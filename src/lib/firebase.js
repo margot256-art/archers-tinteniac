@@ -3,9 +3,9 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCuAVIS5J0CQo2cIB9C2LT3yksNGGvlmJs",
-  projectId: "archers-tinteniac",
-  appId: "1:237137485161:web:85802a6b7754fee83031f8",
+  apiKey:    import.meta.env.VITE_FIREBASE_API_KEY,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId:     import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

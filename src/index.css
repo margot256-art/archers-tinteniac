@@ -55,6 +55,168 @@ body {
   background-color: #111;
 }
 
+/* ── MesSeances responsive ─────────────────────────────────────────────── */
+
+.ms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ms-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ms-filter-select {
+  padding: 7px 10px;
+  border: 1.5px solid #2e2e2e;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #e8e8e8;
+  background-color: #1e1e1e;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.edit-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 16px;
+}
+
+@media (max-width: 600px) {
+  .ms-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ms-controls {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .ms-filter-select {
+    font-size: 16px;
+    padding: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .edit-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .edit-form .edit-label-cls {
+    font-size: 13px;
+  }
+
+  .edit-form input,
+  .edit-form select {
+    font-size: 16px;
+    padding: 10px;
+  }
+
+  .ms-table th,
+  .ms-table td {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+}
+
+/* ── Coach pages responsive ────────────────────────────────────────────── */
+
+.coach-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.coach-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.coach-filter-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.coach-filter-select {
+  padding: 7px 10px;
+  border: 1.5px solid #2e2e2e;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #e8e8e8;
+  background-color: #1e1e1e;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .coach-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .coach-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .coach-filter-group {
+    gap: 10px;
+    width: 100%;
+  }
+
+  .coach-filter-select {
+    font-size: 16px;
+    padding: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .coach-table th,
+  .coach-table td {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+}
+
+/* ── Saisie responsive ─────────────────────────────────────────────────── */
+
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .form-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .saisie-form .field-label {
+    font-size: 13px;
+  }
+
+  .saisie-form input,
+  .saisie-form select {
+    font-size: 16px;
+    padding: 12px;
+  }
+}
+
 #root {
   width: 100%;
   max-width: 100%;

@@ -431,9 +431,9 @@ export default function MesSeances() {
     <div style={s.page}>
 
       {/* En-tête */}
-      <div style={s.header}>
+      <div className="ms-header">
         <h2 style={s.title}>Mes séances</h2>
-        <div style={s.controls}>
+        <div className="ms-controls">
           <FilterSelect label="Saison"   value={filterSaison} options={saisons}    onChange={setFilterSaison} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES} onChange={setFilterDist} />
           <FilterSelect label="Type"     value={filterType}   options={TYPES}     onChange={setFilterType} />
@@ -476,12 +476,12 @@ export default function MesSeances() {
 
       {/* Formulaire d'édition */}
       {editId && editData && (
-        <div style={s.editCard}>
+        <div style={s.editCard} className="edit-form">
           <div style={s.editHeader}>
             <span style={s.editTitle}>Modifier la séance</span>
             <button style={s.editClose} onClick={cancelEdit}>✕</button>
           </div>
-          <div style={s.editGrid}>
+          <div className="edit-grid-4">
             <EditField label="Date">
               <input type="date" value={editData.date}
                 onChange={setEditField("date")} style={s.editInput} />
@@ -542,7 +542,7 @@ export default function MesSeances() {
 
       {!loading && !error && (
         <div style={s.tableWrap}>
-          <table style={s.table}>
+          <table style={s.table} className="ms-table">
             <thead>
               <tr>
                 <th style={s.th}>Date</th>
@@ -687,7 +687,7 @@ function FilterSelect({ label, value, options, onChange }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={s.filterSelect}>
+      <select value={value} onChange={e => onChange(e.target.value)} className="ms-filter-select">
         {options.map(o => <option key={o}>{o}</option>)}
       </select>
     </div>
@@ -700,7 +700,7 @@ function EditField({ label, children, wide }) {
       display: "flex", flexDirection: "column", gap: "5px",
       ...(wide ? { gridColumn: "span 2" } : {}),
     }}>
-      <label style={s.editLabel}>{label}</label>
+      <label className="edit-label-cls" style={s.editLabel}>{label}</label>
       {children}
     </div>
   );
@@ -720,19 +720,15 @@ function PencilIcon() {
 
 const s = {
   page:    { display: "flex", flexDirection: "column", gap: "16px" },
-  header:  { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
+  header:  {},
   title:   { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: 0 },
-  controls:{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" },
+  controls:{},
 
   filterLabel: {
     fontSize: "12px", fontWeight: "600", color: "#777",
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
-  filterSelect: {
-    padding: "7px 10px", border: "1.5px solid #2e2e2e", borderRadius: "7px",
-    fontSize: "13px", color: "#e8e8e8", backgroundColor: "#1e1e1e",
-    outline: "none", fontFamily: "inherit", cursor: "pointer",
-  },
+  filterSelect: {},
   exportBtn: {
     backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
@@ -765,10 +761,7 @@ const s = {
     color: "#666", fontSize: "16px", padding: "2px 6px",
     borderRadius: "4px", fontFamily: "inherit",
   },
-  editGrid:  {
-    display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "14px 16px",
-  },
+  editGrid:  {},
   editLabel: {
     fontSize: "11px", fontWeight: "600", color: "#777",
     textTransform: "uppercase", letterSpacing: "0.07em",

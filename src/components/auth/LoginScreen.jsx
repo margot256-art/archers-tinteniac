@@ -10,11 +10,13 @@ const styles = {
     justifyContent: "center",
     backgroundColor: "#111",
     fontFamily: "'Segoe UI', sans-serif",
+    padding: "24px",
+    boxSizing: "border-box",
   },
   card: {
     backgroundColor: "#1a1a1a",
     borderRadius: "12px",
-    padding: "40px 36px",
+    padding: "40px 36px 32px",
     width: "100%",
     maxWidth: "380px",
     boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
@@ -22,16 +24,24 @@ const styles = {
   logo: {
     textAlign: "center",
     marginBottom: "28px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "12px",
+  },
+  logoImg: {
+    width: "72px",
+    height: "auto",
   },
   title: {
-    fontSize: "22px",
+    fontSize: "20px",
     fontWeight: "700",
     color: "#e8e8e8",
-    margin: "0 0 4px",
+    margin: 0,
   },
   subtitle: {
     fontSize: "13px",
-    color: "#666",
+    color: "#555",
     margin: 0,
   },
   accent: {
@@ -69,6 +79,7 @@ const styles = {
     backgroundColor: "#252525",
     outline: "none",
     transition: "border-color 0.2s",
+    fontFamily: "inherit",
   },
   error: {
     backgroundColor: "rgba(255,0,122,0.1)",
@@ -91,6 +102,7 @@ const styles = {
     cursor: "pointer",
     marginTop: "8px",
     transition: "opacity 0.2s",
+    fontFamily: "inherit",
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -100,6 +112,15 @@ const styles = {
     height: "1px",
     backgroundColor: "#2a2a2a",
     margin: "24px 0 20px",
+  },
+  inscriptionLink: {
+    display: "block",
+    textAlign: "center",
+    marginTop: "20px",
+    fontSize: "12px",
+    color: "#555",
+    textDecoration: "none",
+    transition: "color 0.15s",
   },
 };
 
@@ -132,7 +153,9 @@ export default function LoginScreen({ login, onLogin }) {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
+
         <div style={styles.logo}>
+          <img src="/TINTENIAC.png" alt="Logo Archers de Tinténiac" style={styles.logoImg} />
           <p style={styles.title}>
             Archers de <span style={styles.accent}>Tinténiac</span>
           </p>
@@ -195,6 +218,18 @@ export default function LoginScreen({ login, onLogin }) {
             {loading ? "Connexion…" : "Se connecter"}
           </button>
         </form>
+
+        <a
+          href="https://www.archers-de-la-bretagne-romantique.fr/en-savoir-plus/mandat-et-inscription-130102"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={styles.inscriptionLink}
+          onMouseEnter={e => (e.currentTarget.style.color = "#999")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#555")}
+        >
+          ↗ Inscription aux concours
+        </a>
+
       </div>
     </div>
   );

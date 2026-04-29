@@ -8,6 +8,12 @@ const COACH_KEY = "at_coach";
 
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
+// Toutes les variantes d'apostrophe (droite, typographique, autres) → typographique '
+const normalizeApostrophe = (s) => s.replace(/['`´ʼ‘ʹ]/g, "’");
+
+const toDocId = (prenom, nom) =>
+  normalizeApostrophe(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`);
+
 function clearStorage() {
   try { localStorage.removeItem(USER_KEY);  } catch {}
   try { localStorage.removeItem(COACH_KEY); } catch {}
@@ -19,34 +25,27 @@ function loadStoredUser() {
     const coachFlag = localStorage.getItem(COACH_KEY);
     if (!raw) return null;
 
-    // Try JSON first (for sessions written by this app after login)
     try {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object" && parsed.prenom && parsed.nom) {
         return {
           prenom: parsed.prenom,
           nom:    parsed.nom,
-          id:     parsed.id ?? `${parsed.prenom.trim().toLowerCase()}_${parsed.nom.trim().toLowerCase()}`,
+          id:     parsed.id ?? toDocId(parsed.prenom, parsed.nom),
           role:   parsed.role ?? (coachFlag === "true" ? "coach" : "archer"),
         };
       }
     } catch {
-      // not JSON — fall through to plain-string handling
+      // not JSON — plain string
     }
 
-    // Plain string: "Margot TREVILLY"
     const parts  = raw.trim().split(/\s+/);
     const prenom = parts[0] ?? "";
     const nom    = parts.slice(1).join(" ");
 
-    if (!prenom || !nom) {
-      // unrecognisable value — wipe and show login
-      clearStorage();
-      return null;
-    }
+    if (!prenom || !nom) { clearStorage(); return null; }
 
-    const id = `${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`;
-    return { prenom, nom, id, role: coachFlag === "true" ? "coach" : "archer" };
+    return { prenom, nom, id: toDocId(prenom, nom), role: coachFlag === "true" ? "coach" : "archer" };
   } catch {
     clearStorage();
     return null;
@@ -60,23 +59,18 @@ export function useAuth() {
   });
 
   const login = async (prenom, nom, password) => {
-    console.log("[useAuth] login appelé :", { prenom, nom });
-
     if (password === COACH_PASSWORD) {
-      console.log("[useAuth] mot de passe coach reconnu");
-      const coachUser = { prenom, nom, role: "coach", id: `${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}` };
+      const coachUser = { prenom, nom, role: "coach", id: toDocId(prenom, nom) };
       try { localStorage.setItem(COACH_KEY, "true"); localStorage.setItem(USER_KEY, `${prenom} ${nom}`); } catch {}
       setIsCoach(true);
       setUser(coachUser);
       return { success: true, role: "coach" };
     }
 
-    const docId = `${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`;
-    console.log("[useAuth] recherche document Firestore :", docId);
+    const docId = toDocId(prenom, nom);
 
     try {
       const snapshot = await getDoc(doc(db, "users", docId));
-      console.log("[useAuth] document existe :", snapshot.exists());
 
       if (!snapshot.exists()) {
         return { success: false, error: "Utilisateur introuvable." };
@@ -84,8 +78,6 @@ export function useAuth() {
 
       const data    = snapshot.data();
       const encoded = toBase64(password);
-      console.log("[useAuth] mdp stocké :", data.mdp);
-      console.log("[useAuth] mdp encodé saisi :", encoded);
 
       if (data.mdp !== encoded) {
         return { success: false, error: "Mot de passe incorrect." };
@@ -95,7 +87,6 @@ export function useAuth() {
       try { localStorage.setItem(USER_KEY, `${prenom} ${nom}`); localStorage.removeItem(COACH_KEY); } catch {}
       setUser(userData);
       setIsCoach(false);
-      console.log("[useAuth] connexion archer réussie :", userData);
       return { success: true, role: "archer" };
     } catch (err) {
       console.error("[useAuth] erreur Firestore :", err);

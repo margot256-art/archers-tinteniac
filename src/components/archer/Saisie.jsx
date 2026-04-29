@@ -205,9 +205,9 @@ export default function Saisie() {
       <div style={s.formZone}>
         <h2 style={s.title}>Nouvelle séance</h2>
 
-        <form onSubmit={handleSubmit} style={s.card}>
+        <form onSubmit={handleSubmit} style={s.card} className="saisie-form">
 
-          <div style={s.row4}>
+          <div className="form-grid-4">
             <Field label="Date">
               <input type="date" value={form.date} onChange={set("date")}
                 style={s.input} required />
@@ -231,7 +231,7 @@ export default function Saisie() {
 
           <div style={s.divider} />
 
-          <div style={s.row4}>
+          <div className="form-grid-4">
             <Field label="Vol. paille">
               <input type="number" min="0" value={form.volumePaille}
                 onChange={set("volumePaille")} style={s.input} placeholder="0" />
@@ -411,7 +411,7 @@ export default function Saisie() {
 function Field({ label, children }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-      <label style={s.label}>{label}</label>
+      <label className="field-label" style={s.label}>{label}</label>
       {children}
     </div>
   );
@@ -454,7 +454,7 @@ const s = {
     padding: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
     display: "flex", flexDirection: "column", gap: "18px",
   },
-  row4:  { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" },
+  row4:  { gap: "16px" },
   label: {
     fontSize: "11px", fontWeight: "600", color: "#777",
     textTransform: "uppercase", letterSpacing: "0.07em",

@@ -46,7 +46,7 @@ function FilterSelect({ label, value, options, onChange }) {
   return (
     <label style={s.filterWrap}>
       <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={s.filterSelect}>
+      <select value={value} onChange={e => onChange(e.target.value)} className="coach-filter-select">
         {options.map(o => <option key={o}>{o}</option>)}
       </select>
     </label>

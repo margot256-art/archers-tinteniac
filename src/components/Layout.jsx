@@ -1,32 +1,30 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 
-// ── Composants archer ─────────────────────────────────────────────────────────
-import Saisie          from "./archer/Saisie";
-import MesSeances      from "./archer/MesSeances";
-import StatsMenusuelles from "./archer/StatsMenusuelles";
-import Graphiques      from "./archer/Graphiques";
-import MesRecords      from "./archer/MesRecords";
-
-// ── Composants coach ──────────────────────────────────────────────────────────
-import Dashboard       from "./coach/Dashboard";
-import SeancesArchers  from "./coach/SeancesArchers";
-import StatsCoach      from "./coach/StatsCoach";
-import Classement      from "./coach/Classement";
-import CoachGraph      from "./coach/CoachGraph";
-import Objectifs       from "./coach/Objectifs";
+// ── Imports lazy (chargement à la demande) ────────────────────────────────────
+const Saisie           = lazy(() => import("./archer/Saisie"));
+const MesSeances       = lazy(() => import("./archer/MesSeances"));
+const StatsMenusuelles = lazy(() => import("./archer/StatsMenusuelles"));
+const Graphiques       = lazy(() => import("./archer/Graphiques"));
+const MesRecords       = lazy(() => import("./archer/MesRecords"));
+const Dashboard        = lazy(() => import("./coach/Dashboard"));
+const SeancesArchers   = lazy(() => import("./coach/SeancesArchers"));
+const StatsCoach       = lazy(() => import("./coach/StatsCoach"));
+const Classement       = lazy(() => import("./coach/Classement"));
+const CoachGraph       = lazy(() => import("./coach/CoachGraph"));
+const Objectifs        = lazy(() => import("./coach/Objectifs"));
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const PRIMARY  = "#FF007A";
-const BG       = "#1a1a1a";
-const BG_ROW2  = "#141414";
+const PRIMARY = "#FF007A";
+const BG      = "#1a1a1a";
+const BG_SUB  = "#141414";
 
 const ARCHER_TABS = [
   { id: "new-session",    label: "+Séance" },
   { id: "my-sessions",   label: "Mes séances" },
-  { id: "monthly-stats", label: "Stats mensuelles" },
+  { id: "monthly-stats", label: "Stats" },
   { id: "graphs",        label: "Graphiques" },
-  { id: "records",       label: "Mes records" },
+  { id: "records",       label: "Records" },
 ];
 
 const COACH_TABS = [
@@ -34,28 +32,25 @@ const COACH_TABS = [
   { id: "archer-sessions", label: "Séances archers" },
   { id: "coach-stats",     label: "Stats" },
   { id: "ranking",         label: "Classement" },
-  { id: "coach-graphs",    label: "Coach-Graph" },
+  { id: "coach-graphs",    label: "Graphiques" },
   { id: "objectives",      label: "Objectifs" },
 ];
 
-// ── Routage des onglets ───────────────────────────────────────────────────────
+// ── Rendu des onglets ─────────────────────────────────────────────────────────
 
 function renderTab(id) {
   switch (id) {
-    // archer
     case "new-session":    return <Saisie />;
     case "my-sessions":   return <MesSeances />;
     case "monthly-stats": return <StatsMenusuelles />;
     case "graphs":        return <Graphiques />;
     case "records":       return <MesRecords />;
-    // coach
     case "dashboard":       return <Dashboard />;
     case "archer-sessions": return <SeancesArchers />;
     case "coach-stats":     return <StatsCoach />;
     case "ranking":         return <Classement />;
     case "coach-graphs":    return <CoachGraph />;
     case "objectives":      return <Objectifs />;
-    // fallback
     default:
       return (
         <div style={sDefault}>
@@ -71,75 +66,19 @@ const sDefault = {
   color: "#666", fontSize: "14px",
 };
 
-// ── Sous-composants navigation ────────────────────────────────────────────────
-
-function TargetIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function CoachIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <circle cx="12" cy="7" r="4" />
-      <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
-    </svg>
-  );
-}
-
-function TabButton({ label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: "none",
-        border: "none",
-        borderBottom: active ? `2px solid ${PRIMARY}` : "2px solid transparent",
-        color: active ? PRIMARY : "#999",
-        padding: "13px 14px 11px",
-        fontSize: "13px",
-        fontWeight: active ? "600" : "400",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        transition: "color 0.15s, border-color 0.15s",
-        fontFamily: "inherit",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function GroupLabel({ icon, label, active }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: "5px",
-      padding: "0 12px",
-      color: active ? PRIMARY : "#555",
-      fontSize: "10px", fontWeight: "700",
-      textTransform: "uppercase", letterSpacing: "0.1em",
-      whiteSpace: "nowrap", userSelect: "none",
-      transition: "color 0.15s",
-    }}>
-      {icon}{label}
-    </div>
-  );
-}
-
 // ── Layout principal ──────────────────────────────────────────────────────────
 
 export default function Layout({ user, isCoach, onLogout }) {
+  const [section,   setSection]   = useState("archer");
   const [activeTab, setActiveTab] = useState("new-session");
 
-  const activeInArcher = ARCHER_TABS.some((t) => t.id === activeTab);
-  const activeInCoach  = COACH_TABS.some((t) => t.id === activeTab);
+  const switchSection = (sec) => {
+    setSection(sec);
+    if (sec === "archer") setActiveTab("new-session");
+    if (sec === "coach")  setActiveTab("dashboard");
+  };
+
+  const subTabs = section === "coach" ? COACH_TABS : ARCHER_TABS;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#111", fontFamily: "'Segoe UI', sans-serif" }}>
@@ -154,12 +93,11 @@ export default function Layout({ user, isCoach, onLogout }) {
           borderBottom: "1px solid #2a2a2a",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "18px" }}>🏹</span>
+            <img src="/TINTENIAC.png" alt="Logo" style={{ height: "32px", width: "auto" }} />
             <span style={{ color: "#fff", fontWeight: "700", fontSize: "15px", letterSpacing: "-0.01em" }}>
               Archers de <span style={{ color: PRIMARY }}>Tinténiac</span>
             </span>
           </div>
-
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <span style={{ color: "#777", fontSize: "13px" }}>
               {user.prenom} {user.nom}
@@ -170,9 +108,7 @@ export default function Layout({ user, isCoach, onLogout }) {
                   textTransform: "uppercase", letterSpacing: "0.08em",
                   border: `1px solid ${PRIMARY}`, borderRadius: "4px",
                   padding: "1px 5px",
-                }}>
-                  Coach
-                </span>
+                }}>Coach</span>
               )}
             </span>
             <button
@@ -181,56 +117,121 @@ export default function Layout({ user, isCoach, onLogout }) {
                 background: "none", border: "1px solid #333",
                 color: "#777", padding: "5px 13px", borderRadius: "6px",
                 fontSize: "12px", cursor: "pointer", fontFamily: "inherit",
-                transition: "border-color 0.15s, color 0.15s",
               }}
-              onMouseEnter={(e) => { e.target.style.borderColor = "#555"; e.target.style.color = "#bbb"; }}
-              onMouseLeave={(e) => { e.target.style.borderColor = "#333"; e.target.style.color = "#777"; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#555"; e.currentTarget.style.color = "#bbb"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#777"; }}
             >
               Déconnexion
             </button>
           </div>
         </div>
 
-        {/* Ligne 2 — onglets */}
+        {/* Ligne 2 — sections */}
         <div style={{
           display: "flex", alignItems: "stretch",
-          backgroundColor: BG_ROW2,
+          padding: "0 16px", gap: "4px",
+          borderBottom: "1px solid #2a2a2a",
           overflowX: "auto", scrollbarWidth: "none",
         }}>
-          {/* Groupe Archer */}
-          <div style={{ display: "flex", alignItems: "stretch", borderRight: "1px solid #2a2a2a" }}>
-            <GroupLabel icon={<TargetIcon />} label="Archer" active={activeInArcher} />
-            {ARCHER_TABS.map((tab) => (
-              <TabButton
-                key={tab.id}
-                label={tab.label}
-                active={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              />
-            ))}
-          </div>
-
-          {/* Groupe Coach */}
+          <SectionBtn label="Archer" active={section === "archer"} onClick={() => switchSection("archer")} />
           {isCoach && (
-            <div style={{ display: "flex", alignItems: "stretch" }}>
-              <GroupLabel icon={<CoachIcon />} label="Coach" active={activeInCoach} />
-              {COACH_TABS.map((tab) => (
-                <TabButton
-                  key={tab.id}
-                  label={tab.label}
-                  active={activeTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                />
-              ))}
-            </div>
+            <SectionBtn label="Coach" active={section === "coach"} onClick={() => switchSection("coach")} />
           )}
+          <a
+            href="https://www.archers-de-la-bretagne-romantique.fr/en-savoir-plus/mandat-et-inscription-130102"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex", alignItems: "center", gap: "5px",
+              padding: "6px 12px", margin: "auto 0",
+              border: "1px solid #2e2e2e", borderRadius: "6px",
+              color: "#666", fontSize: "12px", fontWeight: "500",
+              textDecoration: "none", whiteSpace: "nowrap", fontFamily: "inherit",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#555"; e.currentTarget.style.color = "#bbb"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#2e2e2e"; e.currentTarget.style.color = "#666"; }}
+          >
+            <ExternalLinkIcon /> Inscription concours
+          </a>
         </div>
+
+        {/* Ligne 3 — onglets de la section active */}
+        <div style={{
+          display: "flex", alignItems: "stretch",
+          backgroundColor: BG_SUB,
+          overflowX: "auto", scrollbarWidth: "none",
+        }}>
+          {subTabs.map((tab) => (
+            <TabBtn
+              key={tab.id}
+              label={tab.label}
+              active={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            />
+          ))}
+        </div>
+
       </header>
 
       {/* ── Contenu ── */}
       <main style={{ padding: "28px 24px" }}>
-        {renderTab(activeTab)}
+        <Suspense fallback={<div style={{ color: "#777", fontSize: "14px" }}>Chargement…</div>}>
+          {renderTab(activeTab)}
+        </Suspense>
       </main>
     </div>
+  );
+}
+
+// ── Sous-composants ───────────────────────────────────────────────────────────
+
+function SectionBtn({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: "none", border: "none",
+        borderBottom: active ? `2px solid ${PRIMARY}` : "2px solid transparent",
+        color: active ? "#fff" : "#666",
+        padding: "11px 16px 9px",
+        fontSize: "13px", fontWeight: active ? "700" : "500",
+        cursor: "pointer", whiteSpace: "nowrap",
+        transition: "color 0.15s, border-color 0.15s",
+        fontFamily: "inherit", letterSpacing: "0.02em",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function TabBtn({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: "none", border: "none",
+        borderBottom: active ? `2px solid ${PRIMARY}` : "2px solid transparent",
+        color: active ? PRIMARY : "#888",
+        padding: "10px 14px 8px",
+        fontSize: "13px", fontWeight: active ? "600" : "400",
+        cursor: "pointer", whiteSpace: "nowrap",
+        transition: "color 0.15s, border-color 0.15s",
+        fontFamily: "inherit",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
   );
 }

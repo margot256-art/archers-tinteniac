@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('xlsx'\\); require\\('jspdf'\\); require\\('jspdf-autotable'\\)\")",
+      "Bash(git add *)"
+    ]
+  }
+}

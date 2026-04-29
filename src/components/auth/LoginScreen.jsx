@@ -8,16 +8,16 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#111",
     fontFamily: "'Segoe UI', sans-serif",
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#1a1a1a",
     borderRadius: "12px",
     padding: "40px 36px",
     width: "100%",
     maxWidth: "380px",
-    boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
   },
   logo: {
     textAlign: "center",
@@ -26,12 +26,12 @@ const styles = {
   title: {
     fontSize: "22px",
     fontWeight: "700",
-    color: "#111",
+    color: "#e8e8e8",
     margin: "0 0 4px",
   },
   subtitle: {
     fontSize: "13px",
-    color: "#888",
+    color: "#666",
     margin: 0,
   },
   accent: {
@@ -55,22 +55,23 @@ const styles = {
   label: {
     fontSize: "12px",
     fontWeight: "600",
-    color: "#555",
+    color: "#777",
     marginBottom: "6px",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
   input: {
     padding: "10px 12px",
-    border: "1.5px solid #e0e0e0",
+    border: "1.5px solid #2e2e2e",
     borderRadius: "8px",
     fontSize: "14px",
-    color: "#111",
+    color: "#e8e8e8",
+    backgroundColor: "#252525",
     outline: "none",
     transition: "border-color 0.2s",
   },
   error: {
-    backgroundColor: "#fff0f5",
+    backgroundColor: "rgba(255,0,122,0.1)",
     border: `1px solid ${PRIMARY}`,
     borderRadius: "8px",
     padding: "10px 14px",
@@ -97,7 +98,7 @@ const styles = {
   },
   divider: {
     height: "1px",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#2a2a2a",
     margin: "24px 0 20px",
   },
 };
@@ -152,7 +153,7 @@ export default function LoginScreen({ login, onLogin }) {
                 placeholder="Margot"
                 autoComplete="given-name"
                 onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
-                onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")}
+                onBlur={(e) => (e.target.style.borderColor = "#2e2e2e")}
               />
             </div>
             <div style={styles.field}>
@@ -165,7 +166,7 @@ export default function LoginScreen({ login, onLogin }) {
                 placeholder="Trevilly"
                 autoComplete="family-name"
                 onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
-                onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")}
+                onBlur={(e) => (e.target.style.borderColor = "#2e2e2e")}
               />
             </div>
           </div>
@@ -180,7 +181,7 @@ export default function LoginScreen({ login, onLogin }) {
               placeholder="••••••••"
               autoComplete="current-password"
               onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
-              onBlur={(e) => (e.target.style.borderColor = "#e0e0e0")}
+              onBlur={(e) => (e.target.style.borderColor = "#2e2e2e")}
             />
           </div>
 

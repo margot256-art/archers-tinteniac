@@ -11,9 +11,9 @@ const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 // Toutes les variantes d'apostrophe → apostrophe typographique '
 const normAp = (s) => s.replace(/['`´ʼ'ʹ]/g, "’");
 
-// Construit l'ID Firestore : minuscules + apostrophe normalisée
+// Construit l'ID Firestore : minuscules + espaces→_ + apostrophe normalisée
 const toDocId = (prenom, nom) =>
-  normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`);
+  normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`).replace(/\s+/g, "_");
 
 // Normalise le prénom/nom affiché (conserve la casse, normalise l'apostrophe)
 const normName = (s) => normAp(s.trim());

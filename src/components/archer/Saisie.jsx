@@ -494,7 +494,7 @@ const s = {
     boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
     padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px",
   },
-  gaugeRow:    { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" },
+  gaugeRow:    { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" },
   gaugeLabel:  {
     fontSize: "12px", fontWeight: "700", color: "#777",
     textTransform: "uppercase", letterSpacing: "0.07em",

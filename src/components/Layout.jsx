@@ -87,19 +87,15 @@ export default function Layout({ user, isCoach, onLogout }) {
       <header style={{ backgroundColor: BG, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
 
         {/* Ligne 1 — logo + utilisateur */}
-        <div style={{
-          display: "flex", alignItems: "center",
-          justifyContent: "space-between", padding: "10px 24px",
-          borderBottom: "1px solid #2a2a2a",
-        }}>
+        <div className="layout-nav-top">
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <img src="/TINTENIAC.png" alt="Logo" style={{ height: "32px", width: "auto" }} />
-            <span style={{ color: "#fff", fontWeight: "700", fontSize: "15px", letterSpacing: "-0.01em" }}>
+            <span className="layout-nav-title">
               Archers de <span style={{ color: PRIMARY }}>Tinténiac</span>
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <span style={{ color: "#777", fontSize: "13px" }}>
+            <span className="layout-nav-username">
               {user.prenom} {user.nom}
               {isCoach && (
                 <span style={{
@@ -174,7 +170,7 @@ export default function Layout({ user, isCoach, onLogout }) {
       </header>
 
       {/* ── Contenu ── */}
-      <main style={{ padding: "28px 24px" }}>
+      <main className="layout-main">
         <Suspense fallback={<div style={{ color: "#777", fontSize: "14px" }}>Chargement…</div>}>
           {renderTab(activeTab)}
         </Suspense>

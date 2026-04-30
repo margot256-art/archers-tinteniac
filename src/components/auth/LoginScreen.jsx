@@ -170,6 +170,7 @@ export default function LoginScreen({ login, onLogin }) {
               <label style={styles.label}>Prénom</label>
               <input
                 style={styles.input}
+                className="login-input"
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
@@ -183,6 +184,7 @@ export default function LoginScreen({ login, onLogin }) {
               <label style={styles.label}>Nom</label>
               <input
                 style={styles.input}
+                className="login-input"
                 type="text"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
@@ -198,6 +200,7 @@ export default function LoginScreen({ login, onLogin }) {
             <label style={styles.label}>Mot de passe</label>
             <input
               style={styles.input}
+              className="login-input"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

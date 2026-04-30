@@ -160,7 +160,7 @@ export default function Dashboard() {
     <div style={s.page}>
 
       {/* ── Stat cards ── */}
-      <div style={s.cards}>
+      <div className="coach-cards-grid">
         <StatCard label="Séances cette semaine" value={weekSeances.length} />
         <StatCard label="Séances ce mois"       value={monthSeances.length} />
         <StatCard label="Flèches ce mois"       value={fleches.toLocaleString("fr-FR")} />

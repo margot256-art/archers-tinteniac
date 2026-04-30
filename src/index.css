@@ -129,6 +129,59 @@ body {
   }
 }
 
+/* ── Layout nav & main responsive ─────────────────────────────────────── */
+
+.layout-nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.layout-nav-title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.layout-nav-username {
+  color: #777;
+  font-size: 13px;
+}
+
+.layout-main {
+  padding: 28px 24px;
+}
+
+@media (max-width: 600px) {
+  .layout-nav-top {
+    padding: 8px 12px;
+  }
+
+  .layout-nav-title {
+    display: none;
+  }
+
+  .layout-nav-username {
+    display: none;
+  }
+
+  .layout-main {
+    padding: 16px 12px;
+  }
+}
+
+/* ── Login ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .login-input {
+    font-size: 16px !important;
+    padding: 12px !important;
+  }
+}
+
 /* ── Coach pages responsive ────────────────────────────────────────────── */
 
 .coach-cards-grid {

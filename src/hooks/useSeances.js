@@ -23,7 +23,10 @@ export function useSeances() {
       q,
       (snapshot) => {
         const data = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
+          .map((d) => {
+            const raw = d.data();
+            return { id: d.id, ...raw, distance: raw.distance === "18 ans" ? "18m" : raw.distance };
+          })
           .sort((a, b) => (a.date < b.date ? 1 : -1));
         setSeances(data);
         setLoading(false);

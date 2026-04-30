@@ -24,7 +24,7 @@ const ARCHER_TABS = [
   { id: "my-sessions",   label: "Mes séances" },
   { id: "monthly-stats", label: "Stats" },
   { id: "graphs",        label: "Graphiques" },
-  { id: "records",       label: "Records" },
+  { id: "records",       label: "Mes records" },
 ];
 
 const COACH_TABS = [

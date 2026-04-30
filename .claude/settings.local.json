@@ -5,7 +5,10 @@
       "Bash(node -e \"require\\('xlsx'\\); require\\('jspdf'\\); require\\('jspdf-autotable'\\)\")",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(npm run *)",
+      "Bash(node *)"
     ]
   }
 }

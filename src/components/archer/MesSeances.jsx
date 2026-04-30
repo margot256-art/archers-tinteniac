@@ -741,7 +741,7 @@ const s = {
     boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
     padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px",
   },
-  gaugeHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" },
+  gaugeHeader: { display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 12px" },
   gaugeLabel:  { fontSize: "12px", fontWeight: "700", color: "#777", textTransform: "uppercase", letterSpacing: "0.07em" },
   gaugeFigures:{ fontSize: "13px", color: "#bbb" },
   gaugeTrack:  { height: "8px", borderRadius: "4px", backgroundColor: "#2a2a2a", overflow: "hidden" },

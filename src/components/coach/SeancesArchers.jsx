@@ -7,9 +7,9 @@ const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
 
 const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-const getPaille  = (s) => s.paille  ?? 0;
-const getBlason  = (s) => s.blason  ?? 0;
-const getCompte  = (s) => s.compte  ?? 0;
+const getPaille  = (s) => s.paille  ?? s.volumePaille  ?? 0;
+const getBlason  = (s) => s.blason  ?? s.volumeBlason  ?? 0;
+const getCompte  = (s) => s.compte  ?? s.volumeCompte  ?? 0;
 
 const MOIS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 

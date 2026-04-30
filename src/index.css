@@ -182,6 +182,24 @@ body {
   }
 }
 
+/* ── MesSeances gauge ──────────────────────────────────────────────────── */
+
+.ms-gauge-box {
+  background-color: #1a1a1a;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .ms-gauge-box {
+    padding: 12px 14px;
+  }
+}
+
 /* ── Coach pages responsive ────────────────────────────────────────────── */
 
 .coach-cards-grid {

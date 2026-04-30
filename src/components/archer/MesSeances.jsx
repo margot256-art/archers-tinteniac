@@ -457,7 +457,7 @@ export default function MesSeances() {
       </div>
 
       {/* Jauge volume mensuel */}
-      <div style={s.gaugeBox}>
+      <div className="ms-gauge-box">
         <div style={s.gaugeHeader}>
           <span style={s.gaugeLabel}>Volume entraînement ce mois</span>
           {volEntr > 0

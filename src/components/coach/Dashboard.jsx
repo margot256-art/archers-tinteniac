@@ -18,7 +18,9 @@ function getWeekBounds() {
   mon.setDate(today.getDate() + toMon);
   const sun   = new Date(mon);
   sun.setDate(mon.getDate() + 6);
-  return [mon.toISOString().split("T")[0], sun.toISOString().split("T")[0]];
+  const localISO = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return [localISO(mon), localISO(sun)];
 }
 
 function getMonthKeys() {

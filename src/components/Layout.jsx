@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
@@ -73,9 +73,17 @@ const sDefault = {
 // ── Layout principal ──────────────────────────────────────────────────────────
 
 export default function Layout({ user, isCoach, onLogout }) {
-  const [section,      setSection]      = useState("archer");
-  const [activeTab,    setActiveTab]    = useState("new-session");
-  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [section,        setSection]        = useState("archer");
+  const [activeTab,      setActiveTab]      = useState("new-session");
+  const [showChangePwd,  setShowChangePwd]  = useState(false);
+  const [pendingResets,  setPendingResets]  = useState(0);
+
+  useEffect(() => {
+    if (!isCoach) return;
+    const q = query(collection(db, "password_resets"), where("status", "==", "pending"));
+    const unsub = onSnapshot(q, snap => setPendingResets(snap.size));
+    return () => unsub();
+  }, [isCoach]);
 
   const switchSection = (sec) => {
     setSection(sec);
@@ -183,6 +191,7 @@ export default function Layout({ user, isCoach, onLogout }) {
               label={tab.label}
               active={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
+              badge={tab.id === "dashboard" && pendingResets > 0 ? pendingResets : 0}
             />
           ))}
         </div>
@@ -327,7 +336,7 @@ function SectionBtn({ label, active, onClick }) {
   );
 }
 
-function TabBtn({ label, active, onClick }) {
+function TabBtn({ label, active, onClick, badge }) {
   return (
     <button
       onClick={onClick}
@@ -340,9 +349,23 @@ function TabBtn({ label, active, onClick }) {
         cursor: "pointer", whiteSpace: "nowrap",
         transition: "color 0.15s, border-color 0.15s",
         fontFamily: "inherit",
+        position: "relative", display: "inline-flex", alignItems: "center", gap: "6px",
       }}
     >
       {label}
+      {badge > 0 && (
+        <span style={{
+          backgroundColor: "#ef4444",
+          color: "#fff",
+          fontSize: "10px", fontWeight: "700",
+          borderRadius: "10px",
+          padding: "1px 5px",
+          lineHeight: "1.4",
+          minWidth: "16px", textAlign: "center",
+        }}>
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

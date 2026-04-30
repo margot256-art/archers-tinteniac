@@ -1,8 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+const normAp   = (s)   => s.replace(/['`´ʼ'ʹ]/g, "'");
+const toDocId  = (prenom, nom) =>
+  normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`).replace(/\s+/g, "_");
 
 function useResetRequests() {
   const [requests, setRequests] = useState([]);
@@ -80,8 +83,9 @@ export default function Dashboard() {
   const { seances, loading, error } = useAllSeances();
   const objectifs  = useObjectifs();
   const resetReqs  = useResetRequests();
-  const [newPasswords, setNewPasswords] = useState({});
-  const [resetStatus,  setResetStatus]  = useState({});
+  const [newPasswords,   setNewPasswords]   = useState({});
+  const [resetStatus,    setResetStatus]    = useState({});
+  const [showNewArcher,  setShowNewArcher]  = useState(false);
 
   const handlePasswordReset = async (req) => {
     const pwd = (newPasswords[req.id] || "").trim();
@@ -191,6 +195,15 @@ export default function Dashboard() {
 
   return (
     <div style={s.page}>
+
+      {/* ── Actions ── */}
+      <div style={{ display: "flex", justifyContent: "flex-start" }}>
+        <button onClick={() => setShowNewArcher(true)} style={s.newArcherBtn}>
+          + Nouvel archer
+        </button>
+      </div>
+
+      {showNewArcher && <NewArcherModal onClose={() => setShowNewArcher(false)} />}
 
       {/* ── Demandes de réinitialisation de mot de passe ── */}
       {resetReqs.length > 0 && (
@@ -352,10 +365,124 @@ function Section({ title, children }) {
   );
 }
 
+// ── Modale nouvel archer ──────────────────────────────────────────────────────
+
+function NewArcherModal({ onClose }) {
+  const [prenom,  setPrenom]  = useState("");
+  const [nom,     setNom]     = useState("");
+  const [pwd,     setPwd]     = useState("");
+  const [error,   setError]   = useState("");
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!prenom.trim() || !nom.trim()) { setError("Prénom et nom obligatoires."); return; }
+    if (!pwd || pwd.length < 4)        { setError("Mot de passe trop court (4 caractères min)."); return; }
+    setLoading(true);
+    try {
+      const id   = toDocId(prenom, nom);
+      const ref  = doc(db, "users", id);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        setError(`Un archer "${prenom.trim()} ${nom.trim()}" existe déjà.`);
+        setLoading(false);
+        return;
+      }
+      await setDoc(ref, {
+        prenom: prenom.trim(),
+        nom:    nom.trim(),
+        mdp:    toBase64(pwd),
+      });
+      setSuccess(true);
+    } catch {
+      setError("Erreur lors de la création. Réessayez.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = {
+    padding: "10px 12px", border: "1.5px solid #2e2e2e", borderRadius: "8px",
+    fontSize: "14px", color: "#e8e8e8", backgroundColor: "#252525",
+    outline: "none", fontFamily: "inherit", width: "100%", boxSizing: "border-box",
+  };
+
+  return (
+    <div style={sModal.overlay} onClick={onClose}>
+      <div style={sModal.card} onClick={e => e.stopPropagation()}>
+        <div style={sModal.header}>
+          <span style={sModal.title}>Nouvel archer</span>
+          <button style={sModal.close} onClick={onClose}>✕</button>
+        </div>
+
+        {success ? (
+          <div style={sModal.success}>
+            <span>✓ Archer créé avec succès.</span>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button style={sModal.secondaryBtn} onClick={() => { setPrenom(""); setNom(""); setPwd(""); setSuccess(false); }}>
+                Créer un autre
+              </button>
+              <button style={sModal.primaryBtn} onClick={onClose}>Fermer</button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "5px" }}>
+                <label style={sModal.label}>Prénom</label>
+                <input type="text" value={prenom} onChange={e => { setPrenom(e.target.value); setError(""); }}
+                  style={inputStyle} placeholder="Margot" autoFocus />
+              </div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "5px" }}>
+                <label style={sModal.label}>Nom</label>
+                <input type="text" value={nom} onChange={e => { setNom(e.target.value); setError(""); }}
+                  style={inputStyle} placeholder="Trevilly" />
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+              <label style={sModal.label}>Mot de passe</label>
+              <input type="text" value={pwd} onChange={e => { setPwd(e.target.value); setError(""); }}
+                style={inputStyle} placeholder="Mot de passe initial" />
+            </div>
+            {error && <div style={sModal.error}>{error}</div>}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button type="button" onClick={onClose} style={sModal.secondaryBtn}>Annuler</button>
+              <button type="submit" disabled={loading}
+                style={{ ...sModal.primaryBtn, ...(loading ? { opacity: 0.6 } : {}) }}>
+                {loading ? "Création…" : "Créer"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const sModal = {
+  overlay:      { position: "fixed", inset: 0, zIndex: 200, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" },
+  card:         { backgroundColor: "#1a1a1a", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "400px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column", gap: "18px" },
+  header:       { display: "flex", alignItems: "center", justifyContent: "space-between" },
+  title:        { fontSize: "15px", fontWeight: "700", color: "#e8e8e8" },
+  close:        { background: "none", border: "none", color: "#666", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
+  label:        { fontSize: "11px", fontWeight: "600", color: "#777", textTransform: "uppercase", letterSpacing: "0.07em" },
+  error:        { backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#ef4444" },
+  success:      { backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "#16a34a", display: "flex", flexDirection: "column", gap: "12px" },
+  primaryBtn:   { backgroundColor: PRIMARY, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
+  secondaryBtn: { background: "none", border: "1px solid #333", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "#aaa", cursor: "pointer", fontFamily: "inherit" },
+};
+
 // ── styles ────────────────────────────────────────────────────────────────────
 
 const s = {
   page:   { display: "flex", flexDirection: "column", gap: "28px" },
+  newArcherBtn: {
+    backgroundColor: PRIMARY, color: "#fff", border: "none",
+    borderRadius: "8px", padding: "8px 18px",
+    fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
+  },
   info:   { color: "#777", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",

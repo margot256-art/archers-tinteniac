@@ -56,6 +56,12 @@ const fmtDate = (iso) => {
   return `${d}/${m}/${y}`;
 };
 
+const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","Oct","Nov","Déc"];
+const fmtMonth = (ym) => {
+  const [y, m] = ym.split("-");
+  return `${MONTHS_FR[parseInt(m) - 1]} ${y.slice(2)}`;
+};
+
 const getSaison = (iso) => {
   const [y, m] = iso.split("-").map(Number);
   return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
@@ -151,6 +157,7 @@ export default function Graphiques() {
     const set = new Set(seances.map(s => s.date ? getSaison(s.date) : null).filter(Boolean));
     return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
   }, [seances]);
+
 
   // ── Chart 1 : une séance = un point ──────────────────────────────────────
   const { lineData, lineOpts, hasLineData } = useMemo(() => {
@@ -257,7 +264,112 @@ export default function Graphiques() {
     return { lineData, lineOpts, hasLineData: entraData.some(v => v !== null) || compData.some(v => v !== null) };
   }, [seances, filterDist, filterSaison, objectives]);
 
-  // ── Chart 2 : top 3 moy. par distance, 1 graphique / distance, X = saisons ──
+  // ── Chart 2 : score moyen par mois ──────────────────────────────────────────
+  const { monthlyData, monthlyOpts, hasMonthlyData } = useMemo(() => {
+    const src = seances
+      .filter(s => {
+        if (!s.date) return false;
+        const okSaison = filterSaison === "Toutes" || getSaison(s.date) === filterSaison;
+        const okDist   = filterDist   === "Toutes" || s.distance === filterDist;
+        return okSaison && okDist && getCompte(s) > 0 && (s.score ?? 0) > 0;
+      })
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+
+    const months = [...new Set(src.map(s => s.date.slice(0, 7)))].sort();
+
+    const avgByType = (type) => months.map(ym => {
+      const group = src.filter(s => s.date.startsWith(ym) && s.type === type);
+      if (!group.length) return null;
+      const totSc  = group.reduce((n, s) => n + s.score,        0);
+      const totVol = group.reduce((n, s) => n + getCompte(s), 0);
+      return totVol > 0 ? parseFloat((totSc / totVol).toFixed(2)) : null;
+    });
+
+    const entraData = avgByType("Entraînement");
+    const compData  = avgByType("Compétition");
+
+    const datasets = [
+      {
+        label: "Entraînements",
+        data: entraData,
+        borderColor: PRIMARY,
+        backgroundColor: "rgba(255,0,122,0.1)",
+        pointBackgroundColor: PRIMARY,
+        pointRadius: 5, pointHoverRadius: 7,
+        tension: 0.35, fill: true, spanGaps: false,
+      },
+      {
+        label: "Compétitions",
+        data: compData,
+        borderColor: BLUE,
+        backgroundColor: "rgba(59,130,246,0.1)",
+        pointBackgroundColor: BLUE,
+        pointStyle: "rectRot",
+        pointRadius: 6, pointHoverRadius: 8,
+        borderDash: [6, 3], tension: 0.35, fill: true, spanGaps: false,
+      },
+    ];
+
+    if (filterDist !== "Toutes" && objectives[filterDist] != null) {
+      const objMoyFl = objectives[filterDist] / normFactor(filterDist);
+      datasets.push({
+        label: "Objectif",
+        data: months.map(() => objMoyFl),
+        borderColor: OBJ_COLOR, backgroundColor: "transparent",
+        borderDash: [6, 3], borderWidth: 2,
+        pointRadius: 0, fill: false, tension: 0, spanGaps: true,
+      });
+    }
+
+    const labels = months.map(fmtMonth);
+
+    const opts = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: { font: { size: 11 }, color: "#666", maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
+          grid: { color: "#2a2a2a" },
+        },
+        y: {
+          beginAtZero: false,
+          ticks: { font: { size: 11 }, color: "#666" },
+          grid: { color: "#2a2a2a" },
+          title: { display: true, text: "Moy. / flèche", color: "#555", font: { size: 11 } },
+        },
+      },
+      plugins: {
+        legend: {
+          labels: { font: { size: 12 }, color: "#fff", boxWidth: 18, padding: 18 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0]?.label ?? "",
+            label: (ctx) => {
+              if (ctx.parsed.y == null) return null;
+              if (ctx.dataset.label === "Objectif") return `Objectif : ${ctx.parsed.y.toFixed(2)} moy/fl`;
+              const ym    = months[ctx.dataIndex];
+              const type  = ctx.dataset.label === "Entraînements" ? "Entraînement" : "Compétition";
+              const group = src.filter(s => s.date.startsWith(ym) && s.type === type);
+              const nb    = group.length;
+              return [
+                `${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`,
+                `${nb} séance${nb > 1 ? "s" : ""} ce mois`,
+              ];
+            },
+          },
+        },
+      },
+    };
+
+    return {
+      monthlyData: { labels, datasets },
+      monthlyOpts: opts,
+      hasMonthlyData: entraData.some(v => v !== null) || compData.some(v => v !== null),
+    };
+  }, [seances, filterDist, filterSaison, objectives]);
+
+  // ── Chart 3 : top 3 moy. par distance, 1 graphique / distance, X = saisons ──
   const distBarCharts = useMemo(() => {
     const allSaisons = [...new Set(
       seances.filter(s => s.date).map(s => getSaison(s.date))
@@ -331,16 +443,32 @@ export default function Graphiques() {
         )}
       </div>
 
+      {/* Score moyen par mois */}
+      <div style={s.card}>
+        <div style={s.cardHeader}>
+          <span style={s.cardTitle}>Score moyen par mois</span>
+          {filterDist !== "Toutes" && <span style={s.distBadge}>{filterDist}</span>}
+          <span style={s.hint}>Moy./flèche agrégée par mois</span>
+        </div>
+        {!hasMonthlyData ? (
+          <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div>
+        ) : (
+          <div style={{ height: 320 }}>
+            <Line data={monthlyData} options={monthlyOpts} />
+          </div>
+        )}
+      </div>
+
       {/* Meilleur score moy. par distance — 1 graphique / distance, toutes saisons */}
       {distBarCharts.length > 0 && (
-        <>
-          <div style={s.sectionTitle}>
-            Meilleur score moy. par distance — toutes saisons
+        <div style={s.sectionCard}>
+          <div style={s.sectionCardHeader}>
+            <span style={s.sectionCardTitle}>Meilleur score moy. par distance — toutes saisons</span>
             <span style={s.hint}>Moyenne top 3 · ×60 (5m/18m) · ×72 autres</span>
           </div>
           <div style={s.distGrid}>
             {distBarCharts.map(({ dist, nf, data, opts, objVal }) => (
-              <div key={dist} style={s.card}>
+              <div key={dist} style={s.distCard}>
                 <div style={s.cardHeader}>
                   <span style={s.cardTitle}>
                     {dist}{" "}
@@ -355,7 +483,7 @@ export default function Graphiques() {
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -409,7 +537,27 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.08em",
     display: "flex", alignItems: "center", gap: "12px",
   },
+  sectionCard: {
+    backgroundColor: "#1a1a1a", borderRadius: "12px",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    padding: "20px 24px 24px",
+    display: "flex", flexDirection: "column", gap: "20px",
+  },
+  sectionCardHeader: {
+    display: "flex", alignItems: "center", gap: "10px",
+    paddingBottom: "16px",
+    borderBottom: "1px solid #2a2a2a",
+    flexWrap: "wrap",
+  },
+  sectionCardTitle: {
+    fontSize: "14px", fontWeight: "600", color: "#d0d0d0",
+  },
   distGrid: { display: "flex", flexDirection: "column", gap: "16px" },
+  distCard: {
+    backgroundColor: "#141414", borderRadius: "10px",
+    border: "1px solid #242424",
+    padding: "16px 20px 20px",
+  },
   empty: { textAlign: "center", color: "#555", fontSize: "14px", padding: "52px 0" },
   info:  { color: "#777", fontSize: "14px" },
   errMsg: {

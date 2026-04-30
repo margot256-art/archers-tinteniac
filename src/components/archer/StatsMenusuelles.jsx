@@ -1,4 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 
 const PRIMARY    = "#FF007A";
@@ -34,10 +37,53 @@ const fmtInt = (v) => (v != null ? String(v) : "—");
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
+const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
+
 export default function StatsMenusuelles() {
-  const { seances, loading, error } = useSeances();
+  const { user }                        = useAuth();
+  const { seances, loading, error }     = useSeances();
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
+  const [objectives,   setObjectives]   = useState({});
+
+  useEffect(() => {
+    if (!user) return;
+    const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
+    const unsub = onSnapshot(doc(db, "objectifs", archerId), snap =>
+      setObjectives(snap.exists() ? (snap.data().distances ?? {}) : {})
+    );
+    return () => unsub();
+  }, [user]);
+
+  // Top 3 compétition + top 3 entraînement par distance vs objectif
+  const objSummary = useMemo(() => {
+    const entries = Object.entries(objectives);
+    if (!entries.length) return [];
+
+    const top3avg = (dist, type) => {
+      const nf   = normFactor(dist);
+      const list = seances
+        .filter(s => s.distance === dist && s.type === type && getCompte(s) > 0 && (s.score ?? 0) > 0)
+        .map(s => Math.round((s.score / getCompte(s)) * nf))
+        .sort((a, b) => b - a)
+        .slice(0, 3);
+      return { avg: list.length ? Math.round(list.reduce((a, b) => a + b, 0) / list.length) : null, nb: list.length };
+    };
+
+    return entries
+      .map(([dist, objScore]) => {
+        const nf   = normFactor(dist);
+        const comp = top3avg(dist, "Compétition");
+        const entr = top3avg(dist, "Entraînement");
+        const mkRow = (avg) => ({
+          current: avg,
+          delta:   avg != null ? avg - objScore : null,
+          pct:     avg != null ? Math.min(100, Math.round((avg / objScore) * 100)) : 0,
+        });
+        return { dist, objScore, nf, comp: { ...mkRow(comp.avg), nb: comp.nb }, entr: { ...mkRow(entr.avg), nb: entr.nb } };
+      })
+      .sort((a, b) => DIST_ORDER.indexOf(a.dist) - DIST_ORDER.indexOf(b.dist));
+  }, [seances, objectives]);
 
   const saisons = useMemo(() => {
     const set = new Set(seances.map(s => s.date ? getSaison(s.date) : null).filter(Boolean));
@@ -126,6 +172,36 @@ export default function StatsMenusuelles() {
 
       {loading && <div style={s.info}>Chargement…</div>}
       {error   && <div style={s.errMsg}>{error}</div>}
+
+      {/* Objectifs par distance */}
+      {!loading && objSummary.length > 0 && (
+        <div style={s.objCard}>
+          <div style={s.objHeader}>
+            <span style={s.objTitle}>Objectifs</span>
+            <span style={s.objHint}>Moy. top 3 · score normalisé</span>
+          </div>
+          {objSummary.map(({ dist, objScore, nf, comp, entr }, i) => {
+            const isLast = i === objSummary.length - 1;
+            return (
+              <div key={dist} style={{ ...s.objRow, ...(isLast ? { borderBottom: "none" } : {}) }}>
+                {/* Distance */}
+                <div style={s.objLeft}>
+                  <span style={s.objBadge}>{dist}</span>
+                  <span style={s.objMax}>/ {nf * 10} pts</span>
+                </div>
+                {/* Jauges */}
+                <div style={s.objMiddle}>
+                  <ObjGauge label="Comp." color={BLUE}    row={comp} objScore={objScore} />
+                  <ObjGauge label="Entr." color={PRIMARY} row={entr} objScore={objScore} />
+                  <div style={s.objObjLine}>
+                    <span style={s.objObjVal}>objectif : {objScore}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {!loading && !error && (
         <>
@@ -223,6 +299,31 @@ function FilterSelect({ label, value, options, onChange }) {
   );
 }
 
+function ObjGauge({ label, color, row, objScore }) {
+  const { current, delta, pct } = row;
+  const hasData  = current != null;
+  const barColor = !hasData ? "#2a2a2a" : pct >= 100 ? "#16a34a" : pct >= 80 ? color : pct >= 60 ? "#f97316" : "#ef4444";
+  const deltaStr = delta == null ? null : delta >= 0 ? `+${delta}` : `${delta}`;
+  const deltaCol = delta == null ? "#555" : delta >= 0 ? "#16a34a" : "#ef4444";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <span style={{ fontSize: "10px", fontWeight: "700", color, width: "32px", flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, height: "5px", backgroundColor: "#252525", borderRadius: "10px", overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, backgroundColor: barColor, borderRadius: "10px", transition: "width 0.5s ease" }} />
+      </div>
+      <span style={{ fontSize: "13px", fontWeight: "700", color: hasData ? "#e0e0e0" : "#333", width: "32px", textAlign: "right", flexShrink: 0 }}>
+        {hasData ? current : "—"}
+      </span>
+      {deltaStr
+        ? <span style={{ fontSize: "11px", fontWeight: "700", color: deltaCol, width: "36px", flexShrink: 0 }}>{deltaStr}</span>
+        : <span style={{ width: "36px", flexShrink: 0 }} />
+      }
+    </div>
+  );
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const thBase = {
@@ -280,4 +381,31 @@ const s = {
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
   count: { fontSize: "12px", color: "#555", textAlign: "right" },
+
+  // objectifs
+  objCard: {
+    backgroundColor: "#1a1a1a", borderRadius: "12px",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    overflow: "hidden",
+  },
+  objHeader: {
+    display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap",
+    padding: "16px 20px", borderBottom: "1px solid #222",
+  },
+  objTitle:  { fontSize: "13px", fontWeight: "700", color: "#c0c0c0", textTransform: "uppercase", letterSpacing: "0.06em" },
+  objHint:   { fontSize: "11px", color: "#444", marginLeft: "auto" },
+  objRow: {
+    display: "grid",
+    gridTemplateColumns: "80px 1fr",
+    alignItems: "center",
+    gap: "16px",
+    padding: "14px 20px",
+    borderBottom: "1px solid #1e1e1e",
+  },
+  objLeft:    { display: "flex", flexDirection: "column", gap: "4px" },
+  objBadge:   { backgroundColor: "#252525", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "700", color: "#bbb", alignSelf: "flex-start" },
+  objMax:     { fontSize: "10px", color: "#3a3a3a" },
+  objMiddle:  { display: "flex", flexDirection: "column", gap: "7px" },
+  objObjLine: { display: "flex", justifyContent: "flex-end" },
+  objObjVal:  { fontSize: "10px", color: "#3a3a3a" },
 };

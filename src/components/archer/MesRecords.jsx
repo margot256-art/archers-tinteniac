@@ -77,16 +77,19 @@ export default function MesRecords() {
 
   const saisons = useMemo(() => {
     const set = new Set(seances.filter(s => s.date).map(s => getSaison(s.date)));
-    return [...set].sort((a, b) => b.localeCompare(a));
+    return ["Toutes saisons", ...[...set].sort((a, b) => b.localeCompare(a))];
   }, [seances]);
 
-  const [y1, y2] = filterSaison.split("/");
-  const subtitle = `Records de la saison ${filterSaison} (1 sept. ${y1} — 31 août ${y2})`;
+  const toutesLesSaisons = filterSaison === "Toutes saisons";
+  const subtitle = toutesLesSaisons
+    ? "Meilleurs scores personnels — toutes saisons confondues"
+    : (() => { const [y1, y2] = filterSaison.split("/"); return `Records de la saison ${filterSaison} (1 sept. ${y1} — 31 août ${y2})`; })();
 
   const records = useMemo(() => {
     const src = seances.filter(s => {
       if (!s.date) return false;
-      return getSaison(s.date) === filterSaison && getCompte(s) > 0 && (s.score ?? 0) > 0;
+      const okSaison = toutesLesSaisons || getSaison(s.date) === filterSaison;
+      return okSaison && getCompte(s) > 0 && (s.score ?? 0) > 0;
     });
 
     return DIST_ORDER.map(dist => {
@@ -141,7 +144,7 @@ export default function MesRecords() {
 
       {/* ── Grille de cartes ── */}
       {records.length === 0 ? (
-        <div style={s.empty}>Aucune séance avec tir compté pour cette saison.</div>
+        <div style={s.empty}>{toutesLesSaisons ? "Aucune séance avec tir compté." : "Aucune séance avec tir compté pour cette saison."}</div>
       ) : (
         <div style={s.grid}>
           {records.map(({ dist, nf, max, entr, comp }) => (

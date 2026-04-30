@@ -1,6 +1,20 @@
 import { useEffect, useState, useMemo } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, where } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+
+const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+
+function useResetRequests() {
+  const [requests, setRequests] = useState([]);
+  useEffect(() => {
+    const q    = query(collection(db, "password_resets"), where("status", "==", "pending"));
+    const unsub = onSnapshot(q, (snap) =>
+      setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+    return () => unsub();
+  }, []);
+  return requests;
+}
 import { useAllSeances } from "../../hooks/useAllSeances";
 
 const PRIMARY = "#FF007A";
@@ -64,7 +78,24 @@ function useObjectifs() {
 
 export default function Dashboard() {
   const { seances, loading, error } = useAllSeances();
-  const objectifs = useObjectifs();
+  const objectifs  = useObjectifs();
+  const resetReqs  = useResetRequests();
+  const [newPasswords, setNewPasswords] = useState({});
+  const [resetStatus,  setResetStatus]  = useState({});
+
+  const handlePasswordReset = async (req) => {
+    const pwd = (newPasswords[req.id] || "").trim();
+    if (!pwd) return;
+    setResetStatus(prev => ({ ...prev, [req.id]: "loading" }));
+    try {
+      await updateDoc(doc(db, "users", req.archerId), { mdp: toBase64(pwd) });
+      await updateDoc(doc(db, "password_resets", req.id), { status: "done" });
+      setResetStatus(prev => ({ ...prev, [req.id]: "done" }));
+      setNewPasswords(prev => ({ ...prev, [req.id]: "" }));
+    } catch {
+      setResetStatus(prev => ({ ...prev, [req.id]: "error" }));
+    }
+  };
 
   const [monStr, sunStr] = useMemo(() => getWeekBounds(), []);
   const [ym, ymPrev]     = useMemo(() => getMonthKeys(),  []);
@@ -160,6 +191,40 @@ export default function Dashboard() {
 
   return (
     <div style={s.page}>
+
+      {/* ── Demandes de réinitialisation de mot de passe ── */}
+      {resetReqs.length > 0 && (
+        <div style={s.resetSection}>
+          <div style={s.resetHeader}>
+            <span style={s.resetTitle}>Demandes de mot de passe</span>
+            <span style={s.resetBadge}>{resetReqs.length}</span>
+          </div>
+          {resetReqs.map(req => (
+            <div key={req.id} style={s.resetRow}>
+              <span style={s.resetName}>{req.prenom} {req.nom}</span>
+              <div style={s.resetActions}>
+                <input
+                  type="text"
+                  placeholder="Nouveau mot de passe"
+                  value={newPasswords[req.id] || ""}
+                  onChange={e => setNewPasswords(prev => ({ ...prev, [req.id]: e.target.value }))}
+                  style={s.resetInput}
+                />
+                <button
+                  style={{ ...s.resetBtn, ...(resetStatus[req.id] === "loading" ? { opacity: 0.6 } : {}) }}
+                  onClick={() => handlePasswordReset(req)}
+                  disabled={resetStatus[req.id] === "loading" || !(newPasswords[req.id] || "").trim()}
+                >
+                  {resetStatus[req.id] === "done" ? "✓" : resetStatus[req.id] === "loading" ? "…" : "Valider"}
+                </button>
+              </div>
+              {resetStatus[req.id] === "error" && (
+                <span style={{ fontSize: "11px", color: "#ef4444" }}>Erreur — archer introuvable ?</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Stat cards ── */}
       <div className="coach-cards-grid">
@@ -295,6 +360,41 @@ const s = {
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
+  },
+
+  // réinitialisation mot de passe
+  resetSection: {
+    backgroundColor: "#1a1a1a",
+    border: "1px solid #f97316",
+    borderRadius: "12px",
+    padding: "16px 20px",
+    display: "flex", flexDirection: "column", gap: "12px",
+    boxShadow: "0 2px 10px rgba(249,115,22,0.15)",
+  },
+  resetHeader: { display: "flex", alignItems: "center", gap: "10px" },
+  resetTitle:  { fontSize: "13px", fontWeight: "700", color: "#e8e8e8", textTransform: "uppercase", letterSpacing: "0.06em" },
+  resetBadge:  {
+    backgroundColor: "#f97316", color: "#fff",
+    borderRadius: "10px", padding: "1px 7px",
+    fontSize: "11px", fontWeight: "700",
+  },
+  resetRow: {
+    display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px",
+    paddingTop: "10px", borderTop: "1px solid #2a2a2a",
+  },
+  resetName:    { fontSize: "14px", color: "#e8e8e8", fontWeight: "600", flex: "1 1 120px" },
+  resetActions: { display: "flex", gap: "8px", flex: "2 1 240px" },
+  resetInput: {
+    flex: 1, padding: "7px 10px",
+    border: "1.5px solid #2e2e2e", borderRadius: "7px",
+    fontSize: "13px", color: "#e8e8e8", backgroundColor: "#252525",
+    outline: "none", fontFamily: "inherit",
+  },
+  resetBtn: {
+    backgroundColor: "#f97316", color: "#fff", border: "none",
+    borderRadius: "7px", padding: "7px 14px",
+    fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
+    whiteSpace: "nowrap",
   },
 
   // bannière

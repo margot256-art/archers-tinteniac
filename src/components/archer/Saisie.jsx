@@ -52,10 +52,11 @@ export default function Saisie() {
   const { user }    = useAuth();
   const { seances } = useSeances();
 
-  const [form,    setForm]    = useState(INIT);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error,   setError]   = useState("");
+  const [form,        setForm]        = useState(INIT);
+  const [loading,     setLoading]     = useState(false);
+  const [success,     setSuccess]     = useState(false);
+  const [error,       setError]       = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [volEntr, setVolEntr] = useState(null);
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
 
@@ -73,6 +74,30 @@ export default function Saisie() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setSuccess(false);
     setError("");
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validate = () => {
+    const errs = {};
+    if (!form.date) {
+      errs.date = "La date est requise.";
+    } else if (form.date > todayISO()) {
+      errs.date = "La date ne peut pas être dans le futur.";
+    }
+    const p = parseInt(form.volumePaille) || 0;
+    const b = parseInt(form.volumeBlason)  || 0;
+    const c = parseInt(form.volumeCompte)  || 0;
+    const sc = parseInt(form.score)        || 0;
+    if (p + b + c === 0) {
+      errs.volumes = "Veuillez saisir au moins un volume de flèches.";
+    }
+    if (sc > 0 && c === 0) {
+      errs.score = "Un score nécessite un volume de tir compté.";
+    }
+    if (sc > c * 10 && c > 0) {
+      errs.score = `Score trop élevé : maximum possible = ${c * 10} (${c} flèches × 10).`;
+    }
+    return errs;
   };
 
   const paille       = parseInt(form.volumePaille) || 0;
@@ -86,6 +111,12 @@ export default function Saisie() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     setLoading(true);
     try {
       await addDoc(collection(db, "seances"), {
@@ -208,9 +239,9 @@ export default function Saisie() {
         <form onSubmit={handleSubmit} style={s.card} className="saisie-form">
 
           <div className="form-grid-4">
-            <Field label="Date">
+            <Field label="Date" error={fieldErrors.date}>
               <input type="date" value={form.date} onChange={set("date")}
-                style={s.input} required />
+                style={{ ...s.input, ...(fieldErrors.date ? s.inputError : {}) }} required />
             </Field>
             <Field label="Distance">
               <select value={form.distance} onChange={set("distance")} style={s.input}>
@@ -232,21 +263,25 @@ export default function Saisie() {
           <div style={s.divider} />
 
           <div className="form-grid-4">
-            <Field label="Vol. paille">
+            <Field label="Vol. paille" error={fieldErrors.volumes}>
               <input type="number" min="0" value={form.volumePaille}
-                onChange={set("volumePaille")} style={s.input} placeholder="0" />
+                onChange={e => { set("volumePaille")(e); setFieldErrors(p => ({ ...p, volumes: undefined })); }}
+                style={{ ...s.input, ...(fieldErrors.volumes ? s.inputError : {}) }} placeholder="0" />
             </Field>
             <Field label="Vol. blason">
               <input type="number" min="0" value={form.volumeBlason}
-                onChange={set("volumeBlason")} style={s.input} placeholder="0" />
+                onChange={e => { set("volumeBlason")(e); setFieldErrors(p => ({ ...p, volumes: undefined })); }}
+                style={{ ...s.input, ...(fieldErrors.volumes ? s.inputError : {}) }} placeholder="0" />
             </Field>
             <Field label="Vol. tir compté">
               <input type="number" min="0" value={form.volumeCompte}
-                onChange={set("volumeCompte")} style={s.input} placeholder="0" />
+                onChange={e => { set("volumeCompte")(e); setFieldErrors(p => ({ ...p, volumes: undefined, score: undefined })); }}
+                style={{ ...s.input, ...(fieldErrors.volumes ? s.inputError : {}) }} placeholder="0" />
             </Field>
-            <Field label="Score">
+            <Field label="Score" error={fieldErrors.score}>
               <input type="number" min="0" value={form.score}
-                onChange={set("score")} style={s.input} placeholder="0" />
+                onChange={set("score")}
+                style={{ ...s.input, ...(fieldErrors.score ? s.inputError : {}) }} placeholder="0" />
             </Field>
           </div>
 
@@ -313,90 +348,129 @@ export default function Saisie() {
           </select>
         </div>
         {tableRows.length > 0 ? (
-          <div style={s.tableWrap}>
-            <table style={s.table}>
-              <thead>
-                <tr>
-                  <th style={s.th}>Dist.</th>
-                  <th style={{ ...s.thR, ...s.thEntr }}>Séances</th>
-                  <th style={{ ...s.thR, ...s.thEntr }}>Flèches</th>
-                  <th style={{ ...s.thR, ...s.thEntr }}>Moy./fl.</th>
-                  <th style={{ ...s.thR, ...s.thEntrEnd }}>Score moy.</th>
-                  <th style={{ ...s.thR, ...s.thComp }}>Séances</th>
-                  <th style={{ ...s.thR, ...s.thComp }}>Flèches</th>
-                  <th style={{ ...s.thR, ...s.thComp }}>Moy./fl.</th>
-                  <th style={{ ...s.thR, ...s.thComp }}>Score moy.</th>
-                  <th style={{ ...s.thR, ...s.thTotal }}>Séances</th>
-                  <th style={{ ...s.thR, ...s.thTotal }}>Flèches</th>
-                  <th style={{ ...s.thR, ...s.thTotal }}>Moy./fl.</th>
-                  <th style={{ ...s.thR, ...s.thTotal }}>Score moy.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableRows.map((row) => (
-                  <tr key={row.dist} style={s.tr}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1f1f1f"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
-                  >
-                    <td style={s.td}><span style={s.badge}>{row.dist}</span></td>
-                    <td style={s.tdR}>{row.entr.count || "—"}</td>
-                    <td style={s.tdR}>{row.entr.fleches || "—"}</td>
-                    <td style={{ ...s.tdR, color: row.entr.moyFl ? PRIMARY : "#bbb", fontWeight: "600" }}>
-                      {row.entr.moyFl ?? "—"}
-                    </td>
-                    <td style={{ ...s.tdR, borderRight: "2px solid #333" }}>
-                      {row.entr.scoreMoy ?? "—"}
-                    </td>
-                    <td style={s.tdR}>{row.comp.count || "—"}</td>
-                    <td style={s.tdR}>{row.comp.fleches || "—"}</td>
-                    <td style={{ ...s.tdR, color: row.comp.moyFl ? BLUE : "#bbb", fontWeight: "600" }}>
-                      {row.comp.moyFl ?? "—"}
-                    </td>
-                    <td style={s.tdR}>{row.comp.scoreMoy ?? "—"}</td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "2px solid #444" }}>
-                      {row.total.count || "—"}
-                    </td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
-                      {row.total.fleches ? row.total.fleches.toLocaleString("fr-FR") : "—"}
-                    </td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
-                      {row.total.moyFl ?? "—"}
-                    </td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
-                      {row.total.scoreMoy ?? "—"}
-                    </td>
+          <>
+            {/* ── Vue desktop : tableau ── */}
+            <div className="saisie-table-desktop" style={s.tableWrap}>
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    <th style={s.th}>Dist.</th>
+                    <th style={{ ...s.thR, ...s.thEntr }}>Séances</th>
+                    <th style={{ ...s.thR, ...s.thEntr }}>Flèches</th>
+                    <th style={{ ...s.thR, ...s.thEntr }}>Moy./fl.</th>
+                    <th style={{ ...s.thR, ...s.thEntrEnd }}>Score moy.</th>
+                    <th style={{ ...s.thR, ...s.thComp }}>Séances</th>
+                    <th style={{ ...s.thR, ...s.thComp }}>Flèches</th>
+                    <th style={{ ...s.thR, ...s.thComp }}>Moy./fl.</th>
+                    <th style={{ ...s.thR, ...s.thComp }}>Score moy.</th>
+                    <th style={{ ...s.thR, ...s.thTotal }}>Séances</th>
+                    <th style={{ ...s.thR, ...s.thTotal }}>Flèches</th>
+                    <th style={{ ...s.thR, ...s.thTotal }}>Moy./fl.</th>
+                    <th style={{ ...s.thR, ...s.thTotal }}>Score moy.</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={s.trTotal}>
-                  <td style={{ ...s.td, fontWeight: "700", color: "#e8e8e8" }}>Total</td>
-                  <td style={s.tdR}>{tableTotals.entr.count || "—"}</td>
-                  <td style={{ ...s.tdR, fontWeight: "700", color: "#e8e8e8" }}>
-                    {tableTotals.entr.fleches ? tableTotals.entr.fleches.toLocaleString("fr-FR") : "—"}
-                  </td>
-                  <td style={s.tdR}>—</td>
-                  <td style={{ ...s.tdR, borderRight: "2px solid #333" }}>—</td>
-                  <td style={s.tdR}>{tableTotals.comp.count || "—"}</td>
-                  <td style={{ ...s.tdR, fontWeight: "700", color: "#e8e8e8" }}>
-                    {tableTotals.comp.fleches ? tableTotals.comp.fleches.toLocaleString("fr-FR") : "—"}
-                  </td>
-                  <td style={s.tdR}>—</td>
-                  <td style={s.tdR}>—</td>
-                  <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "2px solid #444" }}>
-                    {tableTotals.total.count || "—"}
-                  </td>
-                  <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
-                    {tableTotals.total.fleches ? tableTotals.total.fleches.toLocaleString("fr-FR") : "—"}
-                  </td>
-                  <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
-                    {tableTotals.total.moyFl ?? "—"}
-                  </td>
-                  <td style={s.tdR}>—</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {tableRows.map((row) => (
+                    <tr key={row.dist} style={s.tr}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1f1f1f"}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+                    >
+                      <td style={s.td}><span style={s.badge}>{row.dist}</span></td>
+                      <td style={s.tdR}>{row.entr.count || "—"}</td>
+                      <td style={s.tdR}>{row.entr.fleches || "—"}</td>
+                      <td style={{ ...s.tdR, color: row.entr.moyFl ? PRIMARY : "#bbb", fontWeight: "600" }}>
+                        {row.entr.moyFl ?? "—"}
+                      </td>
+                      <td style={{ ...s.tdR, borderRight: "2px solid #333" }}>
+                        {row.entr.scoreMoy ?? "—"}
+                      </td>
+                      <td style={s.tdR}>{row.comp.count || "—"}</td>
+                      <td style={s.tdR}>{row.comp.fleches || "—"}</td>
+                      <td style={{ ...s.tdR, color: row.comp.moyFl ? BLUE : "#bbb", fontWeight: "600" }}>
+                        {row.comp.moyFl ?? "—"}
+                      </td>
+                      <td style={s.tdR}>{row.comp.scoreMoy ?? "—"}</td>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "2px solid #444" }}>
+                        {row.total.count || "—"}
+                      </td>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                        {row.total.fleches ? row.total.fleches.toLocaleString("fr-FR") : "—"}
+                      </td>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                        {row.total.moyFl ?? "—"}
+                      </td>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                        {row.total.scoreMoy ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={s.trTotal}>
+                    <td style={{ ...s.td, fontWeight: "700", color: "#e8e8e8" }}>Total</td>
+                    <td style={s.tdR}>{tableTotals.entr.count || "—"}</td>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "#e8e8e8" }}>
+                      {tableTotals.entr.fleches ? tableTotals.entr.fleches.toLocaleString("fr-FR") : "—"}
+                    </td>
+                    <td style={s.tdR}>—</td>
+                    <td style={{ ...s.tdR, borderRight: "2px solid #333" }}>—</td>
+                    <td style={s.tdR}>{tableTotals.comp.count || "—"}</td>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "#e8e8e8" }}>
+                      {tableTotals.comp.fleches ? tableTotals.comp.fleches.toLocaleString("fr-FR") : "—"}
+                    </td>
+                    <td style={s.tdR}>—</td>
+                    <td style={s.tdR}>—</td>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "2px solid #444" }}>
+                      {tableTotals.total.count || "—"}
+                    </td>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                      {tableTotals.total.fleches ? tableTotals.total.fleches.toLocaleString("fr-FR") : "—"}
+                    </td>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                      {tableTotals.total.moyFl ?? "—"}
+                    </td>
+                    <td style={s.tdR}>—</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* ── Vue mobile : cartes par distance ── */}
+            <div className="saisie-cards-mobile">
+              <div className="sdc-summary">
+                <span><strong>{tableTotals.total.count}</strong> séance{tableTotals.total.count > 1 ? "s" : ""}</span>
+                <span className="sdc-summary-sep">·</span>
+                <span><strong>{tableTotals.total.fleches ? tableTotals.total.fleches.toLocaleString("fr-FR") : 0}</strong> flèches au total</span>
+              </div>
+              {tableRows.map((row) => (
+                <div key={row.dist} className="saisie-dist-card">
+                  <div className="sdc-header">
+                    <span className="sdc-dist">{row.dist}</span>
+                    <span className="sdc-total">
+                      {row.total.count} séance{row.total.count > 1 ? "s" : ""} · {row.total.fleches ? row.total.fleches.toLocaleString("fr-FR") : 0} fl.
+                    </span>
+                  </div>
+                  <div className="sdc-body">
+                    <div className="sdc-col sdc-entr">
+                      <div className="sdc-col-label">Entraînement</div>
+                      <StatLine label="Séances"   value={row.entr.count   || "—"} />
+                      <StatLine label="Flèches"   value={row.entr.fleches || "—"} />
+                      <StatLine label="Moy./fl."  value={row.entr.moyFl   ?? "—"} accent={!!row.entr.moyFl}   color="#FF007A" />
+                      <StatLine label="Score moy." value={row.entr.scoreMoy ?? "—"} accent={!!row.entr.scoreMoy} color="#FF007A" />
+                    </div>
+                    <div className="sdc-divider" />
+                    <div className="sdc-col sdc-comp">
+                      <div className="sdc-col-label">Compétition</div>
+                      <StatLine label="Séances"   value={row.comp.count   || "—"} />
+                      <StatLine label="Flèches"   value={row.comp.fleches || "—"} />
+                      <StatLine label="Moy./fl."  value={row.comp.moyFl   ?? "—"} accent={!!row.comp.moyFl}   color="#3b82f6" />
+                      <StatLine label="Score moy." value={row.comp.scoreMoy ?? "—"} accent={!!row.comp.scoreMoy} color="#3b82f6" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <div style={s.emptyStats}>Aucune séance pour cette saison.</div>
         )}
@@ -408,11 +482,12 @@ export default function Saisie() {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-function Field({ label, children }) {
+function Field({ label, children, error }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       <label className="field-label" style={s.label}>{label}</label>
       {children}
+      {error && <span style={s.fieldError}>{error}</span>}
     </div>
   );
 }
@@ -426,6 +501,17 @@ function SummaryItem({ label, value, accent }) {
       <div style={{ fontSize: "26px", fontWeight: "700", color: accent ? PRIMARY : "#ccc" }}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function StatLine({ label, value, accent, color }) {
+  return (
+    <div className="sdc-stat-line">
+      <span className="sdc-stat-label">{label}</span>
+      <span className="sdc-stat-value" style={accent ? { color, fontWeight: "700" } : {}}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -486,7 +572,9 @@ const s = {
     border: "none", borderRadius: "8px", fontSize: "15px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
-  btnOff: { opacity: 0.6, cursor: "not-allowed" },
+  btnOff:     { opacity: 0.6, cursor: "not-allowed" },
+  inputError: { borderColor: "#ef4444" },
+  fieldError: { fontSize: "11px", color: "#ef4444", fontWeight: "500" },
 
   // jauge
   gaugeBox: {

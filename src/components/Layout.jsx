@@ -1,4 +1,8 @@
 import { useState, lazy, Suspense } from "react";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
+
+const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 // ── Imports lazy (chargement à la demande) ────────────────────────────────────
 const Saisie           = lazy(() => import("./archer/Saisie"));
@@ -69,8 +73,9 @@ const sDefault = {
 // ── Layout principal ──────────────────────────────────────────────────────────
 
 export default function Layout({ user, isCoach, onLogout }) {
-  const [section,   setSection]   = useState("archer");
-  const [activeTab, setActiveTab] = useState("new-session");
+  const [section,      setSection]      = useState("archer");
+  const [activeTab,    setActiveTab]    = useState("new-session");
+  const [showChangePwd, setShowChangePwd] = useState(false);
 
   const switchSection = (sec) => {
     setSection(sec);
@@ -107,6 +112,21 @@ export default function Layout({ user, isCoach, onLogout }) {
                 }}>Coach</span>
               )}
             </span>
+            {!isCoach && (
+              <button
+                onClick={() => setShowChangePwd(true)}
+                title="Changer le mot de passe"
+                style={{
+                  background: "none", border: "1px solid #333",
+                  color: "#777", padding: "5px 8px", borderRadius: "6px",
+                  fontSize: "14px", cursor: "pointer", fontFamily: "inherit", lineHeight: 1,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#555"; e.currentTarget.style.color = "#bbb"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#777"; }}
+              >
+                🔑
+              </button>
+            )}
             <button
               onClick={onLogout}
               style={{
@@ -169,6 +189,11 @@ export default function Layout({ user, isCoach, onLogout }) {
 
       </header>
 
+      {/* ── Modale changement mot de passe ── */}
+      {showChangePwd && (
+        <ChangePasswordModal user={user} onClose={() => setShowChangePwd(false)} />
+      )}
+
       {/* ── Contenu ── */}
       <main className="layout-main">
         <Suspense fallback={<div style={{ color: "#777", fontSize: "14px" }}>Chargement…</div>}>
@@ -180,6 +205,107 @@ export default function Layout({ user, isCoach, onLogout }) {
 }
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
+
+function ChangePasswordModal({ user, onClose }) {
+  const [current,  setCurrent]  = useState("");
+  const [next,     setNext]     = useState("");
+  const [confirm,  setConfirm]  = useState("");
+  const [error,    setError]    = useState("");
+  const [success,  setSuccess]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!current || !next || !confirm) { setError("Veuillez remplir tous les champs."); return; }
+    if (next !== confirm)              { setError("Les nouveaux mots de passe ne correspondent pas."); return; }
+    if (next.length < 6)               { setError("Le nouveau mot de passe doit faire au moins 6 caractères."); return; }
+    setLoading(true);
+    try {
+      const snap = await getDoc(doc(db, "users", user.id));
+      if (!snap.exists() || snap.data().mdp !== toBase64(current)) {
+        setError("Mot de passe actuel incorrect.");
+        setLoading(false);
+        return;
+      }
+      await updateDoc(doc(db, "users", user.id), { mdp: toBase64(next) });
+      setSuccess(true);
+    } catch {
+      setError("Erreur lors de la mise à jour. Réessayez.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={sModal.overlay} onClick={onClose}>
+      <div style={sModal.card} onClick={e => e.stopPropagation()}>
+        <div style={sModal.header}>
+          <span style={sModal.title}>Changer le mot de passe</span>
+          <button style={sModal.close} onClick={onClose}>✕</button>
+        </div>
+
+        {success ? (
+          <div style={sModal.successMsg}>
+            ✓ Mot de passe mis à jour avec succès.
+            <button style={sModal.doneBtn} onClick={onClose}>Fermer</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {[
+              { label: "Mot de passe actuel",       val: current,  set: setCurrent  },
+              { label: "Nouveau mot de passe",       val: next,     set: setNext     },
+              { label: "Confirmer le nouveau",       val: confirm,  set: setConfirm  },
+            ].map(({ label, val, set }) => (
+              <div key={label} style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                <label style={sModal.label}>{label}</label>
+                <input
+                  type="password"
+                  value={val}
+                  onChange={e => { set(e.target.value); setError(""); }}
+                  style={sModal.input}
+                  className="login-input"
+                />
+              </div>
+            ))}
+            {error && <div style={sModal.errorMsg}>{error}</div>}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button type="button" onClick={onClose} style={sModal.cancelBtn}>Annuler</button>
+              <button type="submit" disabled={loading} style={{ ...sModal.submitBtn, ...(loading ? { opacity: 0.6 } : {}) }}>
+                {loading ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const sModal = {
+  overlay: {
+    position: "fixed", inset: 0, zIndex: 200,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    padding: "16px",
+  },
+  card: {
+    backgroundColor: "#1a1a1a", borderRadius: "14px",
+    padding: "24px", width: "100%", maxWidth: "360px",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+    display: "flex", flexDirection: "column", gap: "18px",
+  },
+  header:  { display: "flex", alignItems: "center", justifyContent: "space-between" },
+  title:   { fontSize: "15px", fontWeight: "700", color: "#e8e8e8" },
+  close:   { background: "none", border: "none", color: "#666", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
+  label:   { fontSize: "11px", fontWeight: "600", color: "#777", textTransform: "uppercase", letterSpacing: "0.07em" },
+  input:   { padding: "10px 12px", border: "1.5px solid #2e2e2e", borderRadius: "8px", fontSize: "14px", color: "#e8e8e8", backgroundColor: "#252525", outline: "none", fontFamily: "inherit" },
+  errorMsg:   { backgroundColor: "rgba(255,0,122,0.1)", border: "1px solid #FF007A", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#FF007A" },
+  successMsg: { backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "#16a34a", display: "flex", flexDirection: "column", gap: "12px", alignItems: "flex-start" },
+  doneBtn:    { background: "none", border: "1px solid #16a34a", borderRadius: "6px", padding: "6px 14px", fontSize: "13px", color: "#16a34a", cursor: "pointer", fontFamily: "inherit" },
+  cancelBtn:  { background: "none", border: "1px solid #333", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "#aaa", cursor: "pointer", fontFamily: "inherit" },
+  submitBtn:  { backgroundColor: "#FF007A", color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
+};
 
 function SectionBtn({ label, active, onClick }) {
   return (

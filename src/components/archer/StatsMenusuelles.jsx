@@ -3,6 +3,9 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
+import XLSX from "xlsx-js-style";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const PRIMARY    = "#FF007A";
 const BLUE       = "#3b82f6";
@@ -158,6 +161,211 @@ export default function StatsMenusuelles() {
       });
   }, [seances, filterDist, filterSaison]);
 
+  // ── Export helpers ────────────────────────────────────────────────────────
+
+  const groupedByMonth = useMemo(() => {
+    const map = new Map();
+    rows.forEach(row => {
+      if (!map.has(row.month)) map.set(row.month, []);
+      map.get(row.month).push(row);
+    });
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [rows]);
+
+  const EXPORT_COLS = [
+    "Distance", "Séances Entr.", "Séances Comp.",
+    "Paille", "Blason", "Compté", "Score", "Total fl.",
+    "Moy./fl. Entr.", "Score moy. Entr.",
+    "Moy./fl. Comp.", "Score moy. Comp.",
+  ];
+  const EXPORT_NC        = EXPORT_COLS.length; // 12
+  const EXPORT_NUM_COLS  = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+  const rowToArr = (row, asString = false) => [
+    row.distance,
+    row.nbrEntr      || (asString ? "" : ""),
+    row.nbrComp      || (asString ? "" : ""),
+    row.paille       || "",
+    row.blason       || "",
+    row.compteTotal  || "",
+    row.score        || "",
+    row.total        || "",
+    row.moyEntr  != null ? (asString ? row.moyEntr.toFixed(2)  : parseFloat(row.moyEntr.toFixed(2)))  : "",
+    row.scoreMoyEntr ?? "",
+    row.moyComp  != null ? (asString ? row.moyComp.toFixed(2)  : parseFloat(row.moyComp.toFixed(2)))  : "",
+    row.scoreMoyComp ?? "",
+  ];
+
+  // ── Export Excel ──────────────────────────────────────────────────────────
+
+  const handleExportExcel = () => {
+    const NC     = EXPORT_NC;
+    const archer = user ? `${user.prenom} ${user.nom}` : "";
+    const numCols = EXPORT_NUM_COLS;
+
+    const aoa     = [];
+    const merges  = [];
+    const rowMeta = [];
+
+    aoa.push([`Stats mensuelles — ${archer} — Saison ${filterSaison}`, ...Array(NC - 1).fill("")]);
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } });
+    rowMeta.push({ type: "title" });
+    aoa.push(Array(NC).fill(""));
+    rowMeta.push({ type: "empty" });
+
+    groupedByMonth.forEach(([ym, group]) => {
+      const mR = aoa.length;
+      aoa.push([fmtMois(ym), ...Array(NC - 1).fill("")]);
+      merges.push({ s: { r: mR, c: 0 }, e: { r: mR, c: NC - 1 } });
+      rowMeta.push({ type: "month" });
+
+      aoa.push([...EXPORT_COLS]);
+      rowMeta.push({ type: "header" });
+
+      group.forEach((row, i) => {
+        aoa.push(rowToArr(row, false));
+        rowMeta.push({ type: "data", even: i % 2 === 0 });
+      });
+
+      aoa.push(Array(NC).fill(""));
+      rowMeta.push({ type: "empty" });
+    });
+
+    const ws      = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"] = merges;
+    ws["!cols"]   = [
+      { wch: 10 }, { wch: 14 }, { wch: 14 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  },
+      { wch: 8  }, { wch: 10 },
+      { wch: 14 }, { wch: 16 },
+      { wch: 14 }, { wch: 16 },
+    ];
+
+    const ST = {
+      title: {
+        font: { bold: true, sz: 13, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "B30057" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      },
+      month: {
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      },
+      header: (c) => ({
+        font: { bold: true, sz: 9, color: { rgb: "000000" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFCCE5" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        border: { bottom: { style: "medium", color: { rgb: "FF007A" } } },
+      }),
+      dataEven: (c) => ({
+        font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+      }),
+      dataOdd: (c) => ({
+        font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFF0F6" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+      }),
+    };
+
+    const rowHeights = [];
+    rowMeta.forEach((meta, r) => {
+      if (meta.type === "empty") return;
+      if (meta.type === "title")  rowHeights[r] = { hpx: 28 };
+      if (meta.type === "month")  rowHeights[r] = { hpx: 20 };
+      if (meta.type === "header") rowHeights[r] = { hpx: 18 };
+      for (let c = 0; c < NC; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { v: "", t: "s" };
+        ws[addr].s =
+          meta.type === "title"  ? ST.title :
+          meta.type === "month"  ? ST.month :
+          meta.type === "header" ? ST.header(c) :
+          meta.even              ? ST.dataEven(c) : ST.dataOdd(c);
+      }
+    });
+    ws["!rows"] = rowHeights;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stats");
+    XLSX.writeFile(wb, `stats-${filterSaison.replace("/", "-")}.xlsx`);
+  };
+
+  // ── Export PDF ────────────────────────────────────────────────────────────
+
+  const handleExportPDF = () => {
+    const pdf    = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const archer = user ? `${user.prenom} ${user.nom}` : "";
+    const pw     = pdf.internal.pageSize.width;
+    const ph     = pdf.internal.pageSize.height;
+    const NC     = EXPORT_NC;
+    const COL_W  = [14, 18, 18, 12, 12, 12, 12, 14, 20, 24, 20, 0];
+
+    const colStyles = COL_W.reduce((acc, w, i) => {
+      acc[i] = w > 0 ? { cellWidth: w } : {};
+      if (EXPORT_NUM_COLS.includes(i)) acc[i].halign = "right";
+      return acc;
+    }, {});
+
+    const drawTitle = () => {
+      pdf.setFillColor(179, 0, 87);
+      pdf.rect(0, 0, pw, 14, "F");
+      pdf.setFontSize(11);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`Stats mensuelles — ${archer} — Saison ${filterSaison}`, 14, 9.5);
+    };
+    drawTitle();
+
+    let startY = 18;
+
+    groupedByMonth.forEach(([ym, group]) => {
+      if (startY > ph - 30) {
+        pdf.addPage();
+        drawTitle();
+        startY = 18;
+      }
+
+      const body = group.map(row => rowToArr(row, true));
+
+      autoTable(pdf, {
+        head: [
+          [{ content: fmtMois(ym).toUpperCase(), colSpan: NC, styles: {
+            fillColor: [255, 0, 122], textColor: [255, 255, 255],
+            fontStyle: "bold", fontSize: 9, halign: "left",
+            cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+          }}],
+          EXPORT_COLS,
+        ],
+        body,
+        startY,
+        margin: { left: 14, right: 14, top: 18 },
+        styles: { fontSize: 7.5, cellPadding: 2, font: "helvetica" },
+        headStyles: {
+          fillColor: [255, 204, 229], textColor: [0, 0, 0],
+          fontStyle: "bold", fontSize: 8,
+        },
+        bodyStyles: { textColor: [32, 32, 32], fillColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [255, 240, 246] },
+        columnStyles: colStyles,
+        didDrawPage: () => {
+          drawTitle();
+          pdf.setFontSize(8);
+          pdf.setTextColor(180, 0, 86);
+          pdf.setFont("helvetica", "normal");
+          pdf.text(`Page ${pdf.internal.getNumberOfPages()}`, pw - 20, ph - 6);
+        },
+      });
+
+      const nextY = pdf.lastAutoTable.finalY + 6;
+      startY = nextY > ph - 30 ? ph : nextY;
+    });
+
+    pdf.save(`stats-${filterSaison.replace("/", "-")}.pdf`);
+  };
+
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
   return (
@@ -167,6 +375,18 @@ export default function StatsMenusuelles() {
         <div style={s.filters}>
           <FilterSelect label="Saison"   value={filterSaison} options={saisons}   onChange={setFilterSaison} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES} onChange={setFilterDist} />
+          <button
+            style={{ ...s.exportBtn, ...(rows.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+            onClick={handleExportExcel}
+            disabled={rows.length === 0}
+            title="Exporter en Excel (.xlsx)"
+          >↓ Excel</button>
+          <button
+            style={{ ...s.exportBtn, ...(rows.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+            onClick={handleExportPDF}
+            disabled={rows.length === 0}
+            title="Exporter en PDF"
+          >↓ PDF</button>
         </div>
       </div>
 
@@ -347,6 +567,11 @@ const s = {
     padding: "7px 10px", border: "1.5px solid #2e2e2e", borderRadius: "7px",
     fontSize: "13px", color: "#e8e8e8", backgroundColor: "#1e1e1e",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
+  },
+  exportBtn: {
+    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
+    fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   tableWrap: {
     backgroundColor: "#1a1a1a", borderRadius: "12px",

@@ -535,10 +535,9 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
   exportBtn: {
-    backgroundColor: "#1a2a1a", color: "#4ade80",
-    border: "1px solid #2d4a2d", borderRadius: "8px",
-    padding: "8px 18px", fontSize: "13px", fontWeight: "600",
-    cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
+    fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
 
   tableWrap: {

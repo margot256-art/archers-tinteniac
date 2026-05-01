@@ -109,10 +109,11 @@ export default function Classement() {
   const saisonOptions = useMemo(() => {
     const set = new Set(seances.filter(s => s.date).map(s => getSaison(s.date)));
     set.add(CURRENT_SAISON);
-    return [...set].sort().reverse();
+    return ["Toutes", ...[...set].sort().reverse()];
   }, [seances]);
 
   const periodOptions = useMemo(() => {
+    if (filterSaison === "Toutes") return ["Toute la saison"];
     const months = new Set();
     seances
       .filter(s => s.date && getSaison(s.date) === filterSaison)
@@ -130,7 +131,7 @@ export default function Classement() {
   const rows = useMemo(() => {
     const src = seances.filter(s => {
       if (!s.date || !s.archer) return false;
-      if (getSaison(s.date) !== filterSaison) return false;
+      if (filterSaison !== "Toutes" && getSaison(s.date) !== filterSaison) return false;
       if (filterPeriod !== "Toute la saison") {
         const parts = filterPeriod.split(" ");
         const mIdx  = MOIS_FR.indexOf(parts[0]);

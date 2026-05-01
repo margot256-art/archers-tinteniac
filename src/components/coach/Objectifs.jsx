@@ -6,11 +6,25 @@ import { useAllSeances } from "../../hooks/useAllSeances";
 const PRIMARY   = "#FF007A";
 const DIST_LIST = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
+const CURRENT_SAISON = (() => {
+  const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear();
+  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
+})();
+
+// Lit les objectifs d'un archer pour une saison donnée (rétrocompat ancien format)
+function getObjForSaison(raw, saison) {
+  if (!raw) return null;
+  if (raw.saisons?.[saison]) return raw.saisons[saison];
+  // Ancien format : distances + volEntr à la racine
+  if (raw.distances || raw.volEntr) return { distances: raw.distances ?? {}, volEntr: raw.volEntr ?? 0 };
+  return null;
+}
+
 // ── hook : lecture + écriture objectifs ───────────────────────────────────────
 
 function useObjectifsManager() {
-  const [objectifs, setObjectifs]         = useState({});
-  const [objectifsLoaded, setLoaded] = useState(false);
+  const [objectifs, setObjectifs] = useState({});
+  const [loaded,    setLoaded]    = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "objectifs"), (snap) => {
@@ -22,32 +36,41 @@ function useObjectifsManager() {
     return () => unsub();
   }, []);
 
-  const saveObjectif = async (archerId, archerName, distances, volEntr) => {
+  const saveObjectif = async (archerId, archerName, saison, distances, volEntr) => {
     const cleanDist = {};
     for (const [dist, val] of Object.entries(distances)) {
       const n = parseInt(val, 10);
       if (n > 0) cleanDist[dist] = n;
     }
+    const existing = objectifs[archerId] ?? {};
+    const saisons  = { ...(existing.saisons ?? {}) };
+    saisons[saison] = { distances: cleanDist, volEntr: parseInt(volEntr, 10) || 0 };
+
     await setDoc(doc(db, "objectifs", archerId), {
-      archer:    archerName,
+      archer:   archerName,
       archerId,
-      distances: cleanDist,
-      volEntr:   parseInt(volEntr, 10) || 0,
-    });
+      saisons,
+    }, { merge: true });
   };
 
-  return { objectifs, objectifsLoaded, saveObjectif };
+  return { objectifs, loaded, saveObjectif };
 }
 
 // ── carte par archer ──────────────────────────────────────────────────────────
 
-function ArcherCard({ archer, objectif, onSave }) {
+function ArcherCard({ archer, objectif, saison, onSave }) {
   const [distances, setDistances] = useState(
     Object.fromEntries(DIST_LIST.map((d) => [d, String(objectif?.distances?.[d] ?? "")]))
   );
   const [volEntr,  setVolEntr]  = useState(String(objectif?.volEntr ?? ""));
   const [saving,   setSaving]   = useState(false);
-  const [feedback, setFeedback] = useState(null); // "ok" | "err" | null
+  const [feedback, setFeedback] = useState(null);
+
+  // Resync si saison change
+  useEffect(() => {
+    setDistances(Object.fromEntries(DIST_LIST.map((d) => [d, String(objectif?.distances?.[d] ?? "")])));
+    setVolEntr(String(objectif?.volEntr ?? ""));
+  }, [saison, objectif]);
 
   const setDist = (d) => (e) =>
     setDistances((prev) => ({ ...prev, [d]: e.target.value }));
@@ -70,13 +93,11 @@ function ArcherCard({ archer, objectif, onSave }) {
 
   return (
     <div style={s.card}>
-      {/* header */}
       <div style={s.cardHeader}>
         <span style={s.archerName}>{archer.name}</span>
-        {hasDef && <span style={s.dot} title="Objectif défini" />}
+        {hasDef && <span style={s.dot} title="Objectif défini pour cette saison" />}
       </div>
 
-      {/* distances */}
       <div style={s.section}>
         <div style={s.sectionLabel}>Score cible par distance</div>
         <div style={s.distGrid}>
@@ -97,7 +118,6 @@ function ArcherCard({ archer, objectif, onSave }) {
         </div>
       </div>
 
-      {/* volume mensuel */}
       <div style={s.section}>
         <div style={s.sectionLabel}>Volume mensuel entraînement (flèches)</div>
         <input
@@ -111,7 +131,6 @@ function ArcherCard({ archer, objectif, onSave }) {
         />
       </div>
 
-      {/* footer */}
       <div style={s.cardFooter}>
         <div style={s.feedbackArea}>
           {feedback === "ok"  && <span style={s.feedOk}>Sauvegardé</span>}
@@ -133,22 +152,36 @@ function ArcherCard({ archer, objectif, onSave }) {
 
 export default function Objectifs() {
   const { seances, loading: loadingSeances } = useAllSeances();
-  const { objectifs, objectifsLoaded, saveObjectif } = useObjectifsManager();
+  const { objectifs, loaded, saveObjectif }  = useObjectifsManager();
+  const [saison, setSaison] = useState(CURRENT_SAISON);
+
+  const saisonOptions = useMemo(() => {
+    const set = new Set(seances.filter(s => s.date).map(s => {
+      const [y, m] = s.date.split("-").map(Number);
+      return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
+    }));
+    set.add(CURRENT_SAISON);
+    return [...set].sort().reverse();
+  }, [seances]);
 
   const archers = useMemo(() => {
     const map = {};
     for (const s of seances) {
       if (!s.archer) continue;
-      if (!map[s.archer]) {
-        map[s.archer] = { id: s.archerId, name: s.archer };
-      } else if (!map[s.archer].id && s.archerId) {
-        map[s.archer].id = s.archerId;
-      }
+      if (!map[s.archer]) map[s.archer] = { id: s.archerId, name: s.archer };
+      else if (!map[s.archer].id && s.archerId) map[s.archer].id = s.archerId;
     }
     return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
   }, [seances]);
 
-  const loading = loadingSeances || !objectifsLoaded;
+  const loading = loadingSeances || !loaded;
+
+  const defCount = useMemo(() =>
+    archers.filter((a) => {
+      const raw = objectifs[a.id] ?? objectifs[a.name.trim().toLowerCase().replace(/\s+/g, "_")];
+      return !!getObjForSaison(raw, saison);
+    }).length,
+  [archers, objectifs, saison]);
 
   if (loading) return <div style={s.info}>Chargement…</div>;
 
@@ -156,35 +189,47 @@ export default function Objectifs() {
     <div style={s.page}>
       <div style={s.header}>
         <h2 style={s.pageTitle}>Objectifs des archers</h2>
-        <span style={s.subtitle}>
-          {archers.filter((a) => objectifs[a.id]).length} / {archers.length} objectif{archers.length > 1 ? "s" : ""} défini{archers.length > 1 ? "s" : ""}
-        </span>
+        <div style={s.headerRight}>
+          <span style={s.subtitle}>{defCount} / {archers.length} défini{archers.length > 1 ? "s" : ""}</span>
+          <div style={s.saisonWrap}>
+            <span style={s.saisonLabel}>Saison</span>
+            <select
+              value={saison}
+              onChange={e => setSaison(e.target.value)}
+              className="coach-filter-select"
+            >
+              {saisonOptions.map(sn => <option key={sn}>{sn}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
       {archers.length === 0 ? (
         <div style={s.emptyPage}>Aucun archer trouvé dans les séances.</div>
       ) : (
         <div style={s.grid}>
-          {archers.map((a) => (
-            <ArcherCard
-              key={a.name}
-              archer={a}
-              objectif={
-                objectifs[a.id] ??
-                objectifs[a.name.trim().toLowerCase().replace(/\s+/g, "_")] ??
-                Object.values(objectifs).find(o => o.archer === a.name)
-              }
-              onSave={(distances, volEntr) => {
-                const safeId = a.id ?? a.name.trim().toLowerCase().replace(/\s+/g, "_");
-                return saveObjectif(safeId, a.name, distances, volEntr);
-              }}
-            />
-          ))}
+          {archers.map((a) => {
+            const raw = objectifs[a.id]
+              ?? objectifs[a.name.trim().toLowerCase().replace(/\s+/g, "_")]
+              ?? Object.values(objectifs).find(o => o.archer === a.name);
+            return (
+              <ArcherCard
+                key={a.name + saison}
+                archer={a}
+                objectif={getObjForSaison(raw, saison)}
+                saison={saison}
+                onSave={(distances, volEntr) => {
+                  const safeId = a.id ?? a.name.trim().toLowerCase().replace(/\s+/g, "_");
+                  return saveObjectif(safeId, a.name, saison, distances, volEntr);
+                }}
+              />
+            );
+          })}
         </div>
       )}
 
       <div style={s.legend}>
-        <span style={{ ...s.dot, position: "static", display: "inline-block" }} /> Objectif défini
+        <span style={{ ...s.dot, position: "static", display: "inline-block" }} /> Objectif défini pour cette saison
       </div>
     </div>
   );
@@ -194,9 +239,15 @@ export default function Objectifs() {
 
 const s = {
   page:      { display: "flex", flexDirection: "column", gap: "20px" },
-  header:    { display: "flex", alignItems: "baseline", gap: "14px", flexWrap: "wrap" },
+  header:    { display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
   pageTitle: { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
+  headerRight: { display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" },
   subtitle:  { fontSize: "13px", color: "var(--text-dim)" },
+  saisonWrap: { display: "flex", alignItems: "center", gap: "8px" },
+  saisonLabel: {
+    fontSize: "11px", fontWeight: "700", color: "var(--text-muted)",
+    textTransform: "uppercase", letterSpacing: "0.07em",
+  },
   info:      { color: "var(--text-muted)", fontSize: "14px" },
   emptyPage: {
     backgroundColor: "var(--surface)", borderRadius: "12px",
@@ -235,32 +286,27 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
 
-  // distance grid (2 columns)
-  distGrid: {
-    display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px",
-  },
-  distRow: { display: "flex", alignItems: "center", gap: "8px" },
+  distGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px" },
+  distRow:  { display: "flex", alignItems: "center", gap: "8px" },
   distLabel: {
     fontSize: "12px", fontWeight: "600", color: "var(--text-dim)",
     width: "30px", flexShrink: 0,
   },
 
-  // input
   input: {
-    padding: "6px 8px", border: "var(--border-2)", borderRadius: "6px",
+    padding: "6px 8px", border: "1.5px solid var(--border-2)", borderRadius: "6px",
     fontSize: "13px", color: "var(--text)", fontFamily: "inherit",
     outline: "none", width: "70px", backgroundColor: "var(--input-bg)",
     transition: "border-color 0.15s",
   },
 
-  // footer
   cardFooter: {
     display: "flex", alignItems: "center",
     justifyContent: "space-between", gap: "12px",
-    paddingTop: "4px", borderTop: "var(--border)",
+    paddingTop: "4px", borderTop: "1px solid var(--border)",
   },
   feedbackArea: { minHeight: "20px" },
-  feedOk: { fontSize: "12px", color: "#16a34a", fontWeight: "600" },
+  feedOk:  { fontSize: "12px", color: "#16a34a", fontWeight: "600" },
   feedErr: { fontSize: "12px", color: "#ef4444", fontWeight: "600" },
   btn: {
     backgroundColor: PRIMARY, color: "#fff",
@@ -271,7 +317,6 @@ const s = {
   },
   btnBusy: { opacity: 0.6, cursor: "not-allowed" },
 
-  // legend
   legend: {
     fontSize: "12px", color: "var(--text-dim)",
     display: "flex", alignItems: "center", gap: "6px",

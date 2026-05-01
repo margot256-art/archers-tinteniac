@@ -141,16 +141,25 @@ export default function Graphiques() {
   const colors                          = useChartColors();
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
-  const [objectives,   setObjectives]   = useState({});
+  const [rawObjectif,  setRawObjectif]  = useState(null);
 
   useEffect(() => {
     if (!user) return;
     const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
     const unsub = onSnapshot(doc(db, "objectifs", archerId), (snap) => {
-      setObjectives(snap.exists() ? (snap.data().distances ?? {}) : {});
+      setRawObjectif(snap.exists() ? snap.data() : null);
     });
     return () => unsub();
   }, [user]);
+
+  // Objectifs pour la saison sélectionnée (rétrocompat ancien format)
+  const objectives = useMemo(() => {
+    if (!rawObjectif) return {};
+    const s = filterSaison === "Toutes" ? CURRENT_SAISON : filterSaison;
+    if (rawObjectif.saisons?.[s]) return rawObjectif.saisons[s].distances ?? {};
+    if (rawObjectif.distances) return rawObjectif.distances;
+    return {};
+  }, [rawObjectif, filterSaison]);
 
   const saisons = useMemo(() => {
     const set = new Set(seances.map(s => s.date ? getSaison(s.date) : null).filter(Boolean));

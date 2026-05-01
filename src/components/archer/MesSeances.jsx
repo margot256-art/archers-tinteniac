@@ -62,16 +62,24 @@ export default function MesSeances() {
   const [editId,     setEditId]     = useState(null);
   const [editData,   setEditData]   = useState(null);
   const [editSaving, setEditSaving] = useState(false);
-  const [volEntr,    setVolEntr]    = useState(null);
+  const [rawObjectif, setRawObjectif] = useState(null);
 
   useEffect(() => {
     if (!user) return;
     const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
     const unsub = onSnapshot(doc(db, "objectifs", archerId), (snap) => {
-      setVolEntr(snap.exists() ? (snap.data().volEntr || 0) : null);
+      setRawObjectif(snap.exists() ? snap.data() : null);
     });
     return () => unsub();
   }, [user]);
+
+  // volEntr pour la saison filtrée (rétrocompat ancien format)
+  const volEntr = useMemo(() => {
+    if (!rawObjectif) return null;
+    if (rawObjectif.saisons?.[filterSaison]) return rawObjectif.saisons[filterSaison].volEntr ?? 0;
+    if (rawObjectif.volEntr != null) return rawObjectif.volEntr;
+    return null;
+  }, [rawObjectif, filterSaison]);
 
   const currentYM = todayYM();
 

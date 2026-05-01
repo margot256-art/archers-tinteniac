@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
+import XLSX from "xlsx-js-style";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const PRIMARY    = "#FF007A";
 const BLUE       = "#3b82f6";
@@ -182,6 +185,212 @@ export default function StatsCoach() {
       });
   }, [saisonSeances, filterArcher, filterDist]);
 
+  // ── Export helpers ────────────────────────────────────────────────────────
+
+  const EXPORT_COLS = [
+    "Mois", "Archer", "Distance", "Séances Entr.", "Séances Comp.",
+    "Paille", "Blason", "Compté", "Score", "Total fl.",
+    "Moy./fl. Entr.", "Score moy. Entr.",
+    "Moy./fl. Comp.", "Score moy. Comp.",
+  ];
+  const EXPORT_NC       = EXPORT_COLS.length; // 14
+  const EXPORT_NUM_COLS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+
+  const rowToArr = (row, asString = false) => [
+    fmtMois(row.month),
+    row.archer,
+    row.distance,
+    row.nbrEntr     || "",
+    row.nbrComp     || "",
+    row.paille      || "",
+    row.blason      || "",
+    row.compteTotal || "",
+    row.score       || "",
+    row.total       || "",
+    row.moyEntr  != null ? (asString ? row.moyEntr.toFixed(2) : parseFloat(row.moyEntr.toFixed(2))) : "",
+    row.scoreMoyEntr ?? "",
+    row.moyComp  != null ? (asString ? row.moyComp.toFixed(2) : parseFloat(row.moyComp.toFixed(2))) : "",
+    row.scoreMoyComp ?? "",
+  ];
+
+  const buildTotalRow = (asString = false) => {
+    const t = rows.reduce((acc, row) => ({
+      nbrEntr:     acc.nbrEntr     + row.nbrEntr,
+      nbrComp:     acc.nbrComp     + row.nbrComp,
+      paille:      acc.paille      + row.paille,
+      blason:      acc.blason      + row.blason,
+      compteTotal: acc.compteTotal + row.compteTotal,
+      score:       acc.score       + row.score,
+      total:       acc.total       + row.total,
+      scoreEntr:   acc.scoreEntr   + row.scoreEntr,
+      compteEntr:  acc.compteEntr  + row.compteEntr,
+      scoreComp:   acc.scoreComp   + row.scoreComp,
+      compteComp:  acc.compteComp  + row.compteComp,
+    }), { nbrEntr:0, nbrComp:0, paille:0, blason:0, compteTotal:0, score:0, total:0, scoreEntr:0, compteEntr:0, scoreComp:0, compteComp:0 });
+    const moyEntr = t.compteEntr > 0 ? t.scoreEntr / t.compteEntr : null;
+    const moyComp = t.compteComp > 0 ? t.scoreComp / t.compteComp : null;
+    const fmt = (v) => v != null ? (asString ? v.toFixed(2) : parseFloat(v.toFixed(2))) : "";
+    return [
+      `Total — Saison ${filterSaison}`, "", "",
+      t.nbrEntr  || "", t.nbrComp  || "",
+      t.paille   || "", t.blason   || "", t.compteTotal || "",
+      t.score    || "", t.total    || "",
+      fmt(moyEntr), "", fmt(moyComp), "",
+    ];
+  };
+
+  const exportTitle = filterArcher !== "Tous"
+    ? `Stats mensuelles — ${filterArcher} — Saison ${filterSaison}`
+    : `Stats mensuelles — club — Saison ${filterSaison}`;
+
+  // ── Export Excel ──────────────────────────────────────────────────────────
+
+  const handleExportExcel = () => {
+    const NC      = EXPORT_NC;
+    const numCols = EXPORT_NUM_COLS;
+    const center  = { horizontal: "center", vertical: "center" };
+
+    const aoa     = [];
+    const merges  = [];
+    const rowMeta = [];
+
+    aoa.push([exportTitle, ...Array(NC - 1).fill("")]);
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } });
+    rowMeta.push({ type: "title" });
+    aoa.push(Array(NC).fill(""));
+    rowMeta.push({ type: "empty" });
+
+    aoa.push([...EXPORT_COLS]);
+    rowMeta.push({ type: "header" });
+
+    rows.forEach((row, i) => {
+      aoa.push(rowToArr(row, false));
+      rowMeta.push({ type: "data", even: i % 2 === 0 });
+    });
+
+    aoa.push(buildTotalRow(false));
+    rowMeta.push({ type: "total" });
+
+    const ws      = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"] = merges;
+    ws["!cols"]   = [
+      { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 10 },
+      { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 18 },
+    ];
+
+    const ST = {
+      title: {
+        font: { bold: true, sz: 13, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "B30057" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      },
+      header: {
+        font: { bold: true, sz: 9, color: { rgb: "000000" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFCCE5" } },
+        alignment: center,
+        border: { bottom: { style: "medium", color: { rgb: "FF007A" } } },
+      },
+      dataEven: {
+        font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+        alignment: center,
+      },
+      dataOdd: {
+        font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFF0F6" } },
+        alignment: center,
+      },
+      total: {
+        font: { bold: true, sz: 9, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
+        alignment: center,
+        border: { top: { style: "medium", color: { rgb: "B30057" } } },
+      },
+    };
+
+    const rowHeights = [];
+    rowMeta.forEach((meta, r) => {
+      if (meta.type === "empty") return;
+      if (meta.type === "title")  rowHeights[r] = { hpx: 28 };
+      if (meta.type === "header") rowHeights[r] = { hpx: 18 };
+      for (let c = 0; c < NC; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { v: "", t: "s" };
+        ws[addr].s =
+          meta.type === "title"  ? ST.title  :
+          meta.type === "header" ? ST.header :
+          meta.type === "total"  ? ST.total  :
+          meta.even              ? ST.dataEven : ST.dataOdd;
+      }
+    });
+    ws["!rows"] = rowHeights;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stats");
+    XLSX.writeFile(wb, `stats-club-${filterSaison.replace("/", "-")}.xlsx`);
+  };
+
+  // ── Export PDF ────────────────────────────────────────────────────────────
+
+  const handleExportPDF = () => {
+    const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pw    = pdf.internal.pageSize.width;
+    const ph    = pdf.internal.pageSize.height;
+    // Mois(22) Archer(24) Dist(10) SéEntr(14) SéComp(14) Paille(10) Blason(10) Compté(10) Score(10) Total(12) MoyEntr(18) ScMoyEntr(22) MoyComp(18) ScMoyComp(auto)
+    const COL_W = [22, 24, 10, 14, 14, 10, 10, 10, 10, 12, 18, 22, 18, 0];
+
+    const colStyles = COL_W.reduce((acc, w, i) => {
+      acc[i] = { halign: "center" };
+      if (w > 0) acc[i].cellWidth = w;
+      return acc;
+    }, {});
+
+    const drawTitle = () => {
+      pdf.setFillColor(179, 0, 87);
+      pdf.rect(0, 0, pw, 14, "F");
+      pdf.setFontSize(11);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(exportTitle, 14, 9.5);
+    };
+    drawTitle();
+
+    const body     = rows.map(row => rowToArr(row, true));
+    const totalRow = buildTotalRow(true);
+
+    autoTable(pdf, {
+      head: [EXPORT_COLS],
+      body: [...body, totalRow],
+      startY: 18,
+      margin: { left: 14, right: 14, top: 18 },
+      styles: { fontSize: 7.5, cellPadding: 2, font: "helvetica", halign: "center" },
+      headStyles: {
+        fillColor: [255, 204, 229], textColor: [0, 0, 0],
+        fontStyle: "bold", fontSize: 8, halign: "center",
+      },
+      bodyStyles: { textColor: [32, 32, 32], fillColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [255, 240, 246] },
+      columnStyles: colStyles,
+      didParseCell: ({ row, cell, section }) => {
+        if (section === "body" && row.index === body.length) {
+          cell.styles.fillColor = [255, 0, 122];
+          cell.styles.textColor = [255, 255, 255];
+          cell.styles.fontStyle = "bold";
+        }
+      },
+      didDrawPage: () => {
+        drawTitle();
+        pdf.setFontSize(8);
+        pdf.setTextColor(180, 0, 86);
+        pdf.setFont("helvetica", "normal");
+        pdf.text(`Page ${pdf.internal.getNumberOfPages()}`, pw - 20, ph - 6);
+      },
+    });
+
+    pdf.save(`stats-club-${filterSaison.replace("/", "-")}.pdf`);
+  };
+
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
   return (
@@ -242,6 +451,20 @@ export default function StatsCoach() {
         <div style={s.filters}>
           <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              style={{ ...s.exportBtn, ...(rows.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+              onClick={handleExportExcel}
+              disabled={rows.length === 0}
+              title="Exporter en Excel (.xlsx)"
+            >↓ Excel</button>
+            <button
+              style={{ ...s.exportBtn, ...(rows.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+              onClick={handleExportPDF}
+              disabled={rows.length === 0}
+              title="Exporter en PDF"
+            >↓ PDF</button>
+          </div>
         </div>
       </div>
 
@@ -373,9 +596,14 @@ const thBase = {
 
 const s = {
   page:   { display: "flex", flexDirection: "column", gap: "16px" },
-  header: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
   title:  { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: 0 },
   filters:{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
+  exportBtn: {
+    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
+    fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
+  },
   filterLabel: {
     fontSize: "12px", fontWeight: "600", color: "#777",
     textTransform: "uppercase", letterSpacing: "0.06em",

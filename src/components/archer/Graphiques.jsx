@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useChartColors } from "../../hooks/useChartColors";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -71,26 +72,26 @@ const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
 const getCompte  = s => s.compte ?? s.volumeCompte ?? 0;
 const fmtSaison  = s => "S" + s.split("/")[1];
 
-const makeDistBarOpts = (nf) => ({
+const makeDistBarOpts = (nf, colors) => ({
   responsive: true,
   maintainAspectRatio: false,
   scales: {
     x: {
-      ticks: { font: { size: 12 }, color: "var(--text-muted)" },
+      ticks: { font: { size: 12 }, color: colors.muted },
       grid: { display: false },
     },
     y: {
       min: 0,
       max: nf * 10,
-      ticks: { font: { size: 11 }, color: "var(--text-dim)", stepSize: 100 },
-      grid: { color: "var(--border)" },
-      title: { display: true, text: `/ ${nf * 10}`, color: "var(--text-dim)", font: { size: 11 } },
+      ticks: { font: { size: 11 }, color: colors.dim, stepSize: 100 },
+      grid: { color: colors.grid },
+      title: { display: true, text: `/ ${nf * 10}`, color: colors.dim, font: { size: 11 } },
     },
   },
   plugins: {
     legend: {
       labels: {
-        font: { size: 12 }, color: "#fff", boxWidth: 12, padding: 14,
+        font: { size: 12 }, color: colors.text, boxWidth: 12, padding: 14,
         generateLabels: (chart) => {
           const items = chart.data.datasets.map((ds, i) => ({
             text: ds.label,
@@ -100,7 +101,7 @@ const makeDistBarOpts = (nf) => ({
             lineWidth: 0,
             hidden: !chart.isDatasetVisible(i),
             datasetIndex: i,
-            fontColor: "#fff",
+            fontColor: colors.text,
           }));
           const objCfg = chart.options.plugins?.horizontalLine;
           if (objCfg?.value) {
@@ -111,7 +112,7 @@ const makeDistBarOpts = (nf) => ({
               lineDash: [6, 3],
               lineWidth: 2,
               hidden: false,
-              fontColor: "#fff",
+              fontColor: colors.text,
             });
           }
           return items;
@@ -127,9 +128,6 @@ const makeDistBarOpts = (nf) => ({
   },
 });
 
-const DIST_BAR_OPTS_60 = makeDistBarOpts(60);
-const DIST_BAR_OPTS_72 = makeDistBarOpts(72);
-
 const CURRENT_SAISON = (() => {
   const d = new Date();
   const m = d.getMonth() + 1;
@@ -140,6 +138,7 @@ const CURRENT_SAISON = (() => {
 export default function Graphiques() {
   const { user }                        = useAuth();
   const { seances, loading, error }     = useSeances();
+  const colors                          = useChartColors();
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
   const [objectives,   setObjectives]   = useState({});
@@ -161,6 +160,7 @@ export default function Graphiques() {
 
   // ── Chart 1 : une séance = un point ──────────────────────────────────────
   const { lineData, lineOpts, hasLineData } = useMemo(() => {
+    // colors est capturé dans la closure — useMemo se relance quand colors.theme change
     const src = seances
       .filter(s => {
         if (!s.date) return false;
@@ -224,21 +224,21 @@ export default function Graphiques() {
       scales: {
         x: {
           ticks: {
-            font: { size: 11 }, color: "var(--text-dim)",
+            font: { size: 11 }, color: colors.dim,
             maxRotation: 45, autoSkip: true, maxTicksLimit: 24,
           },
-          grid: { color: "var(--border)" },
+          grid: { color: colors.grid },
         },
         y: {
           beginAtZero: false,
-          ticks: { font: { size: 11 }, color: "var(--text-dim)" },
-          grid: { color: "var(--border)" },
-          title: { display: true, text: "Moy. / flèche", color: "var(--text-dim)", font: { size: 11 } },
+          ticks: { font: { size: 11 }, color: colors.dim },
+          grid: { color: colors.grid },
+          title: { display: true, text: "Moy. / flèche", color: colors.dim, font: { size: 11 } },
         },
       },
       plugins: {
         legend: {
-          labels: { font: { size: 12 }, color: "#fff", boxWidth: 18, padding: 18 },
+          labels: { font: { size: 12 }, color: colors.text, boxWidth: 18, padding: 18 },
         },
         tooltip: {
           callbacks: {
@@ -262,7 +262,7 @@ export default function Graphiques() {
     };
 
     return { lineData, lineOpts, hasLineData: entraData.some(v => v !== null) || compData.some(v => v !== null) };
-  }, [seances, filterDist, filterSaison, objectives]);
+  }, [seances, filterDist, filterSaison, objectives, colors.theme]);
 
   // ── Chart 2 : score moyen par mois ──────────────────────────────────────────
   const { monthlyData, monthlyOpts, hasMonthlyData } = useMemo(() => {
@@ -328,19 +328,19 @@ export default function Graphiques() {
       maintainAspectRatio: false,
       scales: {
         x: {
-          ticks: { font: { size: 11 }, color: "var(--text-dim)", maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
-          grid: { color: "var(--border)" },
+          ticks: { font: { size: 11 }, color: colors.dim, maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
+          grid: { color: colors.grid },
         },
         y: {
           beginAtZero: false,
-          ticks: { font: { size: 11 }, color: "var(--text-dim)" },
-          grid: { color: "var(--border)" },
-          title: { display: true, text: "Moy. / flèche", color: "var(--text-dim)", font: { size: 11 } },
+          ticks: { font: { size: 11 }, color: colors.dim },
+          grid: { color: colors.grid },
+          title: { display: true, text: "Moy. / flèche", color: colors.dim, font: { size: 11 } },
         },
       },
       plugins: {
         legend: {
-          labels: { font: { size: 12 }, color: "#fff", boxWidth: 18, padding: 18 },
+          labels: { font: { size: 12 }, color: colors.text, boxWidth: 18, padding: 18 },
         },
         tooltip: {
           callbacks: {
@@ -367,7 +367,7 @@ export default function Graphiques() {
       monthlyOpts: opts,
       hasMonthlyData: entraData.some(v => v !== null) || compData.some(v => v !== null),
     };
-  }, [seances, filterDist, filterSaison, objectives]);
+  }, [seances, filterDist, filterSaison, objectives, colors.theme]);
 
   // ── Chart 3 : top 3 moy. par distance, 1 graphique / distance, X = saisons ──
   const distBarCharts = useMemo(() => {
@@ -404,7 +404,7 @@ export default function Graphiques() {
         ];
 
         const objVal = objectives[dist];
-        const baseOpts = nf === 60 ? DIST_BAR_OPTS_60 : DIST_BAR_OPTS_72;
+        const baseOpts = makeDistBarOpts(nf, colors);
         const opts = objVal != null
           ? { ...baseOpts, plugins: { ...baseOpts.plugins, horizontalLine: { value: objVal, color: OBJ_COLOR } } }
           : baseOpts;
@@ -412,7 +412,7 @@ export default function Graphiques() {
         return { dist, nf, data: { labels: allSaisons.map(fmtSaison), datasets }, opts, objVal };
       })
       .filter(Boolean);
-  }, [seances, objectives]);
+  }, [seances, objectives, colors.theme]);
 
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;

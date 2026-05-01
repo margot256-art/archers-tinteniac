@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useChartColors } from "../../hooks/useChartColors";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -72,25 +73,25 @@ function getCurrentSaison() {
 }
 const CURRENT_SAISON = getCurrentSaison();
 
-const makeDistBarOpts = (nf) => ({
+const makeDistBarOpts = (nf, colors) => ({
   responsive: true,
   maintainAspectRatio: false,
   scales: {
     x: {
-      ticks: { font: { size: 12 }, color: "var(--text-muted)" },
+      ticks: { font: { size: 12 }, color: colors.muted },
       grid: { display: false },
     },
     y: {
       min: 0, max: nf * 10,
-      ticks: { font: { size: 11 }, color: "var(--text-dim)", stepSize: 100 },
-      grid: { color: "var(--border)" },
-      title: { display: true, text: `/ ${nf * 10}`, color: "var(--text-dim)", font: { size: 11 } },
+      ticks: { font: { size: 11 }, color: colors.dim, stepSize: 100 },
+      grid: { color: colors.grid },
+      title: { display: true, text: `/ ${nf * 10}`, color: colors.dim, font: { size: 11 } },
     },
   },
   plugins: {
     legend: {
       labels: {
-        font: { size: 12 }, color: "#fff", boxWidth: 12, padding: 14,
+        font: { size: 12 }, color: colors.text, boxWidth: 12, padding: 14,
       },
     },
     tooltip: {
@@ -100,8 +101,6 @@ const makeDistBarOpts = (nf) => ({
     },
   },
 });
-const DIST_BAR_OPTS_60 = makeDistBarOpts(60);
-const DIST_BAR_OPTS_72 = makeDistBarOpts(72);
 
 // ── Sous-composants ────────────────────────────────────────────────────────────
 
@@ -120,6 +119,7 @@ function FilterSelect({ label, value, options, onChange }) {
 
 export default function CoachGraph() {
   const { seances, loading, error } = useAllSeances();
+  const colors = useChartColors();
 
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
 
@@ -281,19 +281,19 @@ export default function CoachGraph() {
       maintainAspectRatio: false,
       scales: {
         x: {
-          ticks: { font: { size: 11 }, color: "var(--text-dim)", maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
-          grid: { color: "var(--border)" },
+          ticks: { font: { size: 11 }, color: colors.dim, maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
+          grid: { color: colors.grid },
         },
         y: {
           beginAtZero: false,
-          ticks: { font: { size: 11 }, color: "var(--text-dim)" },
-          grid: { color: "var(--border)" },
-          title: { display: true, text: "Moy. / flèche", color: "var(--text-dim)", font: { size: 11 } },
+          ticks: { font: { size: 11 }, color: colors.dim },
+          grid: { color: colors.grid },
+          title: { display: true, text: "Moy. / flèche", color: colors.dim, font: { size: 11 } },
         },
       },
       plugins: {
         legend: {
-          labels: { font: { size: 12 }, color: "#fff", boxWidth: 18, padding: 18 },
+          labels: { font: { size: 12 }, color: colors.text, boxWidth: 18, padding: 18 },
         },
         tooltip: {
           callbacks: {
@@ -319,7 +319,7 @@ export default function CoachGraph() {
       c3Opts: opts,
       hasC3: entraData.some(v => v !== null) || compData.some(v => v !== null),
     };
-  }, [seances, filterSaison, c3Archer, c3Dist]);
+  }, [seances, filterSaison, c3Archer, c3Dist, colors.theme]);
 
   // ── Chart 4 : meilleur score moy. par distance — toutes saisons ──────────
 
@@ -358,21 +358,21 @@ export default function CoachGraph() {
             backgroundColor: "rgba(59,130,246,0.75)", borderRadius: 4 },
         ];
 
-        const baseOpts = nf === 60 ? DIST_BAR_OPTS_60 : DIST_BAR_OPTS_72;
+        const baseOpts = makeDistBarOpts(nf, colors);
         return { dist, nf, data: { labels: allSaisons.map(fmtSaison), datasets }, opts: baseOpts };
       })
       .filter(Boolean);
-  }, [seances, c4Archer]);
+  }, [seances, c4Archer, colors.theme]);
 
   // ── Options Chart 1 & 2 ───────────────────────────────────────────────────
 
-  const c1Opts = {
+  const c1Opts = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "bottom",
-        labels: { font: { size: 12 }, color: "var(--text-2)", boxWidth: 14, padding: 18 },
+        labels: { font: { size: 12 }, color: colors.text2, boxWidth: 14, padding: 18 },
       },
       tooltip: {
         callbacks: {
@@ -382,25 +382,25 @@ export default function CoachGraph() {
     },
     scales: {
       x: {
-        ticks: { font: { size: 10 }, color: "var(--text-dim)", maxRotation: 45, maxTicksLimit: 18 },
-        grid: { color: "var(--border)" },
+        ticks: { font: { size: 10 }, color: colors.dim, maxRotation: 45, maxTicksLimit: 18 },
+        grid: { color: colors.grid },
       },
       y: {
         beginAtZero: false,
-        ticks: { font: { size: 11 }, color: "var(--text-dim)" },
-        grid: { color: "var(--border)" },
-        title: { display: true, text: "Moy. / flèche", color: "var(--text-dim)", font: { size: 11 } },
+        ticks: { font: { size: 11 }, color: colors.dim },
+        grid: { color: colors.grid },
+        title: { display: true, text: "Moy. / flèche", color: colors.dim, font: { size: 11 } },
       },
     },
-  };
+  }), [colors.theme]);
 
-  const c2Opts = {
+  const c2Opts = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "bottom",
-        labels: { font: { size: 12 }, color: "var(--text-2)", boxWidth: 14, padding: 18 },
+        labels: { font: { size: 12 }, color: colors.text2, boxWidth: 14, padding: 18 },
       },
       tooltip: {
         callbacks: {
@@ -410,17 +410,17 @@ export default function CoachGraph() {
     },
     scales: {
       x: {
-        ticks: { font: { size: 12 }, color: "var(--text-muted)" },
-        grid: { color: "var(--border)" },
+        ticks: { font: { size: 12 }, color: colors.muted },
+        grid: { color: colors.grid },
       },
       y: {
         beginAtZero: false,
-        ticks: { font: { size: 11 }, color: "var(--text-dim)" },
-        grid: { color: "var(--border)" },
-        title: { display: true, text: "Meilleur score normalisé", color: "var(--text-dim)", font: { size: 11 } },
+        ticks: { font: { size: 11 }, color: colors.dim },
+        grid: { color: colors.grid },
+        title: { display: true, text: "Meilleur score normalisé", color: colors.dim, font: { size: 11 } },
       },
     },
-  };
+  }), [colors.theme]);
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
 

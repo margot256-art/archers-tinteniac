@@ -195,13 +195,13 @@ export default function Objectifs() {
 const s = {
   page:      { display: "flex", flexDirection: "column", gap: "20px" },
   header:    { display: "flex", alignItems: "baseline", gap: "14px", flexWrap: "wrap" },
-  pageTitle: { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: 0 },
-  subtitle:  { fontSize: "13px", color: "#555" },
-  info:      { color: "#777", fontSize: "14px" },
+  pageTitle: { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
+  subtitle:  { fontSize: "13px", color: "var(--text-dim)" },
+  info:      { color: "var(--text-muted)", fontSize: "14px" },
   emptyPage: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-    padding: "40px", textAlign: "center", color: "#555", fontSize: "14px",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
+    padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px",
   },
   grid: {
     display: "grid",
@@ -211,8 +211,8 @@ const s = {
 
   // card
   card: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "18px 20px 16px",
     display: "flex", flexDirection: "column", gap: "16px",
     position: "relative",
@@ -221,7 +221,7 @@ const s = {
     display: "flex", alignItems: "center",
     justifyContent: "space-between",
   },
-  archerName: { fontSize: "15px", fontWeight: "700", color: "#e8e8e8" },
+  archerName: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
   dot: {
     position: "absolute", top: "18px", right: "18px",
     width: "8px", height: "8px", borderRadius: "50%",
@@ -231,7 +231,7 @@ const s = {
   // sections
   section:      { display: "flex", flexDirection: "column", gap: "10px" },
   sectionLabel: {
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
 
@@ -241,15 +241,15 @@ const s = {
   },
   distRow: { display: "flex", alignItems: "center", gap: "8px" },
   distLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#999",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-dim)",
     width: "30px", flexShrink: 0,
   },
 
   // input
   input: {
-    padding: "6px 8px", border: "1.5px solid #2e2e2e", borderRadius: "6px",
-    fontSize: "13px", color: "#e8e8e8", fontFamily: "inherit",
-    outline: "none", width: "70px", backgroundColor: "#252525",
+    padding: "6px 8px", border: "var(--border-2)", borderRadius: "6px",
+    fontSize: "13px", color: "var(--text)", fontFamily: "inherit",
+    outline: "none", width: "70px", backgroundColor: "var(--input-bg)",
     transition: "border-color 0.15s",
   },
 
@@ -257,7 +257,7 @@ const s = {
   cardFooter: {
     display: "flex", alignItems: "center",
     justifyContent: "space-between", gap: "12px",
-    paddingTop: "4px", borderTop: "1px solid #2a2a2a",
+    paddingTop: "4px", borderTop: "var(--border)",
   },
   feedbackArea: { minHeight: "20px" },
   feedOk: { fontSize: "12px", color: "#16a34a", fontWeight: "600" },
@@ -273,7 +273,7 @@ const s = {
 
   // legend
   legend: {
-    fontSize: "12px", color: "#555",
+    fontSize: "12px", color: "var(--text-dim)",
     display: "flex", alignItems: "center", gap: "6px",
   },
 };

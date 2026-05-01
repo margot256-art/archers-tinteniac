@@ -372,25 +372,25 @@ export default function Saisie() {
                 <tbody>
                   {tableRows.map((row) => (
                     <tr key={row.dist} style={s.tr}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1f1f1f"}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
                     >
                       <td style={s.td}><span style={s.badge}>{row.dist}</span></td>
                       <td style={s.tdR}>{row.entr.count || "—"}</td>
                       <td style={s.tdR}>{row.entr.fleches || "—"}</td>
-                      <td style={{ ...s.tdR, color: row.entr.moyFl ? PRIMARY : "#bbb", fontWeight: "600" }}>
+                      <td style={{ ...s.tdR, color: row.entr.moyFl ? PRIMARY : "var(--text-3)", fontWeight: "600" }}>
                         {row.entr.moyFl ?? "—"}
                       </td>
-                      <td style={{ ...s.tdR, borderRight: "2px solid #333" }}>
+                      <td style={{ ...s.tdR, borderRight: "var(--border-3)" }}>
                         {row.entr.scoreMoy ?? "—"}
                       </td>
                       <td style={s.tdR}>{row.comp.count || "—"}</td>
                       <td style={s.tdR}>{row.comp.fleches || "—"}</td>
-                      <td style={{ ...s.tdR, color: row.comp.moyFl ? BLUE : "#bbb", fontWeight: "600" }}>
+                      <td style={{ ...s.tdR, color: row.comp.moyFl ? BLUE : "var(--text-3)", fontWeight: "600" }}>
                         {row.comp.moyFl ?? "—"}
                       </td>
                       <td style={s.tdR}>{row.comp.scoreMoy ?? "—"}</td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "2px solid #444" }}>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "var(--border-strong)" }}>
                         {row.total.count || "—"}
                       </td>
                       <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
@@ -407,20 +407,20 @@ export default function Saisie() {
                 </tbody>
                 <tfoot>
                   <tr style={s.trTotal}>
-                    <td style={{ ...s.td, fontWeight: "700", color: "#e8e8e8" }}>Total</td>
+                    <td style={{ ...s.td, fontWeight: "700", color: "var(--text)" }}>Total</td>
                     <td style={s.tdR}>{tableTotals.entr.count || "—"}</td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#e8e8e8" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                       {tableTotals.entr.fleches ? tableTotals.entr.fleches.toLocaleString("fr-FR") : "—"}
                     </td>
                     <td style={s.tdR}>—</td>
-                    <td style={{ ...s.tdR, borderRight: "2px solid #333" }}>—</td>
+                    <td style={{ ...s.tdR, borderRight: "var(--border-3)" }}>—</td>
                     <td style={s.tdR}>{tableTotals.comp.count || "—"}</td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#e8e8e8" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                       {tableTotals.comp.fleches ? tableTotals.comp.fleches.toLocaleString("fr-FR") : "—"}
                     </td>
                     <td style={s.tdR}>—</td>
                     <td style={s.tdR}>—</td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "2px solid #444" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "var(--border-strong)" }}>
                       {tableTotals.total.count || "—"}
                     </td>
                     <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
@@ -495,10 +495,10 @@ function Field({ label, children, error }) {
 function SummaryItem({ label, value, accent }) {
   return (
     <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: "11px", color: "#777", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
+      <div style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
         {label}
       </div>
-      <div style={{ fontSize: "26px", fontWeight: "700", color: accent ? PRIMARY : "#ccc" }}>
+      <div style={{ fontSize: "26px", fontWeight: "700", color: accent ? PRIMARY : "var(--text-3)" }}>
         {value}
       </div>
     </div>
@@ -534,30 +534,30 @@ const s = {
   formZone: {},
 
   // form
-  title: { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: "0 0 20px" },
+  title: { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: "0 0 20px" },
   card:  {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    padding: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    padding: "28px", boxShadow: "var(--shadow-card)",
     display: "flex", flexDirection: "column", gap: "18px",
   },
   row4:  { gap: "16px" },
   label: {
-    fontSize: "11px", fontWeight: "600", color: "#777",
+    fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   input: {
-    padding: "10px 12px", border: "1.5px solid #2e2e2e", borderRadius: "8px",
-    fontSize: "14px", color: "#e8e8e8", outline: "none",
-    fontFamily: "inherit", backgroundColor: "#252525",
+    padding: "10px 12px", border: "var(--border-2)", borderRadius: "8px",
+    fontSize: "14px", color: "var(--text)", outline: "none",
+    fontFamily: "inherit", backgroundColor: "var(--input-bg)",
     width: "100%", boxSizing: "border-box",
   },
-  divider: { height: "1px", backgroundColor: "#2a2a2a" },
+  divider: { height: "1px", backgroundColor: "var(--border)" },
   summary: {
     display: "flex", alignItems: "center", justifyContent: "space-around",
-    backgroundColor: "#1e1e1e", borderRadius: "10px",
-    padding: "20px", border: "1px solid #2a2a2a",
+    backgroundColor: "var(--surface-raised)", borderRadius: "10px",
+    padding: "20px", border: "var(--border)",
   },
-  sep:      { width: "1px", height: "44px", backgroundColor: "#333" },
+  sep:      { width: "1px", height: "44px", backgroundColor: "var(--border-3)" },
   msgError: {
     backgroundColor: "rgba(255,0,122,0.1)", border: `1px solid ${PRIMARY}`,
     borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: PRIMARY,
@@ -578,35 +578,35 @@ const s = {
 
   // jauge
   gaugeBox: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px",
   },
   gaugeRow:    { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" },
   gaugeLabel:  {
-    fontSize: "12px", fontWeight: "700", color: "#777",
+    fontSize: "12px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
-  gaugeFigures:{ fontSize: "13px", color: "#bbb" },
-  gaugeTrack:  { height: "8px", borderRadius: "4px", backgroundColor: "#2a2a2a", overflow: "hidden" },
+  gaugeFigures:{ fontSize: "13px", color: "var(--text-3)" },
+  gaugeTrack:  { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
   gaugeBar:    { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
 
   // sections communes
   section:     { display: "flex", flexDirection: "column", gap: "12px" },
   sectionHead: { display: "flex", alignItems: "center", gap: "10px" },
   sectionLabel:{
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.08em",
   },
   saisonBadge: {
-    backgroundColor: "#2a2a2a", borderRadius: "5px",
-    padding: "2px 8px", fontSize: "11px", fontWeight: "600", color: "#aaa",
+    backgroundColor: "var(--border)", borderRadius: "5px",
+    padding: "2px 8px", fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
   },
   saisonSelect: {
     padding: "4px 10px", borderRadius: "7px",
-    border: "1.5px solid #2e2e2e",
-    backgroundColor: "#252525",
-    color: "#d0d0d0",
+    border: "var(--border-2)",
+    backgroundColor: "var(--input-bg)",
+    color: "var(--text-2)",
     fontSize: "12px", fontWeight: "600",
     cursor: "pointer", outline: "none",
     fontFamily: "inherit",
@@ -614,53 +614,53 @@ const s = {
 
   // tableau
   tableWrap: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)", overflowX: "auto",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)", overflowX: "auto",
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "12px" },
   th: {
     padding: "8px 7px", textAlign: "left",
-    fontSize: "10px", fontWeight: "700", color: "#777",
+    fontSize: "10px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.03em",
-    borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
-    backgroundColor: "#1e1e1e",
+    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    backgroundColor: "var(--surface-raised)",
   },
   thR: {
     padding: "8px 7px", textAlign: "right",
-    fontSize: "10px", fontWeight: "700", color: "#777",
+    fontSize: "10px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.03em",
-    borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
+    borderBottom: "var(--border)", whiteSpace: "nowrap",
   },
   thEntr:    { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)" },
-  thEntrEnd: { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)", borderRight: "2px solid #333" },
+  thEntrEnd: { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)", borderRight: "var(--border-3)" },
   thComp:    { color: BLUE,      backgroundColor: "rgba(59,130,246,0.1)" },
-  thTotal:   { color: "#e8e8e8", backgroundColor: "#252525", borderLeft: "2px solid #444" },
+  thTotal:   { color: "var(--text)", backgroundColor: "var(--input-bg)", borderLeft: "var(--border-strong)" },
   tr:        { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
-  trTotal:     { borderTop: "2px solid #333", backgroundColor: "#1e1e1e" },
-  td:        { padding: "8px 7px", color: "#d0d0d0", whiteSpace: "nowrap" },
-  tdR:       { padding: "8px 7px", textAlign: "right", color: "#ccc", whiteSpace: "nowrap" },
+  trTotal:     { borderTop: "var(--border-3)", backgroundColor: "var(--surface-raised)" },
+  td:        { padding: "8px 7px", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdR:       { padding: "8px 7px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   badge: {
-    backgroundColor: "#2a2a2a", borderRadius: "5px",
-    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "#bbb",
+    backgroundColor: "var(--border)", borderRadius: "5px",
+    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)",
   },
 
   // cartes stats
   statCards: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" },
   statCard:  {
-    backgroundColor: "#1a1a1a", borderRadius: "10px",
+    backgroundColor: "var(--surface)", borderRadius: "10px",
     boxShadow: "0 1px 8px rgba(0,0,0,0.3)",
     padding: "16px 18px", display: "flex", flexDirection: "column", gap: "4px",
   },
   statLabel: {
-    fontSize: "11px", fontWeight: "600", color: "#666",
+    fontSize: "11px", fontWeight: "600", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
-  statValue: { fontSize: "22px", fontWeight: "700", color: "#e8e8e8", letterSpacing: "-0.01em" },
-  statSub:   { fontSize: "11px", color: "#555" },
+  statValue: { fontSize: "22px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
+  statSub:   { fontSize: "11px", color: "var(--text-dim)" },
 
   emptyStats: {
-    backgroundColor: "#1a1a1a", borderRadius: "10px",
+    backgroundColor: "var(--surface)", borderRadius: "10px",
     boxShadow: "0 1px 8px rgba(0,0,0,0.3)",
-    padding: "32px", textAlign: "center", color: "#555", fontSize: "14px",
+    padding: "32px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px",
   },
 };

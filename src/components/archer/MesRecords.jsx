@@ -52,7 +52,7 @@ function RecordSection({ type, color, bgColor, best, max }) {
       {best ? (
         <>
           <div style={s.scoreRow}>
-            <span style={{ ...s.bigScore, color: "#e8e8e8" }}>{best.score}</span>
+            <span style={{ ...s.bigScore, color: "var(--text)" }}>{best.score}</span>
             <span style={s.scoreCtx}>/{max} ({pct}%)</span>
           </div>
           <div style={s.meta}>
@@ -184,20 +184,20 @@ const s = {
 
   // barre saison
   saisonBar: {
-    backgroundColor: "#1a2744",
+    backgroundColor: "var(--blue-deep)",
     borderRadius: "10px",
     padding: "13px 18px",
     display: "flex", alignItems: "center", gap: "10px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+    boxShadow: "var(--shadow-card)",
     alignSelf: "flex-start",
   },
-  calIcon:    { color: "#7ba7e0", display: "flex", alignItems: "center" },
+  calIcon:    { color: "var(--blue-dark)", display: "flex", alignItems: "center" },
   saisonBarLabel: {
-    fontSize: "13px", fontWeight: "700", color: "#c8d8f0",
+    fontSize: "13px", fontWeight: "700", color: "var(--blue-soft2)",
     textTransform: "uppercase", letterSpacing: "0.08em",
   },
   saisonSelect: {
-    backgroundColor: "#243660", color: "#e0eaf8",
+    backgroundColor: "var(--blue-mid)", color: "var(--blue-text)",
     border: "1px solid #2e4a80", borderRadius: "7px",
     padding: "7px 12px", fontSize: "14px", fontWeight: "600",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
@@ -205,7 +205,7 @@ const s = {
 
   // sous-titre
   subtitle: {
-    fontSize: "13px", color: "#777", fontStyle: "italic",
+    fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic",
     marginTop: "-8px",
   },
 
@@ -218,25 +218,25 @@ const s = {
 
   // carte distance
   card: {
-    backgroundColor: "#1a1a1a", borderRadius: "14px",
+    backgroundColor: "var(--surface)", borderRadius: "14px",
     boxShadow: "0 2px 14px rgba(0,0,0,0.35)",
     padding: "18px 20px",
     display: "flex", flexDirection: "column", gap: "12px",
   },
   cardHead: {
     display: "flex", alignItems: "baseline", gap: "7px",
-    paddingBottom: "10px", borderBottom: "1px solid #2a2a2a",
+    paddingBottom: "10px", borderBottom: "var(--border)",
   },
   cardDistKey: {
-    fontSize: "10px", fontWeight: "700", color: "#555",
+    fontSize: "10px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.1em",
   },
   cardDistVal: {
-    fontSize: "18px", fontWeight: "800", color: "#e8e8e8",
+    fontSize: "18px", fontWeight: "800", color: "var(--text)",
     letterSpacing: "-0.01em",
   },
   cardMax: {
-    fontSize: "11px", color: "#555", marginLeft: "2px",
+    fontSize: "11px", color: "var(--text-dim)", marginLeft: "2px",
   },
 
   // section entr/comp
@@ -257,30 +257,30 @@ const s = {
   // score
   scoreRow: { display: "flex", alignItems: "baseline", gap: "6px" },
   bigScore: { fontSize: "38px", fontWeight: "800", lineHeight: 1, letterSpacing: "-0.02em" },
-  scoreCtx: { fontSize: "14px", color: "#666", fontWeight: "500" },
+  scoreCtx: { fontSize: "14px", color: "var(--text-dim)", fontWeight: "500" },
 
   // date / lieu
-  meta: { fontSize: "12px", color: "#777" },
+  meta: { fontSize: "12px", color: "var(--text-muted)" },
 
   // barre de progression
   barTrack: {
     height: "6px", borderRadius: "3px",
-    backgroundColor: "#2a2a2a", overflow: "hidden",
+    backgroundColor: "var(--border)", overflow: "hidden",
   },
   barFill: { height: "100%", borderRadius: "3px", transition: "width 0.4s ease" },
 
-  noData: { fontSize: "12px", color: "#444", fontStyle: "italic" },
+  noData: { fontSize: "12px", color: "var(--text-3)", fontStyle: "italic" },
 
   // états
-  info:   { color: "#777", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px",
     border: `1px solid ${PRIMARY}`,
   },
   empty: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
-    padding: "48px", textAlign: "center", color: "#555", fontSize: "14px",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
+    padding: "48px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px",
   },
 };

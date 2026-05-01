@@ -20,8 +20,6 @@ const Objectifs        = lazy(() => import("./coach/Objectifs"));
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const PRIMARY = "#FF007A";
-const BG      = "#1a1a1a";
-const BG_SUB  = "#141414";
 
 const ARCHER_TABS = [
   { id: "new-session",    label: "+Séance" },
@@ -58,21 +56,21 @@ function renderTab(id) {
     default:
       return (
         <div style={sDefault}>
-          Vue <strong style={{ color: "#e8e8e8" }}>{id}</strong> — à venir
+          Vue <strong style={{ color: "var(--text)" }}>{id}</strong> — à venir
         </div>
       );
   }
 }
 
 const sDefault = {
-  backgroundColor: "#1a1a1a", borderRadius: "10px",
+  backgroundColor: "var(--surface)", borderRadius: "10px",
   padding: "48px", textAlign: "center",
-  color: "#666", fontSize: "14px",
+  color: "var(--text-dim)", fontSize: "14px",
 };
 
 // ── Layout principal ──────────────────────────────────────────────────────────
 
-export default function Layout({ user, isCoach, onLogout }) {
+export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) {
   const [section,        setSection]        = useState("archer");
   const [activeTab,      setActiveTab]      = useState("new-session");
   const [showChangePwd,  setShowChangePwd]  = useState(false);
@@ -94,10 +92,10 @@ export default function Layout({ user, isCoach, onLogout }) {
   const subTabs = section === "coach" ? COACH_TABS : ARCHER_TABS;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#111", fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--app-bg)", fontFamily: "'Segoe UI', sans-serif" }}>
 
       {/* ── Navbar ── */}
-      <header style={{ backgroundColor: BG, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
+      <header style={{ backgroundColor: "var(--surface)", position: "sticky", top: 0, zIndex: 100, boxShadow: "var(--shadow-nav)" }}>
 
         {/* Ligne 1 — logo + utilisateur */}
         <div className="layout-nav-top">
@@ -120,17 +118,30 @@ export default function Layout({ user, isCoach, onLogout }) {
                 }}>Coach</span>
               )}
             </span>
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+              style={{
+                background: "none", border: "1px solid var(--border-3)",
+                color: "var(--text-muted)", padding: "5px 8px", borderRadius: "6px",
+                fontSize: "14px", cursor: "pointer", fontFamily: "inherit", lineHeight: 1,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-3)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+            >
+              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            </button>
             {!isCoach && (
               <button
                 onClick={() => setShowChangePwd(true)}
                 title="Changer le mot de passe"
                 style={{
-                  background: "none", border: "1px solid #333",
-                  color: "#777", padding: "5px 8px", borderRadius: "6px",
+                  background: "none", border: "1px solid var(--border-3)",
+                  color: "var(--text-muted)", padding: "5px 8px", borderRadius: "6px",
                   fontSize: "14px", cursor: "pointer", fontFamily: "inherit", lineHeight: 1,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#555"; e.currentTarget.style.color = "#bbb"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#777"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-3)"; e.currentTarget.style.color = "var(--text-muted)"; }}
               >
                 🔑
               </button>
@@ -138,12 +149,12 @@ export default function Layout({ user, isCoach, onLogout }) {
             <button
               onClick={onLogout}
               style={{
-                background: "none", border: "1px solid #333",
-                color: "#777", padding: "5px 13px", borderRadius: "6px",
+                background: "none", border: "1px solid var(--border-3)",
+                color: "var(--text-muted)", padding: "5px 13px", borderRadius: "6px",
                 fontSize: "12px", cursor: "pointer", fontFamily: "inherit",
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#555"; e.currentTarget.style.color = "#bbb"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#333"; e.currentTarget.style.color = "#777"; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-3)"; e.currentTarget.style.color = "var(--text-muted)"; }}
             >
               Déconnexion
             </button>
@@ -154,7 +165,7 @@ export default function Layout({ user, isCoach, onLogout }) {
         <div style={{
           display: "flex", alignItems: "stretch",
           padding: "0 16px", gap: "4px",
-          borderBottom: "1px solid #2a2a2a",
+          borderBottom: "1px solid var(--border)",
           overflowX: "auto", scrollbarWidth: "none",
         }}>
           <SectionBtn label="Archer" active={section === "archer"} onClick={() => switchSection("archer")} />
@@ -168,13 +179,13 @@ export default function Layout({ user, isCoach, onLogout }) {
             style={{
               display: "flex", alignItems: "center", gap: "5px",
               padding: "6px 14px", margin: "auto 0",
-              border: "1.5px solid #444", borderRadius: "6px",
-              color: "#ccc", fontSize: "12px", fontWeight: "600",
+              border: "1.5px solid var(--border-strong)", borderRadius: "6px",
+              color: "var(--text-3)", fontSize: "12px", fontWeight: "600",
               textDecoration: "none", whiteSpace: "nowrap", fontFamily: "inherit",
-              backgroundColor: "#1e1e1e",
+              backgroundColor: "var(--surface-raised)",
             }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF007A"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.backgroundColor = "rgba(255,0,122,0.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#444"; e.currentTarget.style.color = "#ccc"; e.currentTarget.style.backgroundColor = "#1e1e1e"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.backgroundColor = "var(--surface-raised)"; }}
           >
             <ExternalLinkIcon /> Inscription concours
           </a>
@@ -183,7 +194,7 @@ export default function Layout({ user, isCoach, onLogout }) {
         {/* Ligne 3 — onglets de la section active */}
         <div style={{
           display: "flex", alignItems: "stretch",
-          backgroundColor: BG_SUB,
+          backgroundColor: "var(--surface-sub)",
           overflowX: "auto", scrollbarWidth: "none",
         }}>
           {subTabs.map((tab) => (
@@ -206,7 +217,7 @@ export default function Layout({ user, isCoach, onLogout }) {
 
       {/* ── Contenu ── */}
       <main className="layout-main">
-        <Suspense fallback={<div style={{ color: "#777", fontSize: "14px" }}>Chargement…</div>}>
+        <Suspense fallback={<div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Chargement…</div>}>
           {renderTab(activeTab)}
         </Suspense>
       </main>
@@ -300,20 +311,20 @@ const sModal = {
     padding: "16px",
   },
   card: {
-    backgroundColor: "#1a1a1a", borderRadius: "14px",
+    backgroundColor: "var(--surface)", borderRadius: "14px",
     padding: "24px", width: "100%", maxWidth: "360px",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+    boxShadow: "var(--shadow-modal)",
     display: "flex", flexDirection: "column", gap: "18px",
   },
   header:  { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  title:   { fontSize: "15px", fontWeight: "700", color: "#e8e8e8" },
-  close:   { background: "none", border: "none", color: "#666", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
-  label:   { fontSize: "11px", fontWeight: "600", color: "#777", textTransform: "uppercase", letterSpacing: "0.07em" },
-  input:   { padding: "10px 12px", border: "1.5px solid #2e2e2e", borderRadius: "8px", fontSize: "14px", color: "#e8e8e8", backgroundColor: "#252525", outline: "none", fontFamily: "inherit" },
+  title:   { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
+  close:   { background: "none", border: "none", color: "var(--text-dim)", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
+  label:   { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
+  input:   { padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px", fontSize: "14px", color: "var(--text)", backgroundColor: "var(--input-bg)", outline: "none", fontFamily: "inherit" },
   errorMsg:   { backgroundColor: "rgba(255,0,122,0.1)", border: "1px solid #FF007A", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#FF007A" },
   successMsg: { backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "#16a34a", display: "flex", flexDirection: "column", gap: "12px", alignItems: "flex-start" },
   doneBtn:    { background: "none", border: "1px solid #16a34a", borderRadius: "6px", padding: "6px 14px", fontSize: "13px", color: "#16a34a", cursor: "pointer", fontFamily: "inherit" },
-  cancelBtn:  { background: "none", border: "1px solid #333", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "#aaa", cursor: "pointer", fontFamily: "inherit" },
+  cancelBtn:  { background: "none", border: "1px solid var(--border-3)", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" },
   submitBtn:  { backgroundColor: "#FF007A", color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
 };
 
@@ -324,7 +335,7 @@ function SectionBtn({ label, active, onClick }) {
       style={{
         background: "none", border: "none",
         borderBottom: active ? `2px solid ${PRIMARY}` : "2px solid transparent",
-        color: active ? "#fff" : "#666",
+        color: active ? "var(--text)" : "var(--text-dim)",
         padding: "11px 16px 9px",
         fontSize: "13px", fontWeight: active ? "700" : "500",
         cursor: "pointer", whiteSpace: "nowrap",
@@ -344,7 +355,7 @@ function TabBtn({ label, active, onClick, badge }) {
       style={{
         background: "none", border: "none",
         borderBottom: active ? `2px solid ${PRIMARY}` : "2px solid transparent",
-        color: active ? PRIMARY : "#888",
+        color: active ? PRIMARY : "var(--text-muted)",
         padding: "10px 14px 8px",
         fontSize: "13px", fontWeight: active ? "600" : "400",
         cursor: "pointer", whiteSpace: "nowrap",
@@ -378,6 +389,32 @@ function ExternalLinkIcon() {
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );
 }

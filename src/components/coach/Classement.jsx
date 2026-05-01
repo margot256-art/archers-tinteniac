@@ -80,7 +80,7 @@ const RANK_STYLE = {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function RangBadge({ rang }) {
-  const extra = RANK_STYLE[rang] ?? { backgroundColor: "#252525", color: "#666" };
+  const extra = RANK_STYLE[rang] ?? { backgroundColor: "var(--input-bg)", color: "var(--text-dim)" };
   return <span style={{ ...s.rankBadge, ...extra }}>{ordinal(rang)}</span>;
 }
 
@@ -241,7 +241,7 @@ export default function Classement() {
         legend: {
           position: "bottom",
           labels: {
-            font: { size: 12 }, color: "#d0d0d0",
+            font: { size: 12 }, color: "var(--text-2)",
             boxWidth: 14, padding: 18,
           },
         },
@@ -253,14 +253,14 @@ export default function Classement() {
       },
       scales: {
         x: {
-          ticks: { font: { size: 12 }, color: "#777" },
-          grid: { color: "#2a2a2a" },
+          ticks: { font: { size: 12 }, color: "var(--text-muted)" },
+          grid: { color: "var(--border)" },
         },
         y: {
           beginAtZero: false,
-          ticks: { font: { size: 11 }, color: "#666" },
-          grid: { color: "#2a2a2a" },
-          title: { display: true, text: "Meilleur score normalisé", color: "#555", font: { size: 11 } },
+          ticks: { font: { size: 11 }, color: "var(--text-dim)" },
+          grid: { color: "var(--border)" },
+          title: { display: true, text: "Meilleur score normalisé", color: "var(--text-dim)", font: { size: 11 } },
         },
       },
     };
@@ -477,7 +477,7 @@ export default function Classement() {
                 return (
                   <tr key={r.archer} style={{ ...s.tr, ...(top ? s.trTop : {}) }}>
                     <td style={s.td}><RangBadge rang={r.rang} /></td>
-                    <td style={{ ...s.td, fontWeight: top ? "700" : "400", color: top ? "#fff" : "#d0d0d0" }}>
+                    <td style={{ ...s.td, fontWeight: top ? "700" : "400", color: top ? "#fff" : "var(--text-2)" }}>
                       {r.archer}
                     </td>
                     <td style={s.tdR}>{r.nbSeances}</td>
@@ -496,7 +496,7 @@ export default function Classement() {
                         </span>
                       ) : "—"}
                     </td>
-                    <td style={{ ...s.tdR, fontWeight: "600", color: "#e8e8e8" }}>
+                    <td style={{ ...s.tdR, fontWeight: "600", color: "var(--text)" }}>
                       {r.bestNorm ?? "—"}
                     </td>
                   </tr>
@@ -538,18 +538,18 @@ const s = {
 
   saisonBar: {
     display: "flex", alignItems: "center", gap: "16px",
-    backgroundColor: "#1a2744",
+    backgroundColor: "var(--blue-deep)",
     borderRadius: "12px",
     padding: "14px 20px",
     boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
     flexWrap: "wrap",
   },
   saisonBarLabel: {
-    fontSize: "11px", fontWeight: "700", color: "#5b7ab8",
+    fontSize: "11px", fontWeight: "700", color: "var(--blue-dark)",
     textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
   },
   saisonSelect: {
-    backgroundColor: "#243660", color: "#e0eaf8",
+    backgroundColor: "var(--blue-mid)", color: "var(--blue-text)",
     border: "1px solid #2e4a80", borderRadius: "7px",
     padding: "7px 12px", fontSize: "14px", fontWeight: "600",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
@@ -557,43 +557,43 @@ const s = {
 
   filtersRow: {
     display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap",
-    backgroundColor: "#1a1a1a", borderRadius: "10px",
+    backgroundColor: "var(--surface)", borderRadius: "10px",
     padding: "12px 16px",
     boxShadow: "0 1px 6px rgba(0,0,0,0.2)",
   },
   filterWrap: { display: "flex", alignItems: "center", gap: "8px" },
   filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#777",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
   },
   filterSelect: {
-    padding: "6px 10px", border: "1.5px solid #2e2e2e", borderRadius: "7px",
-    fontSize: "13px", color: "#e8e8e8", backgroundColor: "#272727",
+    padding: "6px 10px", border: "var(--border-2)", borderRadius: "7px",
+    fontSize: "13px", color: "var(--text)", backgroundColor: "var(--surface-raised)",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
   exportBtn: {
-    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    backgroundColor: "var(--border)", color: "var(--text)", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
 
   tableWrap: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)", overflowX: "auto",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)", overflowX: "auto",
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
   th: {
     padding: "11px 14px", textAlign: "left",
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
     borderBottom: "1px solid #252525", whiteSpace: "nowrap",
-    backgroundColor: "#1e1e1e",
+    backgroundColor: "var(--surface-raised)",
   },
   thR:   { textAlign: "right" },
   tr:    { borderBottom: "1px solid #1e1e1e", transition: "background 0.1s" },
   trTop: { backgroundColor: "rgba(255,0,122,0.07)" },
-  td:    { padding: "11px 14px", color: "#d0d0d0", whiteSpace: "nowrap" },
-  tdR:   { padding: "11px 14px", textAlign: "right", color: "#ccc", whiteSpace: "nowrap" },
+  td:    { padding: "11px 14px", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdR:   { padding: "11px 14px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   rankBadge: {
     display: "inline-flex", alignItems: "center", justifyContent: "center",
     minWidth: "36px", height: "24px", borderRadius: "12px",
@@ -605,19 +605,19 @@ const s = {
     borderRadius: "4px", padding: "1px 5px",
     color: ORANGE,
   },
-  empty:  { padding: "40px", textAlign: "center", color: "#555", fontSize: "14px" },
-  info:   { color: "#777", fontSize: "14px" },
+  empty:  { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
 
   card: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "20px 24px 28px",
   },
   cardHead: { display: "flex", alignItems: "center", marginBottom: "16px" },
-  cardTitle: { fontSize: "14px", fontWeight: "600", color: "#d0d0d0" },
+  cardTitle: { fontSize: "14px", fontWeight: "600", color: "var(--text-2)" },
   graphFilters: { display: "flex", gap: "16px", flexWrap: "wrap" },
 };

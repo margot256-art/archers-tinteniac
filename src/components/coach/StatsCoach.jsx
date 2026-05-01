@@ -503,18 +503,18 @@ export default function StatsCoach() {
                 {rows.length === 0 ? (
                   <tr><td colSpan={14} style={s.empty}>Aucune séance trouvée.</td></tr>
                 ) : rows.map((row, i) => {
-                  const entrMoyColor = row.moyEntr == null ? "#555" : PRIMARY;
-                  const compMoyColor = row.moyComp == null ? "#555" : BLUE;
+                  const entrMoyColor = row.moyEntr == null ? "var(--text-dim)" : PRIMARY;
+                  const compMoyColor = row.moyComp == null ? "var(--text-dim)" : BLUE;
                   return (
                     <tr key={i} style={s.tr}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = "#1f1f1f"}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                     >
                       <td style={{ ...s.td, fontWeight: "500" }}>{fmtMois(row.month)}</td>
                       <td style={{ ...s.td, fontWeight: "700" }}>{row.archer}</td>
                       <td style={s.td}><span style={s.badge}>{row.distance}</span></td>
-                      <td style={{ ...s.tdNum, color: row.nbrEntr ? PRIMARY : "#555", fontWeight: "600" }}>{row.nbrEntr || "—"}</td>
-                      <td style={{ ...s.tdNum, color: row.nbrComp ? BLUE    : "#555", fontWeight: "600" }}>{row.nbrComp || "—"}</td>
+                      <td style={{ ...s.tdNum, color: row.nbrEntr ? PRIMARY : "var(--text-dim)", fontWeight: "600" }}>{row.nbrEntr || "—"}</td>
+                      <td style={{ ...s.tdNum, color: row.nbrComp ? BLUE    : "var(--text-dim)", fontWeight: "600" }}>{row.nbrComp || "—"}</td>
                       <td style={s.tdNum}>{row.paille      || "—"}</td>
                       <td style={s.tdNum}>{row.blason      || "—"}</td>
                       <td style={s.tdNum}>{row.compteTotal || "—"}</td>
@@ -556,12 +556,12 @@ function MoyDistCard({ moyByDist }) {
     <div style={{ ...s.statCard, gap: "8px" }}>
       <div style={s.statLabel}>Moy. club / flèche</div>
       {moyByDist.length === 0 ? (
-        <div style={{ fontSize: "13px", color: "#555" }}>—</div>
+        <div style={{ fontSize: "13px", color: "var(--text-dim)" }}>—</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "2px" }}>
           {moyByDist.map(({ dist, moy }) => (
             <div key={dist} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: "12px", color: "#666", fontWeight: "600" }}>{dist}</span>
+              <span style={{ fontSize: "12px", color: "var(--text-dim)", fontWeight: "600" }}>{dist}</span>
               <span style={{ fontSize: "16px", fontWeight: "800", color: PRIMARY, letterSpacing: "-0.01em" }}>
                 {moy.toFixed(2)}
               </span>
@@ -590,22 +590,22 @@ const thBase = {
   padding: "10px 12px",
   fontSize: "11px", fontWeight: "700",
   textTransform: "uppercase", letterSpacing: "0.06em",
-  borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
-  backgroundColor: "#1e1e1e", color: "#666",
+  borderBottom: "var(--border)", whiteSpace: "nowrap",
+  backgroundColor: "var(--surface-raised)", color: "var(--text-dim)",
 };
 
 const s = {
   page:   { display: "flex", flexDirection: "column", gap: "16px" },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
-  title:  { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: 0 },
+  title:  { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
   filters:{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
   exportBtn: {
-    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    backgroundColor: "var(--border)", color: "var(--text)", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#777",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
 
@@ -614,33 +614,33 @@ const s = {
     alignSelf: "flex-start",
   },
   saisonBarLabel: {
-    fontSize: "12px", fontWeight: "700", color: "#666",
+    fontSize: "12px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.08em",
   },
   saisonSelect: {
     padding: "7px 12px", borderRadius: "8px",
-    border: "1.5px solid #2e2e2e",
-    backgroundColor: "#1e1e1e", color: "#c8daf5",
+    border: "var(--border-2)",
+    backgroundColor: "var(--surface-raised)", color: "var(--blue-soft)",
     fontSize: "14px", fontWeight: "600",
     cursor: "pointer", outline: "none", fontFamily: "inherit",
   },
 
   // stat cards
   statCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "18px 20px",
     display: "flex", flexDirection: "column", gap: "4px",
   },
   statLabel: {
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   statValue: {
-    fontSize: "28px", fontWeight: "800", color: "#e8e8e8",
+    fontSize: "28px", fontWeight: "800", color: "var(--text)",
     letterSpacing: "-0.02em", lineHeight: "1.1",
   },
-  statSub: { fontSize: "12px", color: "#555" },
+  statSub: { fontSize: "12px", color: "var(--text-dim)" },
 
   // macarons archers
   archerGrid: {
@@ -649,8 +649,8 @@ const s = {
     gap: "12px",
   },
   archerCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "10px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "10px",
+    boxShadow: "var(--shadow-card)",
     padding: "14px 16px",
     display: "flex", alignItems: "center", gap: "13px",
   },
@@ -660,39 +660,39 @@ const s = {
     fontSize: "15px", fontWeight: "800", flexShrink: 0,
   },
   archerInfo: { display: "flex", flexDirection: "column", gap: "3px" },
-  archerName: { fontSize: "14px", fontWeight: "700", color: "#e0e0e0" },
-  archerMeta: { fontSize: "11px", color: "#666" },
+  archerName: { fontSize: "14px", fontWeight: "700", color: "var(--text)" },
+  archerMeta: { fontSize: "11px", color: "var(--text-dim)" },
   archerMoy:  { fontSize: "12px", fontWeight: "600", color: PRIMARY },
 
   // tableau
   tableWrap: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)", overflowX: "auto",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)", overflowX: "auto",
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
 
   th:         { ...thBase, textAlign: "left" },
   thR:        { ...thBase, textAlign: "right" },
-  thGrpSeance:{ ...thBase, textAlign: "center", borderLeft: "1px solid #2a2a2a", borderRight: "1px solid #2a2a2a" },
-  thGrpVol:   { ...thBase, textAlign: "center", borderLeft: "1px solid #2a2a2a", borderRight: "1px solid #2a2a2a" },
+  thGrpSeance:{ ...thBase, textAlign: "center", borderLeft: "var(--border)", borderRight: "var(--border)" },
+  thGrpVol:   { ...thBase, textAlign: "center", borderLeft: "var(--border)", borderRight: "var(--border)" },
   thGrpEntr:  { ...thBase, textAlign: "center", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)", borderLeft: "2px solid rgba(255,0,122,0.3)" },
   thGrpComp:  { ...thBase, textAlign: "center", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)", borderLeft: "2px solid rgba(59,130,246,0.3)" },
-  thSub:      { ...thBase, fontWeight: "600", color: "#666" },
+  thSub:      { ...thBase, fontWeight: "600", color: "var(--text-dim)" },
   thSubEntr:  { ...thBase, fontWeight: "600", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)" },
   thSubComp:  { ...thBase, fontWeight: "600", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)" },
 
   tr:    { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
-  td:    { padding: "10px 12px", color: "#d0d0d0", whiteSpace: "nowrap" },
-  tdNum: { padding: "10px 12px", textAlign: "right", color: "#ccc", whiteSpace: "nowrap" },
+  td:    { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdNum: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   badge: {
-    backgroundColor: "#2a2a2a", borderRadius: "5px",
-    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "#bbb",
+    backgroundColor: "var(--border)", borderRadius: "5px",
+    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)",
   },
-  empty:  { padding: "40px", textAlign: "center", color: "#555", fontSize: "14px" },
-  info:   { color: "#777", fontSize: "14px" },
+  empty:  { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
-  count: { fontSize: "12px", color: "#555", textAlign: "right" },
+  count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },
 };

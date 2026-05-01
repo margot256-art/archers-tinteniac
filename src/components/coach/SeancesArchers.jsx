@@ -418,7 +418,7 @@ export default function SeancesArchers() {
                     const sm  = moy != null ? Math.round(moy * normFactor(seance.distance)) : null;
                     return (
                       <tr key={seance.id} style={s.tr}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = "#1f1f1f"}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                       >
                         <td style={s.td}>{fmtDate(seance.date)}</td>
@@ -428,7 +428,7 @@ export default function SeancesArchers() {
                             {seance.type || "—"}
                           </span>
                         </td>
-                        <td style={{ ...s.td, color: "#666" }}>{seance.lieu || "—"}</td>
+                        <td style={{ ...s.td, color: "var(--text-dim)" }}>{seance.lieu || "—"}</td>
                         <td style={s.td}>
                           {seance.distance ? <span style={s.distBadge}>{seance.distance}</span> : "—"}
                         </td>
@@ -437,13 +437,13 @@ export default function SeancesArchers() {
                         <td style={s.tdR}>{c > 0 ? c : "—"}</td>
                         <td style={{ ...s.tdR, fontWeight: "600" }}>{sc > 0 ? sc : "—"}</td>
                         <td style={s.tdR}>{tot > 0 ? tot : "—"}</td>
-                        <td style={{ ...s.tdR, color: moy != null ? PRIMARY : "#555", fontWeight: "600" }}>
+                        <td style={{ ...s.tdR, color: moy != null ? PRIMARY : "var(--text-dim)", fontWeight: "600" }}>
                           {moy != null ? moy.toFixed(2) : "—"}
                         </td>
-                        <td style={{ ...s.tdR, fontWeight: sm != null ? "700" : "400", color: sm != null ? "#e8e8e8" : "#555" }}>
+                        <td style={{ ...s.tdR, fontWeight: sm != null ? "700" : "400", color: sm != null ? "var(--text)" : "var(--text-dim)" }}>
                           {sm != null ? sm : "—"}
                         </td>
-                        <td style={{ ...s.td, color: "#999", minWidth: "160px", maxWidth: "320px", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: "1.4" }}>
+                        <td style={{ ...s.td, color: "var(--text-dim)", minWidth: "160px", maxWidth: "320px", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: "1.4" }}>
                           {seance.commentaire || "—"}
                         </td>
                       </tr>
@@ -495,7 +495,7 @@ function FilterSelect({ label, value, options, onChange }) {
 function CalendarIcon() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none"
-      stroke="#7ba7e0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      stroke="var(--blue-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8"  y1="2" x2="8"  y2="6" />
@@ -508,62 +508,62 @@ function CalendarIcon() {
 
 const s = {
   page:   { display: "flex", flexDirection: "column", gap: "20px" },
-  info:   { color: "#777", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
 
   saisonBar: {
-    backgroundColor: "#1a2744", borderRadius: "10px",
+    backgroundColor: "var(--blue-deep)", borderRadius: "10px",
     padding: "13px 18px",
     display: "flex", alignItems: "center", gap: "10px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+    boxShadow: "var(--shadow-card)",
     alignSelf: "flex-start",
   },
   saisonLabel: {
-    fontSize: "13px", fontWeight: "700", color: "#c8d8f0",
+    fontSize: "13px", fontWeight: "700", color: "var(--blue-soft2)",
     textTransform: "uppercase", letterSpacing: "0.08em",
   },
   saisonSelect: {
-    backgroundColor: "#243660", color: "#e0eaf8",
+    backgroundColor: "var(--blue-mid)", color: "var(--blue-text)",
     border: "1px solid #2e4a80", borderRadius: "7px",
     padding: "7px 12px", fontSize: "14px", fontWeight: "600",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
 
   filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#777",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
   exportBtn: {
-    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    backgroundColor: "var(--border)", color: "var(--text)", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
 
   tableWrap: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)", overflowX: "auto",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)", overflowX: "auto",
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
   th: {
     padding: "11px 12px", textAlign: "left",
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
-    backgroundColor: "#1e1e1e",
+    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    backgroundColor: "var(--surface-raised)",
   },
   thR: {
     padding: "11px 12px", textAlign: "right",
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
-    backgroundColor: "#1e1e1e",
+    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    backgroundColor: "var(--surface-raised)",
   },
   tr:  { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
-  td:  { padding: "10px 12px", color: "#d0d0d0", whiteSpace: "nowrap" },
-  tdR: { padding: "10px 12px", textAlign: "right", color: "#ccc", whiteSpace: "nowrap" },
+  td:  { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdR: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
 
   typeEntr: {
     backgroundColor: "rgba(255,0,122,0.15)", color: PRIMARY,
@@ -574,13 +574,13 @@ const s = {
     borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "600",
   },
   distBadge: {
-    backgroundColor: "#2a2a2a", borderRadius: "5px",
-    padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "#bbb",
+    backgroundColor: "var(--border)", borderRadius: "5px",
+    padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-3)",
   },
 
-  trSub: { backgroundColor: "#222", borderTop: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a" },
-  tdSub: { padding: "9px 12px", color: "#aaa", fontSize: "12px", fontWeight: "600", fontStyle: "italic" },
+  trSub: { backgroundColor: "var(--surface-raised)", borderTop: "var(--border)", borderBottom: "var(--border)" },
+  tdSub: { padding: "9px 12px", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", fontStyle: "italic" },
 
-  empty: { padding: "40px", textAlign: "center", color: "#555", fontSize: "14px" },
-  count: { fontSize: "12px", color: "#555", textAlign: "right" },
+  empty: { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
+  count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },
 };

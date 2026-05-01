@@ -77,14 +77,14 @@ const makeDistBarOpts = (nf) => ({
   maintainAspectRatio: false,
   scales: {
     x: {
-      ticks: { font: { size: 12 }, color: "#777" },
+      ticks: { font: { size: 12 }, color: "var(--text-muted)" },
       grid: { display: false },
     },
     y: {
       min: 0, max: nf * 10,
-      ticks: { font: { size: 11 }, color: "#666", stepSize: 100 },
-      grid: { color: "#2a2a2a" },
-      title: { display: true, text: `/ ${nf * 10}`, color: "#555", font: { size: 11 } },
+      ticks: { font: { size: 11 }, color: "var(--text-dim)", stepSize: 100 },
+      grid: { color: "var(--border)" },
+      title: { display: true, text: `/ ${nf * 10}`, color: "var(--text-dim)", font: { size: 11 } },
     },
   },
   plugins: {
@@ -281,14 +281,14 @@ export default function CoachGraph() {
       maintainAspectRatio: false,
       scales: {
         x: {
-          ticks: { font: { size: 11 }, color: "#666", maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
-          grid: { color: "#2a2a2a" },
+          ticks: { font: { size: 11 }, color: "var(--text-dim)", maxRotation: 45, autoSkip: true, maxTicksLimit: 18 },
+          grid: { color: "var(--border)" },
         },
         y: {
           beginAtZero: false,
-          ticks: { font: { size: 11 }, color: "#666" },
-          grid: { color: "#2a2a2a" },
-          title: { display: true, text: "Moy. / flèche", color: "#555", font: { size: 11 } },
+          ticks: { font: { size: 11 }, color: "var(--text-dim)" },
+          grid: { color: "var(--border)" },
+          title: { display: true, text: "Moy. / flèche", color: "var(--text-dim)", font: { size: 11 } },
         },
       },
       plugins: {
@@ -372,7 +372,7 @@ export default function CoachGraph() {
     plugins: {
       legend: {
         position: "bottom",
-        labels: { font: { size: 12 }, color: "#d0d0d0", boxWidth: 14, padding: 18 },
+        labels: { font: { size: 12 }, color: "var(--text-2)", boxWidth: 14, padding: 18 },
       },
       tooltip: {
         callbacks: {
@@ -382,14 +382,14 @@ export default function CoachGraph() {
     },
     scales: {
       x: {
-        ticks: { font: { size: 10 }, color: "#666", maxRotation: 45, maxTicksLimit: 18 },
-        grid: { color: "#2a2a2a" },
+        ticks: { font: { size: 10 }, color: "var(--text-dim)", maxRotation: 45, maxTicksLimit: 18 },
+        grid: { color: "var(--border)" },
       },
       y: {
         beginAtZero: false,
-        ticks: { font: { size: 11 }, color: "#666" },
-        grid: { color: "#2a2a2a" },
-        title: { display: true, text: "Moy. / flèche", color: "#555", font: { size: 11 } },
+        ticks: { font: { size: 11 }, color: "var(--text-dim)" },
+        grid: { color: "var(--border)" },
+        title: { display: true, text: "Moy. / flèche", color: "var(--text-dim)", font: { size: 11 } },
       },
     },
   };
@@ -400,7 +400,7 @@ export default function CoachGraph() {
     plugins: {
       legend: {
         position: "bottom",
-        labels: { font: { size: 12 }, color: "#d0d0d0", boxWidth: 14, padding: 18 },
+        labels: { font: { size: 12 }, color: "var(--text-2)", boxWidth: 14, padding: 18 },
       },
       tooltip: {
         callbacks: {
@@ -410,14 +410,14 @@ export default function CoachGraph() {
     },
     scales: {
       x: {
-        ticks: { font: { size: 12 }, color: "#777" },
-        grid: { color: "#2a2a2a" },
+        ticks: { font: { size: 12 }, color: "var(--text-muted)" },
+        grid: { color: "var(--border)" },
       },
       y: {
         beginAtZero: false,
-        ticks: { font: { size: 11 }, color: "#666" },
-        grid: { color: "#2a2a2a" },
-        title: { display: true, text: "Meilleur score normalisé", color: "#555", font: { size: 11 } },
+        ticks: { font: { size: 11 }, color: "var(--text-dim)" },
+        grid: { color: "var(--border)" },
+        title: { display: true, text: "Meilleur score normalisé", color: "var(--text-dim)", font: { size: 11 } },
       },
     },
   };
@@ -508,7 +508,7 @@ export default function CoachGraph() {
               <div key={dist} style={s.distCard}>
                 <div style={s.distCardTitle}>
                   {dist}{" "}
-                  <span style={{ color: "#666", fontWeight: "400", fontSize: "12px" }}>
+                  <span style={{ color: "var(--text-dim)", fontWeight: "400", fontSize: "12px" }}>
                     (max {nf * 10} pts / {nf} fl.)
                   </span>
                 </div>
@@ -531,57 +531,57 @@ const s = {
 
   saisonBar: {
     display: "flex", alignItems: "center", gap: "16px",
-    backgroundColor: "#1a2744", borderRadius: "12px",
+    backgroundColor: "var(--blue-deep)", borderRadius: "12px",
     padding: "14px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
     flexWrap: "wrap",
   },
   saisonBarLabel: {
-    fontSize: "11px", fontWeight: "700", color: "#5b7ab8",
+    fontSize: "11px", fontWeight: "700", color: "var(--blue-dark)",
     textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
   },
   saisonSelect: {
     padding: "7px 14px", borderRadius: "8px",
-    border: "1.5px solid #2e4a7a", backgroundColor: "#152035",
-    color: "#c8daf5", fontSize: "14px", fontWeight: "600",
+    border: "1.5px solid var(--blue-dark)", backgroundColor: "var(--blue-deep)",
+    color: "var(--blue-soft)", fontSize: "14px", fontWeight: "600",
     cursor: "pointer", outline: "none", fontFamily: "inherit",
   },
 
   card: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "20px 24px 28px",
   },
   cardHead:    { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "12px" },
-  cardTitle:   { fontSize: "14px", fontWeight: "600", color: "#d0d0d0", paddingTop: "5px" },
+  cardTitle:   { fontSize: "14px", fontWeight: "600", color: "var(--text-2)", paddingTop: "5px" },
   cardFilters: { display: "flex", gap: "12px", flexWrap: "wrap" },
 
   filterWrap:  { display: "flex", alignItems: "center", gap: "8px" },
   filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#777",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
   },
 
   sectionCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "20px 24px 24px",
     display: "flex", flexDirection: "column", gap: "20px",
   },
   sectionCardHeader: {
     display: "flex", alignItems: "center", gap: "10px",
-    paddingBottom: "16px", borderBottom: "1px solid #2a2a2a",
+    paddingBottom: "16px", borderBottom: "var(--border)",
     flexWrap: "wrap",
   },
-  hint: { fontSize: "11px", color: "#555", fontStyle: "italic" },
+  hint: { fontSize: "11px", color: "var(--text-dim)", fontStyle: "italic" },
   distGrid: { display: "flex", flexDirection: "column", gap: "16px" },
   distCard: {
-    backgroundColor: "#141414", borderRadius: "10px",
+    backgroundColor: "var(--surface-sub)", borderRadius: "10px",
     border: "1px solid #242424", padding: "16px 20px 20px",
   },
-  distCardTitle: { fontSize: "13px", fontWeight: "600", color: "#d0d0d0", marginBottom: "14px" },
+  distCardTitle: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)", marginBottom: "14px" },
 
-  empty: { padding: "40px", textAlign: "center", color: "#555", fontSize: "14px" },
-  info:  { color: "#777", fontSize: "14px" },
+  empty: { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
+  info:  { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,

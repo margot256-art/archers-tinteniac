@@ -464,7 +464,7 @@ export default function MesSeances() {
             ? <span style={s.gaugeFigures}>
                 {currentVolume} / {volEntr} flèches — <strong style={{ color: gaugeColor }}>{pct}%</strong>
               </span>
-            : <span style={{ ...s.gaugeFigures, color: "#bbb", fontStyle: "italic" }}>
+            : <span style={{ ...s.gaugeFigures, color: "var(--text-3)", fontStyle: "italic" }}>
                 {currentVolume} flèche{currentVolume !== 1 ? "s" : ""} — objectif non défini par le coach
               </span>
           }
@@ -589,14 +589,14 @@ export default function MesSeances() {
                         const moy = c > 0 && (seance.score ?? 0) > 0 ? seance.score / c : null;
                         const scoreMoy = moy != null ? Math.round(moy * normFactor(seance.distance)) : null;
                         const typeColor = seance.type === "Compétition" ? BLUE : PRIMARY;
-                        const moyColor  = moy == null ? "#555" : typeColor;
+                        const moyColor  = moy == null ? "var(--text-dim)" : typeColor;
                         const isEditing = editId === seance.id;
                         const isConfirm = confirmId === seance.id;
                         return (
                           <tr
                             key={seance.id}
                             style={{ ...s.tr, ...(isEditing ? { backgroundColor: "rgba(255,0,122,0.07)" } : {}) }}
-                            onMouseEnter={e => { if (!isEditing) e.currentTarget.style.backgroundColor = "#1f1f1f"; }}
+                            onMouseEnter={e => { if (!isEditing) e.currentTarget.style.backgroundColor = "var(--surface-raised)"; }}
                             onMouseLeave={e => { if (!isEditing) e.currentTarget.style.backgroundColor = ""; }}
                           >
                             <td style={s.td}>{fmtDate(seance.date)}</td>
@@ -605,7 +605,7 @@ export default function MesSeances() {
                                 {seance.type}
                               </span>
                             </td>
-                            <td style={{ ...s.td, color: "#888" }}>{seance.lieu || "—"}</td>
+                            <td style={{ ...s.td, color: "var(--text-muted)" }}>{seance.lieu || "—"}</td>
                             <td style={s.td}><span style={s.distBadge}>{seance.distance}</span></td>
                             <td style={s.tdR}>{p}</td>
                             <td style={s.tdR}>{b}</td>
@@ -618,7 +618,7 @@ export default function MesSeances() {
                             <td style={{ ...s.tdR, fontWeight: "700", color: moyColor }}>
                               {scoreMoy ?? "—"}
                             </td>
-                            <td style={{ ...s.td, color: "#888", whiteSpace: "normal", minWidth: "120px", maxWidth: "280px", wordBreak: "break-word" }}>
+                            <td style={{ ...s.td, color: "var(--text-muted)", whiteSpace: "normal", minWidth: "120px", maxWidth: "280px", wordBreak: "break-word" }}>
                               {seance.commentaire || "—"}
                             </td>
                             <td style={s.tdAction}>
@@ -630,7 +630,7 @@ export default function MesSeances() {
                               ) : (
                                 <div style={{ display: "flex", gap: "2px", justifyContent: "flex-end" }}>
                                   <button
-                                    style={{ ...s.iconBtn, color: isEditing ? PRIMARY : "#ccc" }}
+                                    style={{ ...s.iconBtn, color: isEditing ? PRIMARY : "var(--text-3)" }}
                                     title="Modifier"
                                     onClick={() => isEditing ? cancelEdit() : startEdit(seance)}
                                   >
@@ -657,10 +657,10 @@ export default function MesSeances() {
                         <td style={s.tdRTotal}>{tc}</td>
                         <td style={{ ...s.tdRTotal, fontWeight: "700" }}>{ts || "—"}</td>
                         <td style={s.tdRTotal}>{tt || "—"}</td>
-                        <td style={{ ...s.tdRTotal, color: tmoy != null ? "#e8e8e8" : "#555" }}>
+                        <td style={{ ...s.tdRTotal, color: tmoy != null ? "var(--text)" : "var(--text-dim)" }}>
                           {tmoy != null ? tmoy.toFixed(2) : "—"}
                         </td>
-                        <td style={{ ...s.tdRTotal, color: tscoreMoy != null ? "#e8e8e8" : "#555" }}>
+                        <td style={{ ...s.tdRTotal, color: tscoreMoy != null ? "var(--text)" : "var(--text-dim)" }}>
                           {tscoreMoy ?? "—"}
                         </td>
                         <td colSpan={2} style={s.tdMonthLabel}></td>
@@ -721,61 +721,61 @@ function PencilIcon() {
 const s = {
   page:    { display: "flex", flexDirection: "column", gap: "16px" },
   header:  {},
-  title:   { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: 0 },
+  title:   { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
   controls:{},
 
   filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#777",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
   filterSelect: {},
   exportBtn: {
-    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    backgroundColor: "var(--border)", color: "var(--text)", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
 
   // jauge
   gaugeBox: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px",
   },
   gaugeHeader: { display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: "6px 12px" },
-  gaugeLabel:  { fontSize: "12px", fontWeight: "700", color: "#777", textTransform: "uppercase", letterSpacing: "0.07em" },
-  gaugeFigures:{ fontSize: "13px", color: "#bbb" },
-  gaugeTrack:  { height: "8px", borderRadius: "4px", backgroundColor: "#2a2a2a", overflow: "hidden" },
+  gaugeLabel:  { fontSize: "12px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
+  gaugeFigures:{ fontSize: "13px", color: "var(--text-3)" },
+  gaugeTrack:  { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
   gaugeBar:    { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
 
   // formulaire d'édition
   editCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px",
     borderTop: `3px solid ${PRIMARY}`,
   },
   editHeader: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  editTitle:  { fontSize: "14px", fontWeight: "700", color: "#e8e8e8" },
+  editTitle:  { fontSize: "14px", fontWeight: "700", color: "var(--text)" },
   editClose:  {
     background: "none", border: "none", cursor: "pointer",
-    color: "#666", fontSize: "16px", padding: "2px 6px",
+    color: "var(--text-dim)", fontSize: "16px", padding: "2px 6px",
     borderRadius: "4px", fontFamily: "inherit",
   },
   editGrid:  {},
   editLabel: {
-    fontSize: "11px", fontWeight: "600", color: "#777",
+    fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   editInput: {
-    padding: "8px 10px", border: "1.5px solid #2e2e2e", borderRadius: "7px",
-    fontSize: "13px", color: "#e8e8e8", fontFamily: "inherit",
-    outline: "none", backgroundColor: "#252525",
+    padding: "8px 10px", border: "var(--border-2)", borderRadius: "7px",
+    fontSize: "13px", color: "var(--text)", fontFamily: "inherit",
+    outline: "none", backgroundColor: "var(--input-bg)",
     width: "100%", boxSizing: "border-box",
   },
   editFooter: { display: "flex", justifyContent: "flex-end", gap: "10px" },
   cancelBtn:  {
-    background: "none", border: "1.5px solid #3a3a3a", borderRadius: "7px",
-    padding: "8px 16px", fontSize: "13px", color: "#aaa",
+    background: "none", border: "var(--border-strong)", borderRadius: "7px",
+    padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)",
     cursor: "pointer", fontFamily: "inherit",
   },
   saveBtn: {
@@ -786,43 +786,43 @@ const s = {
 
   // tableau
   tableWrap: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)", overflowX: "auto",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)", overflowX: "auto",
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
   th: {
     padding: "12px 12px", textAlign: "left",
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
-    backgroundColor: "#1e1e1e",
+    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    backgroundColor: "var(--surface-raised)",
   },
   thR:      { textAlign: "right" },
   tr:       { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
-  td:       { padding: "10px 12px", color: "#d0d0d0", whiteSpace: "nowrap" },
-  tdR:      { padding: "10px 12px", textAlign: "right", color: "#ccc", whiteSpace: "nowrap" },
+  td:       { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdR:      { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   tdAction: { padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" },
 
   // ligne totaux mensuels
   trTotal: {
-    backgroundColor: "#222",
-    borderTop: "2px solid #333",
-    borderBottom: "2px solid #333",
+    backgroundColor: "var(--surface-raised)",
+    borderTop: "var(--border-3)",
+    borderBottom: "var(--border-3)",
   },
   tdMonthLabel: {
-    padding: "9px 12px", color: "#999",
+    padding: "9px 12px", color: "var(--text-dim)",
     fontSize: "11px", fontWeight: "700", whiteSpace: "nowrap",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   tdRTotal: {
     padding: "9px 12px", textAlign: "right",
-    color: "#ccc", whiteSpace: "nowrap",
+    color: "var(--text-3)", whiteSpace: "nowrap",
     fontSize: "13px", fontWeight: "700",
   },
 
   distBadge: {
-    backgroundColor: "#2a2a2a", borderRadius: "5px",
-    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "#bbb",
+    backgroundColor: "var(--border)", borderRadius: "5px",
+    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)",
   },
   typeBadge: {
     backgroundColor: "rgba(255,0,122,0.15)", color: PRIMARY,
@@ -832,7 +832,7 @@ const s = {
 
   iconBtn: {
     background: "none", border: "none", cursor: "pointer",
-    color: "#555", padding: "4px 5px", borderRadius: "4px",
+    color: "var(--text-dim)", padding: "4px 5px", borderRadius: "4px",
     display: "inline-flex", alignItems: "center",
     transition: "color 0.15s", fontFamily: "inherit",
   },
@@ -843,16 +843,16 @@ const s = {
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   btnNon: {
-    backgroundColor: "#2a2a2a", color: "#aaa", border: "none",
+    backgroundColor: "var(--border)", color: "var(--text-muted)", border: "none",
     borderRadius: "5px", padding: "4px 10px", fontSize: "12px",
     cursor: "pointer", fontFamily: "inherit",
   },
 
-  empty:  { padding: "40px", textAlign: "center", color: "#555", fontSize: "14px" },
-  info:   { color: "#777", fontSize: "14px" },
+  empty:  { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
-  count: { fontSize: "12px", color: "#555", textAlign: "right" },
+  count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },
 };

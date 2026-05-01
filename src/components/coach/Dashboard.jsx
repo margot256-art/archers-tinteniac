@@ -284,7 +284,7 @@ export default function Dashboard() {
         ) : (
           <div style={s.progGrid}>
             {progression.map(p => {
-              const dCol   = p.delta == null ? "#555" : p.delta > 0 ? PRIMARY : RED;
+              const dCol   = p.delta == null ? "var(--text-dim)" : p.delta > 0 ? PRIMARY : RED;
               const dStr   = p.delta != null
                 ? `${p.delta > 0 ? "+ " : "− "}${Math.abs(p.delta).toFixed(2)}`
                 : null;
@@ -404,8 +404,8 @@ function NewArcherModal({ onClose }) {
   };
 
   const inputStyle = {
-    padding: "10px 12px", border: "1.5px solid #2e2e2e", borderRadius: "8px",
-    fontSize: "14px", color: "#e8e8e8", backgroundColor: "#252525",
+    padding: "10px 12px", border: "var(--border-2)", borderRadius: "8px",
+    fontSize: "14px", color: "var(--text)", backgroundColor: "var(--input-bg)",
     outline: "none", fontFamily: "inherit", width: "100%", boxSizing: "border-box",
   };
 
@@ -463,15 +463,15 @@ function NewArcherModal({ onClose }) {
 
 const sModal = {
   overlay:      { position: "fixed", inset: 0, zIndex: 200, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" },
-  card:         { backgroundColor: "#1a1a1a", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "400px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column", gap: "18px" },
+  card:         { backgroundColor: "var(--surface)", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "400px", boxShadow: "var(--shadow-modal)", display: "flex", flexDirection: "column", gap: "18px" },
   header:       { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  title:        { fontSize: "15px", fontWeight: "700", color: "#e8e8e8" },
-  close:        { background: "none", border: "none", color: "#666", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
-  label:        { fontSize: "11px", fontWeight: "600", color: "#777", textTransform: "uppercase", letterSpacing: "0.07em" },
+  title:        { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
+  close:        { background: "none", border: "none", color: "var(--text-dim)", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
+  label:        { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
   error:        { backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#ef4444" },
   success:      { backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "#16a34a", display: "flex", flexDirection: "column", gap: "12px" },
   primaryBtn:   { backgroundColor: PRIMARY, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
-  secondaryBtn: { background: "none", border: "1px solid #333", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "#aaa", cursor: "pointer", fontFamily: "inherit" },
+  secondaryBtn: { background: "none", border: "var(--border-3)", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" },
 };
 
 // ── styles ────────────────────────────────────────────────────────────────────
@@ -483,7 +483,7 @@ const s = {
     borderRadius: "8px", padding: "8px 18px",
     fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
-  info:   { color: "#777", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
@@ -491,7 +491,7 @@ const s = {
 
   // réinitialisation mot de passe
   resetSection: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "var(--surface)",
     border: "1px solid #f97316",
     borderRadius: "12px",
     padding: "16px 20px",
@@ -499,7 +499,7 @@ const s = {
     boxShadow: "0 2px 10px rgba(249,115,22,0.15)",
   },
   resetHeader: { display: "flex", alignItems: "center", gap: "10px" },
-  resetTitle:  { fontSize: "13px", fontWeight: "700", color: "#e8e8e8", textTransform: "uppercase", letterSpacing: "0.06em" },
+  resetTitle:  { fontSize: "13px", fontWeight: "700", color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em" },
   resetBadge:  {
     backgroundColor: "#f97316", color: "#fff",
     borderRadius: "10px", padding: "1px 7px",
@@ -507,14 +507,14 @@ const s = {
   },
   resetRow: {
     display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px",
-    paddingTop: "10px", borderTop: "1px solid #2a2a2a",
+    paddingTop: "10px", borderTop: "var(--border)",
   },
-  resetName:    { fontSize: "14px", color: "#e8e8e8", fontWeight: "600", flex: "1 1 120px" },
+  resetName:    { fontSize: "14px", color: "var(--text)", fontWeight: "600", flex: "1 1 120px" },
   resetActions: { display: "flex", gap: "8px", flex: "2 1 240px" },
   resetInput: {
     flex: 1, padding: "7px 10px",
-    border: "1.5px solid #2e2e2e", borderRadius: "7px",
-    fontSize: "13px", color: "#e8e8e8", backgroundColor: "#252525",
+    border: "var(--border-2)", borderRadius: "7px",
+    fontSize: "13px", color: "var(--text)", backgroundColor: "var(--input-bg)",
     outline: "none", fontFamily: "inherit",
   },
   resetBtn: {
@@ -526,38 +526,38 @@ const s = {
 
   // bannière
   banner: {
-    backgroundColor: "#1a2744",
+    backgroundColor: "var(--blue-deep)",
     borderRadius: "12px",
     padding: "20px 28px",
     boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
   },
   bannerTitle: {
-    fontSize: "20px", fontWeight: "700", color: "#e8e8e8",
+    fontSize: "20px", fontWeight: "700", color: "var(--text)",
     letterSpacing: "-0.01em",
   },
 
   // stat cards
   cards: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" },
   statCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     padding: "18px 20px",
     display: "flex", flexDirection: "column", gap: "4px",
   },
   statLabel: {
-    fontSize: "11px", fontWeight: "700", color: "#666",
+    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   statValue: {
-    fontSize: "28px", fontWeight: "800", color: "#e8e8e8",
+    fontSize: "28px", fontWeight: "800", color: "var(--text)",
     letterSpacing: "-0.02em", lineHeight: "1.1",
   },
-  statSub: { fontSize: "12px", color: "#555" },
+  statSub: { fontSize: "12px", color: "var(--text-dim)" },
 
   // sections
   section:      { display: "flex", flexDirection: "column", gap: "10px" },
-  sectionTitle: { fontSize: "14px", fontWeight: "700", color: "#c0c0c0", margin: 0 },
-  empty:        { color: "#555", fontSize: "14px", padding: "24px", textAlign: "center" },
+  sectionTitle: { fontSize: "14px", fontWeight: "700", color: "var(--text-2)", margin: 0 },
+  empty:        { color: "var(--text-dim)", fontSize: "14px", padding: "24px", textAlign: "center" },
 
   // dernière séance (sans fond)
   lastRow: {
@@ -565,7 +565,7 @@ const s = {
     padding: "11px 4px",
     borderBottom: "1px solid #222",
   },
-  lastName:  { fontSize: "14px", fontWeight: "700", color: "#d0d0d0" },
+  lastName:  { fontSize: "14px", fontWeight: "700", color: "var(--text-2)" },
   lastRight: { fontSize: "13px", fontWeight: "600" },
 
   // progression
@@ -575,21 +575,21 @@ const s = {
     gap: "12px",
   },
   progCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "10px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "10px",
+    boxShadow: "var(--shadow-card)",
     padding: "14px 16px",
     display: "flex", flexDirection: "column", gap: "6px",
   },
-  progName:  { fontSize: "13px", fontWeight: "700", color: "#e0e0e0" },
-  progPrev:  { fontSize: "11px", color: "#666" },
+  progName:  { fontSize: "13px", fontWeight: "700", color: "var(--text)" },
+  progPrev:  { fontSize: "11px", color: "var(--text-dim)" },
   progRow:   { display: "flex", alignItems: "baseline", gap: "8px" },
-  progCurr:  { fontSize: "26px", fontWeight: "800", color: "#e8e8e8", letterSpacing: "-0.02em" },
+  progCurr:  { fontSize: "26px", fontWeight: "800", color: "var(--text)", letterSpacing: "-0.02em" },
   progDelta: { fontSize: "14px", fontWeight: "700" },
 
   // volume vs objectif
   volCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     overflow: "hidden",
   },
   volRow: {
@@ -598,11 +598,11 @@ const s = {
     display: "flex", flexDirection: "column", gap: "8px",
   },
   volMeta:  { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  volName:  { fontSize: "13px", fontWeight: "600", color: "#d0d0d0" },
-  volText:  { fontSize: "12px", color: "#888" },
-  volNoObj: { fontSize: "12px", color: "#555", fontStyle: "italic" },
+  volName:  { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
+  volText:  { fontSize: "12px", color: "var(--text-muted)" },
+  volNoObj: { fontSize: "12px", color: "var(--text-dim)", fontStyle: "italic" },
   barTrack: {
-    height: "7px", backgroundColor: "#2a2a2a",
+    height: "7px", backgroundColor: "var(--border)",
     borderRadius: "10px", overflow: "hidden",
   },
   barFill: {

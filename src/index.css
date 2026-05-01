@@ -50,9 +50,71 @@
   }
 }
 
+/* ── Thème sombre (défaut) ─────────────────────────────────────────────── */
+:root {
+  --app-bg:         #111111;
+  --surface:        #1a1a1a;
+  --surface-raised: #1e1e1e;
+  --surface-sub:    #141414;
+  --input-bg:       #252525;
+
+  --text:        #e8e8e8;
+  --text-2:      #d0d0d0;
+  --text-3:      #bbbbbb;
+  --text-muted:  #888888;
+  --text-dim:    #666666;
+
+  --border:        #2a2a2a;
+  --border-2:      #2e2e2e;
+  --border-3:      #333333;
+  --border-strong: #444444;
+
+  --shadow-nav:  0 2px 8px rgba(0,0,0,0.4);
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-modal:0 8px 32px rgba(0,0,0,0.5);
+
+  --blue-deep:  #1a2744;
+  --blue-mid:   #243660;
+  --blue-dark:  #2e4a80;
+  --blue-text:  #e0eaf8;
+  --blue-soft:  #c8daf5;
+  --blue-soft2: #c8d8f0;
+}
+
+/* ── Thème clair ───────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --app-bg:         #f0f2f5;
+  --surface:        #ffffff;
+  --surface-raised: #f0f0f0;
+  --surface-sub:    #f5f7fa;
+  --input-bg:       #f8f9fa;
+
+  --text:        #1a1a1a;
+  --text-2:      #444444;
+  --text-3:      #555555;
+  --text-muted:  #777777;
+  --text-dim:    #999999;
+
+  --border:        #e0e0e0;
+  --border-2:      #dddddd;
+  --border-3:      #cccccc;
+  --border-strong: #aaaaaa;
+
+  --shadow-nav:  0 2px 8px rgba(0,0,0,0.1);
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-modal:0 8px 32px rgba(0,0,0,0.2);
+
+  --blue-deep:  #dbeafe;
+  --blue-mid:   #bfdbfe;
+  --blue-dark:  #93c5fd;
+  --blue-text:  #1e3a5f;
+  --blue-soft:  #eff6ff;
+  --blue-soft2: #dbeafe;
+}
+
 body {
   margin: 0;
-  background-color: #111;
+  background-color: var(--app-bg);
 }
 
 /* ── MesSeances responsive ─────────────────────────────────────────────── */
@@ -74,11 +136,11 @@ body {
 
 .ms-filter-select {
   padding: 7px 10px;
-  border: 1.5px solid #2e2e2e;
+  border: 1.5px solid var(--border-2);
   border-radius: 7px;
   font-size: 13px;
-  color: #e8e8e8;
-  background-color: #1e1e1e;
+  color: var(--text);
+  background-color: var(--surface-raised);
   outline: none;
   font-family: inherit;
   cursor: pointer;
@@ -136,18 +198,18 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 24px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border);
 }
 
 .layout-nav-title {
-  color: #fff;
+  color: var(--text);
   font-weight: 700;
   font-size: 15px;
   letter-spacing: -0.01em;
 }
 
 .layout-nav-username {
-  color: #777;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -185,9 +247,9 @@ body {
 /* ── MesSeances gauge ──────────────────────────────────────────────────── */
 
 .ms-gauge-box {
-  background-color: #1a1a1a;
+  background-color: var(--surface);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-card);
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
@@ -225,11 +287,11 @@ body {
 
 .coach-filter-select {
   padding: 7px 10px;
-  border: 1.5px solid #2e2e2e;
+  border: 1.5px solid var(--border-2);
   border-radius: 7px;
   font-size: 13px;
-  color: #e8e8e8;
-  background-color: #1e1e1e;
+  color: var(--text);
+  background-color: var(--surface-raised);
   outline: none;
   font-family: inherit;
   cursor: pointer;
@@ -282,25 +344,25 @@ body {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background-color: #1a1a1a;
+  background-color: var(--surface);
   border-radius: 10px;
   font-size: 13px;
-  color: #aaa;
+  color: var(--text-muted);
 }
 
 .sdc-summary strong {
-  color: #e8e8e8;
+  color: var(--text);
   font-weight: 700;
 }
 
 .sdc-summary-sep {
-  color: #444;
+  color: var(--border-strong);
 }
 
 .saisie-dist-card {
-  background-color: #1a1a1a;
+  background-color: var(--surface);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -309,22 +371,22 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background-color: #222;
-  border-bottom: 1px solid #2a2a2a;
+  background-color: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
 }
 
 .sdc-dist {
-  background-color: #2e2e2e;
+  background-color: var(--border-2);
   border-radius: 5px;
   padding: 3px 10px;
   font-size: 14px;
   font-weight: 700;
-  color: #e8e8e8;
+  color: var(--text);
 }
 
 .sdc-total {
   font-size: 11px;
-  color: #777;
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -343,7 +405,7 @@ body {
 
 .sdc-divider {
   width: 1px;
-  background-color: #2a2a2a;
+  background-color: var(--border);
   margin: 10px 0;
 }
 
@@ -367,12 +429,12 @@ body {
 
 .sdc-stat-label {
   font-size: 11px;
-  color: #666;
+  color: var(--text-dim);
 }
 
 .sdc-stat-value {
   font-size: 13px;
-  color: #ccc;
+  color: var(--text-3);
 }
 
 /* ── Saisie responsive ─────────────────────────────────────────────────── */

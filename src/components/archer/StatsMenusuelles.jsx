@@ -455,19 +455,19 @@ export default function StatsMenusuelles() {
                   </tr>
                 ) : (
                   rows.map((row, i) => {
-                    const entrMoyColor = row.moyEntr == null ? "#555" : PRIMARY;
-                    const compMoyColor = row.moyComp == null ? "#555" : BLUE;
+                    const entrMoyColor = row.moyEntr == null ? "var(--text-dim)" : PRIMARY;
+                    const compMoyColor = row.moyComp == null ? "var(--text-dim)" : BLUE;
                     return (
                       <tr
                         key={i}
                         style={s.tr}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = "#1f1f1f"}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                       >
                         <td style={{ ...s.td, fontWeight: "500" }}>{fmtMois(row.month)}</td>
                         <td style={s.td}><span style={s.badge}>{row.distance}</span></td>
-                        <td style={{ ...s.tdNum, color: row.nbrEntr ? PRIMARY : "#555", fontWeight: "600" }}>{row.nbrEntr || "—"}</td>
-                        <td style={{ ...s.tdNum, color: row.nbrComp ? BLUE    : "#555", fontWeight: "600" }}>{row.nbrComp || "—"}</td>
+                        <td style={{ ...s.tdNum, color: row.nbrEntr ? PRIMARY : "var(--text-dim)", fontWeight: "600" }}>{row.nbrEntr || "—"}</td>
+                        <td style={{ ...s.tdNum, color: row.nbrComp ? BLUE    : "var(--text-dim)", fontWeight: "600" }}>{row.nbrComp || "—"}</td>
                         <td style={s.tdNum}>{row.paille  || "—"}</td>
                         <td style={s.tdNum}>{row.blason  || "—"}</td>
                         <td style={s.tdNum}>{row.compteTotal || "—"}</td>
@@ -518,18 +518,18 @@ function FilterSelect({ label, value, options, onChange }) {
 function ObjGauge({ label, color, row, objScore }) {
   const { current, delta, pct } = row;
   const hasData  = current != null;
-  const barColor = !hasData ? "#2a2a2a" : pct >= 100 ? "#16a34a" : pct >= 80 ? color : pct >= 60 ? "#f97316" : "#ef4444";
+  const barColor = !hasData ? "var(--border)" : pct >= 100 ? "#16a34a" : pct >= 80 ? color : pct >= 60 ? "#f97316" : "#ef4444";
   const deltaStr = delta == null ? null : delta >= 0 ? `+${delta}` : `${delta}`;
-  const deltaCol = delta == null ? "#555" : delta >= 0 ? "#16a34a" : "#ef4444";
+  const deltaCol = delta == null ? "var(--text-dim)" : delta >= 0 ? "#16a34a" : "#ef4444";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
       <span style={{ fontSize: "10px", fontWeight: "700", color, width: "32px", flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.06em" }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: "5px", backgroundColor: "#252525", borderRadius: "10px", overflow: "hidden" }}>
+      <div style={{ flex: 1, height: "5px", backgroundColor: "var(--input-bg)", borderRadius: "10px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${pct}%`, backgroundColor: barColor, borderRadius: "10px", transition: "width 0.5s ease" }} />
       </div>
-      <span style={{ fontSize: "13px", fontWeight: "700", color: hasData ? "#e0e0e0" : "#333", width: "32px", textAlign: "right", flexShrink: 0 }}>
+      <span style={{ fontSize: "13px", fontWeight: "700", color: hasData ? "var(--text)" : "var(--text-3)", width: "32px", textAlign: "right", flexShrink: 0 }}>
         {hasData ? current : "—"}
       </span>
       {deltaStr
@@ -546,75 +546,75 @@ const thBase = {
   padding: "10px 12px",
   fontSize: "11px", fontWeight: "700",
   textTransform: "uppercase", letterSpacing: "0.06em",
-  borderBottom: "1px solid #2a2a2a", whiteSpace: "nowrap",
-  backgroundColor: "#1e1e1e", color: "#666",
+  borderBottom: "var(--border)", whiteSpace: "nowrap",
+  backgroundColor: "var(--surface-raised)", color: "var(--text-dim)",
 };
 
 const s = {
   page:   { display: "flex", flexDirection: "column", gap: "16px" },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
-  title:  { fontSize: "20px", fontWeight: "700", color: "#e8e8e8", margin: 0 },
+  title:  { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
   filters:{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
   filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "#777",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
   filterSelect: {
-    padding: "7px 10px", border: "1.5px solid #2e2e2e", borderRadius: "7px",
-    fontSize: "13px", color: "#e8e8e8", backgroundColor: "#1e1e1e",
+    padding: "7px 10px", border: "var(--border-2)", borderRadius: "7px",
+    fontSize: "13px", color: "var(--text)", backgroundColor: "var(--surface-raised)",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
   exportBtn: {
-    backgroundColor: "#2a2a2a", color: "#e0e0e0", border: "none",
+    backgroundColor: "var(--border)", color: "var(--text)", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   tableWrap: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)", overflowX: "auto",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)", overflowX: "auto",
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
 
   // en-têtes ligne 1
   th:         { ...thBase, textAlign: "left" },
   thR:        { ...thBase, textAlign: "right" },
-  thGrpSeance:{ ...thBase, textAlign: "center", borderLeft: "1px solid #2a2a2a", borderRight: "1px solid #2a2a2a" },
-  thGrpVol:   { ...thBase, textAlign: "center", borderLeft: "1px solid #2a2a2a", borderRight: "1px solid #2a2a2a" },
+  thGrpSeance:{ ...thBase, textAlign: "center", borderLeft: "var(--border)", borderRight: "var(--border)" },
+  thGrpVol:   { ...thBase, textAlign: "center", borderLeft: "var(--border)", borderRight: "var(--border)" },
   thGrpEntr:  { ...thBase, textAlign: "center", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)", borderLeft: "2px solid rgba(255,0,122,0.3)" },
   thGrpComp:  { ...thBase, textAlign: "center", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)", borderLeft: "2px solid rgba(59,130,246,0.3)" },
 
   // en-têtes ligne 2
-  thSub:     { ...thBase, fontWeight: "600", color: "#666" },
+  thSub:     { ...thBase, fontWeight: "600", color: "var(--text-dim)" },
   thSubEntr: { ...thBase, fontWeight: "600", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)" },
   thSubComp: { ...thBase, fontWeight: "600", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)" },
 
   tr:    { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
-  td:    { padding: "10px 12px", color: "#d0d0d0", whiteSpace: "nowrap" },
-  tdNum: { padding: "10px 12px", textAlign: "right", color: "#ccc", whiteSpace: "nowrap" },
+  td:    { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdNum: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   badge: {
-    backgroundColor: "#2a2a2a", borderRadius: "5px",
-    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "#bbb",
+    backgroundColor: "var(--border)", borderRadius: "5px",
+    padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)",
   },
-  empty:  { padding: "40px", textAlign: "center", color: "#555", fontSize: "14px" },
-  info:   { color: "#777", fontSize: "14px" },
+  empty:  { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
+  info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
-  count: { fontSize: "12px", color: "#555", textAlign: "right" },
+  count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },
 
   // objectifs
   objCard: {
-    backgroundColor: "#1a1a1a", borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+    backgroundColor: "var(--surface)", borderRadius: "12px",
+    boxShadow: "var(--shadow-card)",
     overflow: "hidden",
   },
   objHeader: {
     display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap",
     padding: "16px 20px", borderBottom: "1px solid #222",
   },
-  objTitle:  { fontSize: "13px", fontWeight: "700", color: "#c0c0c0", textTransform: "uppercase", letterSpacing: "0.06em" },
-  objHint:   { fontSize: "11px", color: "#444", marginLeft: "auto" },
+  objTitle:  { fontSize: "13px", fontWeight: "700", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.06em" },
+  objHint:   { fontSize: "11px", color: "var(--text-3)", marginLeft: "auto" },
   objRow: {
     display: "grid",
     gridTemplateColumns: "80px 1fr",
@@ -624,9 +624,9 @@ const s = {
     borderBottom: "1px solid #1e1e1e",
   },
   objLeft:    { display: "flex", flexDirection: "column", gap: "4px" },
-  objBadge:   { backgroundColor: "#252525", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "700", color: "#bbb", alignSelf: "flex-start" },
-  objMax:     { fontSize: "10px", color: "#3a3a3a" },
+  objBadge:   { backgroundColor: "var(--input-bg)", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "700", color: "var(--text-3)", alignSelf: "flex-start" },
+  objMax:     { fontSize: "10px", color: "var(--border-strong)" },
   objMiddle:  { display: "flex", flexDirection: "column", gap: "7px" },
   objObjLine: { display: "flex", justifyContent: "flex-end" },
-  objObjVal:  { fontSize: "10px", color: "#3a3a3a" },
+  objObjVal:  { fontSize: "10px", color: "var(--border-strong)" },
 };

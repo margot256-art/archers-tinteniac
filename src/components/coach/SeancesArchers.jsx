@@ -354,18 +354,20 @@ export default function SeancesArchers() {
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
         </div>
-        <button
-          style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
-          onClick={handleExportExcel}
-          disabled={filtered.length === 0}
-          title="Exporter en Excel (.xlsx)"
-        >↓ Excel</button>
-        <button
-          style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
-          onClick={handleExportPDF}
-          disabled={filtered.length === 0}
-          title="Exporter en PDF"
-        >↓ PDF</button>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <button
+            style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+            onClick={handleExportExcel}
+            disabled={filtered.length === 0}
+            title="Exporter en Excel (.xlsx)"
+          >↓ Excel</button>
+          <button
+            style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+            onClick={handleExportPDF}
+            disabled={filtered.length === 0}
+            title="Exporter en PDF"
+          >↓ PDF</button>
+        </div>
       </div>
 
       {/* ── Tableau ── */}

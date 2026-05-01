@@ -169,8 +169,7 @@ export default function StatsMenusuelles() {
     "Moy./fl. Entr.", "Score moy. Entr.",
     "Moy./fl. Comp.", "Score moy. Comp.",
   ];
-  const EXPORT_NC       = EXPORT_COLS.length; // 13
-  const EXPORT_NUM_COLS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const EXPORT_NC = EXPORT_COLS.length; // 13
 
   const rowToArr = (row, asString = false) => [
     fmtMois(row.month),
@@ -188,33 +187,58 @@ export default function StatsMenusuelles() {
     row.scoreMoyComp ?? "",
   ];
 
+  const buildTotalRow = (asString = false) => {
+    const t = rows.reduce((acc, row) => ({
+      nbrEntr:     acc.nbrEntr     + row.nbrEntr,
+      nbrComp:     acc.nbrComp     + row.nbrComp,
+      paille:      acc.paille      + row.paille,
+      blason:      acc.blason      + row.blason,
+      compteTotal: acc.compteTotal + row.compteTotal,
+      score:       acc.score       + row.score,
+      total:       acc.total       + row.total,
+      scoreEntr:   acc.scoreEntr   + row.scoreEntr,
+      compteEntr:  acc.compteEntr  + row.compteEntr,
+      scoreComp:   acc.scoreComp   + row.scoreComp,
+      compteComp:  acc.compteComp  + row.compteComp,
+    }), { nbrEntr:0, nbrComp:0, paille:0, blason:0, compteTotal:0, score:0, total:0, scoreEntr:0, compteEntr:0, scoreComp:0, compteComp:0 });
+    const moyEntr = t.compteEntr > 0 ? t.scoreEntr / t.compteEntr : null;
+    const moyComp = t.compteComp > 0 ? t.scoreComp / t.compteComp : null;
+    const fmt = (v) => v != null ? (asString ? v.toFixed(2) : parseFloat(v.toFixed(2))) : "";
+    return [
+      `Total — Saison ${filterSaison}`, "",
+      t.nbrEntr  || "", t.nbrComp  || "",
+      t.paille   || "", t.blason   || "", t.compteTotal || "",
+      t.score    || "", t.total    || "",
+      fmt(moyEntr), "", fmt(moyComp), "",
+    ];
+  };
+
   // ── Export Excel ──────────────────────────────────────────────────────────
 
   const handleExportExcel = () => {
-    const NC      = EXPORT_NC;
-    const archer  = user ? `${user.prenom} ${user.nom}` : "";
-    const numCols = EXPORT_NUM_COLS;
+    const NC     = EXPORT_NC;
+    const archer = user ? `${user.prenom} ${user.nom}` : "";
 
     const aoa     = [];
     const merges  = [];
     const rowMeta = [];
 
-    // Titre
     aoa.push([`Stats mensuelles — ${archer} — Saison ${filterSaison}`, ...Array(NC - 1).fill("")]);
     merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } });
     rowMeta.push({ type: "title" });
     aoa.push(Array(NC).fill(""));
     rowMeta.push({ type: "empty" });
 
-    // En-tête colonnes
     aoa.push([...EXPORT_COLS]);
     rowMeta.push({ type: "header" });
 
-    // Données
     rows.forEach((row, i) => {
       aoa.push(rowToArr(row, false));
       rowMeta.push({ type: "data", even: i % 2 === 0 });
     });
+
+    aoa.push(buildTotalRow(false));
+    rowMeta.push({ type: "total" });
 
     const ws      = XLSX.utils.aoa_to_sheet(aoa);
     ws["!merges"] = merges;
@@ -224,28 +248,35 @@ export default function StatsMenusuelles() {
       { wch: 10 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 18 },
     ];
 
+    const center = { horizontal: "center", vertical: "center" };
     const ST = {
       title: {
         font: { bold: true, sz: 13, color: { rgb: "FFFFFF" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "B30057" } },
         alignment: { horizontal: "left", vertical: "center" },
       },
-      header: (c) => ({
+      header: {
         font: { bold: true, sz: 9, color: { rgb: "000000" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFCCE5" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: center,
         border: { bottom: { style: "medium", color: { rgb: "FF007A" } } },
-      }),
-      dataEven: (c) => ({
+      },
+      dataEven: {
         font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
-      }),
-      dataOdd: (c) => ({
+        alignment: center,
+      },
+      dataOdd: {
         font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFF0F6" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
-      }),
+        alignment: center,
+      },
+      total: {
+        font: { bold: true, sz: 9, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
+        alignment: center,
+        border: { top: { style: "medium", color: { rgb: "B30057" } } },
+      },
     };
 
     const rowHeights = [];
@@ -257,9 +288,10 @@ export default function StatsMenusuelles() {
         const addr = XLSX.utils.encode_cell({ r, c });
         if (!ws[addr]) ws[addr] = { v: "", t: "s" };
         ws[addr].s =
-          meta.type === "title"  ? ST.title :
-          meta.type === "header" ? ST.header(c) :
-          meta.even              ? ST.dataEven(c) : ST.dataOdd(c);
+          meta.type === "title"  ? ST.title  :
+          meta.type === "header" ? ST.header :
+          meta.type === "total"  ? ST.total  :
+          meta.even              ? ST.dataEven : ST.dataOdd;
       }
     });
     ws["!rows"] = rowHeights;
@@ -277,11 +309,11 @@ export default function StatsMenusuelles() {
     const pw     = pdf.internal.pageSize.width;
     const ph     = pdf.internal.pageSize.height;
     // Mois(24) Dist(12) SéEntr(14) SéComp(14) Paille(10) Blason(10) Compté(10) Score(10) Total(12) MoyEntr(18) ScMoyEntr(22) MoyComp(18) ScMoyComp(auto)
-    const COL_W  = [24, 12, 14, 14, 10, 10, 10, 10, 12, 18, 22, 18, 0];
+    const COL_W = [24, 12, 14, 14, 10, 10, 10, 10, 12, 18, 22, 18, 0];
 
     const colStyles = COL_W.reduce((acc, w, i) => {
-      acc[i] = w > 0 ? { cellWidth: w } : {};
-      if (EXPORT_NUM_COLS.includes(i)) acc[i].halign = "right";
+      acc[i] = { halign: "center" };
+      if (w > 0) acc[i].cellWidth = w;
       return acc;
     }, {});
 
@@ -295,19 +327,29 @@ export default function StatsMenusuelles() {
     };
     drawTitle();
 
+    const body      = rows.map(row => rowToArr(row, true));
+    const totalRow  = buildTotalRow(true);
+
     autoTable(pdf, {
       head: [EXPORT_COLS],
-      body: rows.map(row => rowToArr(row, true)),
+      body: [...body, totalRow],
       startY: 18,
       margin: { left: 14, right: 14, top: 18 },
-      styles: { fontSize: 7.5, cellPadding: 2, font: "helvetica" },
+      styles: { fontSize: 7.5, cellPadding: 2, font: "helvetica", halign: "center" },
       headStyles: {
         fillColor: [255, 204, 229], textColor: [0, 0, 0],
-        fontStyle: "bold", fontSize: 8,
+        fontStyle: "bold", fontSize: 8, halign: "center",
       },
       bodyStyles: { textColor: [32, 32, 32], fillColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [255, 240, 246] },
       columnStyles: colStyles,
+      didParseCell: ({ row, cell, section }) => {
+        if (section === "body" && row.index === body.length) {
+          cell.styles.fillColor  = [255, 0, 122];
+          cell.styles.textColor  = [255, 255, 255];
+          cell.styles.fontStyle  = "bold";
+        }
+      },
       didDrawPage: () => {
         drawTitle();
         pdf.setFontSize(8);

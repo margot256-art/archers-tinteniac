@@ -294,17 +294,13 @@ export default function Classement() {
       {/* ── Season bar ── */}
       <div style={s.saisonBar}>
         <span style={s.saisonBarLabel}>Saison</span>
-        <div style={s.saisonBtns}>
-          {saisonOptions.map(sn => (
-            <button
-              key={sn}
-              style={{ ...s.saisonBtn, ...(filterSaison === sn ? s.saisonBtnActive : {}) }}
-              onClick={() => { setFilterSaison(sn); setFilterPeriod("Toute la saison"); }}
-            >
-              {sn}
-            </button>
-          ))}
-        </div>
+        <select
+          value={filterSaison}
+          onChange={e => { setFilterSaison(e.target.value); setFilterPeriod("Toute la saison"); }}
+          style={s.saisonSelect}
+        >
+          {saisonOptions.map(sn => <option key={sn}>{sn}</option>)}
+        </select>
       </div>
 
       {/* ── Filters row ── */}
@@ -413,21 +409,11 @@ const s = {
     fontSize: "11px", fontWeight: "700", color: "#5b7ab8",
     textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
   },
-  saisonBtns: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  saisonBtn: {
-    padding: "6px 16px", borderRadius: "20px",
-    border: "1.5px solid #2e4a7a",
-    backgroundColor: "transparent",
-    color: "#8fb3e8",
-    fontSize: "13px", fontWeight: "600",
-    cursor: "pointer", transition: "all 0.15s",
-    fontFamily: "inherit",
-  },
-  saisonBtnActive: {
-    backgroundColor: "#2557b5",
-    borderColor: "#2557b5",
-    color: "#fff",
-    boxShadow: "0 0 0 3px rgba(37,87,181,0.25)",
+  saisonSelect: {
+    backgroundColor: "#243660", color: "#e0eaf8",
+    border: "1px solid #2e4a80", borderRadius: "7px",
+    padding: "7px 12px", fontSize: "14px", fontWeight: "600",
+    outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
 
   filtersRow: {

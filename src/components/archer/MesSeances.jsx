@@ -322,102 +322,102 @@ export default function MesSeances() {
   // ── Export PDF ────────────────────────────────────────────────────────────
 
   const handleExportPDF = () => {
-    const doc    = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pdf    = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const archer = user ? `${user.prenom} ${user.nom}` : "";
-    const HEADS  = [["Date","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total","Moy./fl.","Score moy.","Commentaire"]];
-    const COL_W  = [22, 22, 28, 10, 12, 12, 12, 12, 12, 14, 16, "auto"];
+    const pw     = pdf.internal.pageSize.width;
+    const ph     = pdf.internal.pageSize.height;
+    const NC     = 12;
+    const COL_HEADS = ["Date","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
+    const COL_W     = [22, 22, 28, 10, 12, 12, 12, 12, 12, 14, 16, 0];
+    const RIGHT_COLS = [4, 5, 6, 7, 8, 9, 10];
 
-    // Bandeau titre rose foncé
-    const pw = doc.internal.pageSize.width;
-    doc.setFillColor(179, 0, 87);
-    doc.rect(0, 0, pw, 18, "F");
-    doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Mes séances — ${archer} — Saison ${filterSaison}`, 14, 12);
+    const colStyles = COL_W.reduce((acc, w, i) => {
+      acc[i] = w > 0 ? { cellWidth: w } : {};
+      if (RIGHT_COLS.includes(i)) acc[i].halign = "right";
+      return acc;
+    }, {});
 
-    let curY = 28;
+    const drawTitle = () => {
+      pdf.setFillColor(179, 0, 87);
+      pdf.rect(0, 0, pw, 14, "F");
+      pdf.setFontSize(11);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`Mes séances — ${archer} — Saison ${filterSaison}`, 14, 9.5);
+    };
+    drawTitle();
+
+    let startY = 18;
 
     grouped.forEach(([ym, group]) => {
-      if (curY > 165) {
-        doc.addPage();
-        doc.setFillColor(179, 0, 87);
-        doc.rect(0, 0, pw, 18, "F");
-        doc.setFontSize(13);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.text(`Mes séances — ${archer} — Saison ${filterSaison}`, 14, 12);
-        curY = 22;
+      if (startY > ph - 30) {
+        pdf.addPage();
+        drawTitle();
+        startY = 18;
       }
-
-      // Bandeau mois rose normal + texte blanc
-      const tableW = pw - 28;
-      doc.setFillColor(255, 0, 122);
-      doc.rect(14, curY - 4, tableW, 7, "F");
-      doc.setFontSize(9);
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.text(fmtYM(ym).toUpperCase(), 16, curY);
-      curY += 5;
 
       const body = group.map(s => {
         const p = getPaille(s); const b = getBlason(s); const c = getCompte(s);
         const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
         return [
-          fmtDate(s.date), s.type || "", s.lieu || "—", s.distance || "",
-          p || 0, b || 0, c || 0, s.score ?? "—", p + b + c || "—",
-          moy != null ? moy.toFixed(2) : "—",
-          moy != null ? Math.round(moy * normFactor(s.distance)) : "—",
-          s.commentaire || "—",
+          fmtDate(s.date), s.type || "", s.lieu || "", s.distance || "",
+          p || 0, b || 0, c || 0, s.score ?? "",
+          p + b + c || "",
+          moy != null ? moy.toFixed(2) : "",
+          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
+          s.commentaire || "",
         ];
       });
 
       const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
       const totalRow = [
-        "Total", "", "", "", tp, tb, tc,
-        ts || "—", tt || "—",
-        tmoy != null ? tmoy.toFixed(2) : "—",
-        tscoreMoy ?? "—", "",
+        `Total — ${fmtYM(ym)}`, "", "", "",
+        tp, tb, tc, ts || "", tt || "",
+        tmoy != null ? tmoy.toFixed(2) : "",
+        tscoreMoy ?? "", "",
       ];
 
-      autoTable(doc, {
-        head: HEADS,
+      autoTable(pdf, {
+        head: [
+          [{ content: fmtYM(ym).toUpperCase(), colSpan: NC, styles: {
+            fillColor: [255, 0, 122], textColor: [255, 255, 255],
+            fontStyle: "bold", fontSize: 9, halign: "left",
+            cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+          }}],
+          COL_HEADS,
+        ],
         body: [...body, totalRow],
-        startY: curY,
-        margin: { left: 14, right: 14 },
+        startY,
+        margin: { left: 14, right: 14, top: 18 },
         styles: { fontSize: 7.5, cellPadding: 2, font: "helvetica" },
         headStyles: {
-          fillColor: [255, 204, 229],
-          textColor: [0, 0, 0],
-          fontStyle: "bold",
+          fillColor: [255, 204, 229], textColor: [0, 0, 0],
+          fontStyle: "bold", fontSize: 8,
         },
-        bodyStyles: { textColor: [30, 30, 30], fillColor: [255, 255, 255] },
+        bodyStyles: { textColor: [32, 32, 32], fillColor: [255, 255, 255] },
         alternateRowStyles: { fillColor: [255, 240, 246] },
-        columnStyles: COL_W.reduce((acc, w, i) => {
-          acc[i] = typeof w === "number" ? { cellWidth: w } : {};
-          if (i >= 4 && i <= 10) acc[i] = { ...acc[i], halign: "right" };
-          return acc;
-        }, {}),
-        didParseCell: ({ row, cell }) => {
-          if (row.index === body.length) {
-            cell.styles.fillColor  = [255, 0, 122];
-            cell.styles.textColor  = [255, 255, 255];
-            cell.styles.fontStyle  = "bold";
+        columnStyles: colStyles,
+        didParseCell: ({ row, cell, section }) => {
+          if (section === "body" && row.index === body.length) {
+            cell.styles.fillColor = [255, 0, 122];
+            cell.styles.textColor = [255, 255, 255];
+            cell.styles.fontStyle = "bold";
           }
         },
-        didDrawPage: ({ pageNumber }) => {
-          const ph = doc.internal.pageSize.height;
-          doc.setFontSize(8);
-          doc.setTextColor(180, 0, 86);
-          doc.setFont("helvetica", "normal");
-          doc.text(`Page ${pageNumber}`, pw - 20, ph - 6);
+        didDrawPage: () => {
+          drawTitle();
+          pdf.setFontSize(8);
+          pdf.setTextColor(180, 0, 86);
+          pdf.setFont("helvetica", "normal");
+          pdf.text(`Page ${pdf.internal.getNumberOfPages()}`, pw - 20, ph - 6);
         },
       });
 
-      curY = doc.lastAutoTable.finalY + 8;
+      const nextY = pdf.lastAutoTable.finalY + 6;
+      startY = nextY > ph - 30 ? ph : nextY;
     });
 
-    doc.save(`mes-seances-${filterSaison.replace("/", "-")}.pdf`);
+    pdf.save(`mes-seances-${filterSaison.replace("/", "-")}.pdf`);
   };
 
   // ── Jauge ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,8 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
+import XLSX from "xlsx-js-style";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const PRIMARY   = "#FF007A";
 const BLUE      = "#3b82f6";
@@ -35,31 +38,6 @@ const CURRENT_SAISON = (() => {
   const y = d.getFullYear();
   return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
 })();
-
-function exportCSV(rows) {
-  const headers = ["Date","Archer","Type","Lieu","Distance","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
-  const lines   = [headers.join(";")];
-  for (const s of rows) {
-    const p   = getPaille(s);
-    const b   = getBlason(s);
-    const c   = getCompte(s);
-    const sc  = s.score ?? 0;
-    const tot = p + b + c;
-    const moy = c > 0 && sc > 0 ? (sc / c).toFixed(2) : "";
-    const sm  = c > 0 && sc > 0 ? Math.round(sc / c * normFactor(s.distance)) : "";
-    lines.push([
-      fmtDate(s.date), s.archer || "", s.type || "", s.lieu || "", s.distance || "",
-      p || "", b || "", c || "", sc || "", tot || "",
-      moy, sm,
-      (s.commentaire || "").replace(/;/g, ","),
-    ].join(";"));
-  }
-  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = "seances_archers.csv"; a.click();
-  URL.revokeObjectURL(url);
-}
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
@@ -111,6 +89,245 @@ export default function SeancesArchers() {
       }));
   }, [filtered]);
 
+  // ── Export helpers ────────────────────────────────────────────────────────
+
+  const buildMonthTotals = (group) => {
+    const tp     = group.reduce((n, x) => n + getPaille(x), 0);
+    const tb     = group.reduce((n, x) => n + getBlason(x), 0);
+    const scored = group.filter(x => getCompte(x) > 0 && (x.score ?? 0) > 0);
+    const tc     = scored.reduce((n, x) => n + getCompte(x), 0);
+    const ts     = scored.reduce((n, x) => n + x.score, 0);
+    const tt     = tp + tb + group.reduce((n, x) => n + getCompte(x), 0);
+    const tmoy   = tc > 0 ? ts / tc : null;
+    const dists  = [...new Set(scored.map(x => x.distance))];
+    const tscoreMoy = tmoy != null && dists.length === 1
+      ? Math.round(tmoy * normFactor(dists[0])) : null;
+    return { tp, tb, tc, ts, tt, tmoy, tscoreMoy };
+  };
+
+  const COL_HEADS  = ["Date","Archer","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
+  const NC         = 13;
+  const RIGHT_COLS = [5, 6, 7, 8, 9, 10, 11];
+
+  const exportTitle = filterArcher !== "Tous"
+    ? `Séances archers — ${filterArcher} — Saison ${filterSaison}`
+    : `Séances archers — Saison ${filterSaison}`;
+
+  const handleExportExcel = () => {
+    const numCols = RIGHT_COLS;
+    const aoa     = [];
+    const merges  = [];
+    const rowMeta = [];
+
+    aoa.push([exportTitle, ...Array(NC - 1).fill("")]);
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } });
+    rowMeta.push({ type: "title" });
+    aoa.push(Array(NC).fill(""));
+    rowMeta.push({ type: "empty" });
+
+    groupedByMonth.forEach(({ month, rows: group }) => {
+      const mR = aoa.length;
+      aoa.push([fmtMois(month), ...Array(NC - 1).fill("")]);
+      merges.push({ s: { r: mR, c: 0 }, e: { r: mR, c: NC - 1 } });
+      rowMeta.push({ type: "month" });
+
+      aoa.push([...COL_HEADS]);
+      rowMeta.push({ type: "header" });
+
+      group.forEach((s, i) => {
+        const p   = getPaille(s);
+        const b   = getBlason(s);
+        const c   = getCompte(s);
+        const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
+        aoa.push([
+          s.date || "", s.archer || "", s.type || "", s.lieu || "", s.distance || "",
+          p, b, c, s.score ?? "", p + b + c || "",
+          moy != null ? parseFloat(moy.toFixed(2)) : "",
+          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
+          s.commentaire || "",
+        ]);
+        rowMeta.push({ type: "data", even: i % 2 === 0 });
+      });
+
+      const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
+      aoa.push([
+        `Total — ${fmtMois(month)}`, "", "", "", "",
+        tp, tb, tc, ts || "", tt || "",
+        tmoy != null ? parseFloat(tmoy.toFixed(2)) : "",
+        tscoreMoy ?? "", "",
+      ]);
+      rowMeta.push({ type: "total" });
+      aoa.push(Array(NC).fill(""));
+      rowMeta.push({ type: "empty" });
+    });
+
+    const ws      = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"] = merges;
+    ws["!cols"]   = [
+      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 7 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 10 },
+      { wch: 10 }, { wch: 12 }, { wch: 34 },
+    ];
+
+    const ST = {
+      title: {
+        font: { bold: true, sz: 13, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "B30057" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      },
+      month: {
+        font: { bold: true, sz: 11, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      },
+      header: (c) => ({
+        font: { bold: true, sz: 9, color: { rgb: "000000" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFCCE5" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        border: { bottom: { style: "medium", color: { rgb: "FF007A" } } },
+      }),
+      dataEven: (c) => ({
+        font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+      }),
+      dataOdd: (c) => ({
+        font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FFF0F6" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+      }),
+      total: (c) => ({
+        font: { bold: true, sz: 9, color: { rgb: "FFFFFF" }, name: "Calibri" },
+        fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
+        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        border: {
+          top:    { style: "medium", color: { rgb: "B30057" } },
+          bottom: { style: "thin",   color: { rgb: "B30057" } },
+        },
+      }),
+    };
+
+    const rowHeights = [];
+    rowMeta.forEach((meta, r) => {
+      if (meta.type === "empty") return;
+      if (meta.type === "title")  rowHeights[r] = { hpx: 28 };
+      if (meta.type === "month")  rowHeights[r] = { hpx: 20 };
+      if (meta.type === "header") rowHeights[r] = { hpx: 18 };
+      for (let c = 0; c < NC; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { v: "", t: "s" };
+        ws[addr].s =
+          meta.type === "title"  ? ST.title :
+          meta.type === "month"  ? ST.month :
+          meta.type === "header" ? ST.header(c) :
+          meta.type === "total"  ? ST.total(c) :
+          meta.even              ? ST.dataEven(c) : ST.dataOdd(c);
+      }
+    });
+    ws["!rows"] = rowHeights;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Séances");
+    XLSX.writeFile(wb, `seances-archers-${filterSaison.replace("/", "-")}.xlsx`);
+  };
+
+  const handleExportPDF = () => {
+    const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pw    = pdf.internal.pageSize.width;
+    const ph    = pdf.internal.pageSize.height;
+    const COL_W = [20, 26, 22, 20, 10, 12, 12, 12, 12, 14, 14, 14, 0];
+
+    const colStyles = COL_W.reduce((acc, w, i) => {
+      acc[i] = w > 0 ? { cellWidth: w } : {};
+      if (RIGHT_COLS.includes(i)) acc[i].halign = "right";
+      return acc;
+    }, {});
+
+    const drawTitle = () => {
+      pdf.setFillColor(179, 0, 87);
+      pdf.rect(0, 0, pw, 14, "F");
+      pdf.setFontSize(11);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(exportTitle, 14, 9.5);
+    };
+    drawTitle();
+
+    let startY = 18;
+
+    groupedByMonth.forEach(({ month, rows: group }) => {
+      if (startY > ph - 30) {
+        pdf.addPage();
+        drawTitle();
+        startY = 18;
+      }
+
+      const body = group.map(s => {
+        const p   = getPaille(s);
+        const b   = getBlason(s);
+        const c   = getCompte(s);
+        const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
+        return [
+          fmtDate(s.date), s.archer || "", s.type || "", s.lieu || "", s.distance || "",
+          p || 0, b || 0, c || 0, s.score ?? "",
+          p + b + c || "",
+          moy != null ? moy.toFixed(2) : "",
+          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
+          s.commentaire || "",
+        ];
+      });
+
+      const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
+      const totalRow = [
+        `Total — ${fmtMois(month)}`, "", "", "", "",
+        tp, tb, tc, ts || "", tt || "",
+        tmoy != null ? tmoy.toFixed(2) : "",
+        tscoreMoy ?? "", "",
+      ];
+
+      autoTable(pdf, {
+        head: [
+          [{ content: fmtMois(month).toUpperCase(), colSpan: NC, styles: {
+            fillColor: [255, 0, 122], textColor: [255, 255, 255],
+            fontStyle: "bold", fontSize: 9, halign: "left",
+            cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+          }}],
+          COL_HEADS,
+        ],
+        body: [...body, totalRow],
+        startY,
+        margin: { left: 14, right: 14, top: 18 },
+        styles: { fontSize: 7.5, cellPadding: 2, font: "helvetica" },
+        headStyles: {
+          fillColor: [255, 204, 229], textColor: [0, 0, 0],
+          fontStyle: "bold", fontSize: 8,
+        },
+        bodyStyles: { textColor: [32, 32, 32], fillColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [255, 240, 246] },
+        columnStyles: colStyles,
+        didParseCell: ({ row, cell, section }) => {
+          if (section === "body" && row.index === body.length) {
+            cell.styles.fillColor = [255, 0, 122];
+            cell.styles.textColor = [255, 255, 255];
+            cell.styles.fontStyle = "bold";
+          }
+        },
+        didDrawPage: () => {
+          drawTitle();
+          pdf.setFontSize(8);
+          pdf.setTextColor(180, 0, 86);
+          pdf.setFont("helvetica", "normal");
+          pdf.text(`Page ${pdf.internal.getNumberOfPages()}`, pw - 20, ph - 6);
+        },
+      });
+
+      const nextY = pdf.lastAutoTable.finalY + 6;
+      startY = nextY > ph - 30 ? ph : nextY;
+    });
+
+    pdf.save(`seances-archers-${filterSaison.replace("/", "-")}.pdf`);
+  };
+
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;
 
@@ -137,9 +354,18 @@ export default function SeancesArchers() {
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
         </div>
-        <button style={s.exportBtn} onClick={() => exportCSV(filtered)}>
-          ↓ Exporter
-        </button>
+        <button
+          style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+          onClick={handleExportExcel}
+          disabled={filtered.length === 0}
+          title="Exporter en Excel (.xlsx)"
+        >↓ Excel</button>
+        <button
+          style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+          onClick={handleExportPDF}
+          disabled={filtered.length === 0}
+          title="Exporter en PDF"
+        >↓ PDF</button>
       </div>
 
       {/* ── Tableau ── */}

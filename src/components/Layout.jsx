@@ -167,13 +167,14 @@ export default function Layout({ user, isCoach, onLogout }) {
             rel="noopener noreferrer"
             style={{
               display: "flex", alignItems: "center", gap: "5px",
-              padding: "6px 12px", margin: "auto 0",
-              border: "1px solid #2e2e2e", borderRadius: "6px",
-              color: "#666", fontSize: "12px", fontWeight: "500",
+              padding: "6px 14px", margin: "auto 0",
+              border: "1.5px solid #444", borderRadius: "6px",
+              color: "#ccc", fontSize: "12px", fontWeight: "600",
               textDecoration: "none", whiteSpace: "nowrap", fontFamily: "inherit",
+              backgroundColor: "#1e1e1e",
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#555"; e.currentTarget.style.color = "#bbb"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#2e2e2e"; e.currentTarget.style.color = "#666"; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#FF007A"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.backgroundColor = "rgba(255,0,122,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#444"; e.currentTarget.style.color = "#ccc"; e.currentTarget.style.backgroundColor = "#1e1e1e"; }}
           >
             <ExternalLinkIcon /> Inscription concours
           </a>

@@ -188,9 +188,8 @@ export default function Objectifs() {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <h2 style={s.pageTitle}>Objectifs des archers</h2>
-        <div style={s.headerRight}>
-          <span style={s.subtitle}>{defCount} / {archers.length} défini{archers.length > 1 ? "s" : ""}</span>
+        <div style={s.headerLeft}>
+          <h2 style={s.pageTitle}>Objectifs des archers</h2>
           <div style={s.saisonWrap}>
             <span style={s.saisonLabel}>Saison</span>
             <select
@@ -202,6 +201,7 @@ export default function Objectifs() {
             </select>
           </div>
         </div>
+        <span style={s.subtitle}>{defCount} / {archers.length} défini{archers.length > 1 ? "s" : ""}</span>
       </div>
 
       {archers.length === 0 ? (
@@ -239,10 +239,10 @@ export default function Objectifs() {
 
 const s = {
   page:      { display: "flex", flexDirection: "column", gap: "20px" },
-  header:    { display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
-  pageTitle: { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
-  headerRight: { display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" },
-  subtitle:  { fontSize: "13px", color: "var(--text-dim)" },
+  header:     { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
+  headerLeft: { display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" },
+  pageTitle:  { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
+  subtitle:   { fontSize: "13px", color: "var(--text-dim)" },
   saisonWrap: { display: "flex", alignItems: "center", gap: "8px" },
   saisonLabel: {
     fontSize: "11px", fontWeight: "700", color: "var(--text-muted)",

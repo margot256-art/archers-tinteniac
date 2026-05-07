@@ -4,7 +4,7 @@ import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import confetti from "canvas-confetti";
+import { launch as launchFireworks } from "../../hooks/useFireworks";
 import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
 
 const DISTANCES  = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -121,11 +121,7 @@ export default function Saisie() {
         const oldPct = Math.round(currentVolume / volEntr * 100);
         const newPct = Math.round(newVolume / volEntr * 100);
         if (oldPct < 100 && newPct >= 100) {
-          const fire = (x, angle) => confetti({ particleCount: 60, angle, spread: 55, origin: { x, y: 0.9 }, colors: ["#FF007A", "#ff69b4", "#ffffff", "#FFD700", "#ff4500"], startVelocity: 45, gravity: 0.8, ticks: 200 });
-          fire(0.2, 60);
-          setTimeout(() => fire(0.8, 120), 150);
-          setTimeout(() => fire(0.5, 90), 300);
-          setTimeout(() => confetti({ particleCount: 80, spread: 100, origin: { x: 0.5, y: 0.5 }, colors: ["#FF007A", "#ff69b4", "#ffffff", "#FFD700"], startVelocity: 30, gravity: 0.6, ticks: 250 }), 450);
+          launchFireworks();
         }
       }
     } catch (err) {

@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 
 const storageKey = () => `fireworks-${new Date().getFullYear()}-${new Date().getMonth()}`;
 
-function launch() {
+export function launch() {
   const fire = (x, angle) =>
     confetti({
       particleCount: 60,

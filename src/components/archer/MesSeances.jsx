@@ -2,7 +2,6 @@ import { Fragment, useState, useMemo, useId, cloneElement } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { useFireworks } from "../../hooks/useFireworks";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -378,7 +377,6 @@ export default function MesSeances() {
 
   const pct        = volEntr > 0 ? Math.min(100, Math.round(currentVolume / volEntr * 100)) : 0;
   const gaugeColor = pct >= 100 ? PRIMARY : pct >= 80 ? "#16a34a" : pct >= 50 ? "#f97316" : "#ef4444";
-  useFireworks(pct);
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
 

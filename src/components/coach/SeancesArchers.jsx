@@ -3,41 +3,12 @@ import { useAllSeances } from "../../hooks/useAllSeances";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
+import FilterSelect from "../shared/FilterSelect";
 
-const PRIMARY   = "#FF007A";
-const BLUE      = "#3b82f6";
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
 
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-const getPaille  = (s) => s.paille  ?? s.volumePaille  ?? 0;
-const getBlason  = (s) => s.blason  ?? s.volumeBlason  ?? 0;
-const getCompte  = (s) => s.compte  ?? s.volumeCompte  ?? 0;
-
-const MOIS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-};
-
-const fmtMois = (yyyyMM) => {
-  const [y, m] = yyyyMM.split("-");
-  return `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
-};
-
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
@@ -91,19 +62,6 @@ export default function SeancesArchers() {
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
-  const buildMonthTotals = (group) => {
-    const tp     = group.reduce((n, x) => n + getPaille(x), 0);
-    const tb     = group.reduce((n, x) => n + getBlason(x), 0);
-    const scored = group.filter(x => getCompte(x) > 0 && (x.score ?? 0) > 0);
-    const tc     = scored.reduce((n, x) => n + getCompte(x), 0);
-    const ts     = scored.reduce((n, x) => n + x.score, 0);
-    const tt     = tp + tb + group.reduce((n, x) => n + getCompte(x), 0);
-    const tmoy   = tc > 0 ? ts / tc : null;
-    const dists  = [...new Set(scored.map(x => x.distance))];
-    const tscoreMoy = tmoy != null && dists.length === 1
-      ? Math.round(tmoy * normFactor(dists[0])) : null;
-    return { tp, tb, tc, ts, tt, tmoy, tscoreMoy };
-  };
 
   const COL_HEADS  = ["Date","Archer","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
   const NC         = 13;
@@ -127,7 +85,7 @@ export default function SeancesArchers() {
 
     groupedByMonth.forEach(({ month, rows: group }) => {
       const mR = aoa.length;
-      aoa.push([fmtMois(month), ...Array(NC - 1).fill("")]);
+      aoa.push([fmtYM(month), ...Array(NC - 1).fill("")]);
       merges.push({ s: { r: mR, c: 0 }, e: { r: mR, c: NC - 1 } });
       rowMeta.push({ type: "month" });
 
@@ -151,7 +109,7 @@ export default function SeancesArchers() {
 
       const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
       aoa.push([
-        `Total — ${fmtMois(month)}`, "", "", "", "",
+        `Total — ${fmtYM(month)}`, "", "", "", "",
         tp, tb, tc, ts || "", tt || "",
         tmoy != null ? parseFloat(tmoy.toFixed(2)) : "",
         tscoreMoy ?? "", "",
@@ -279,7 +237,7 @@ export default function SeancesArchers() {
 
       const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
       const totalRow = [
-        `Total — ${fmtMois(month)}`, "", "", "", "",
+        `Total — ${fmtYM(month)}`, "", "", "", "",
         tp, tb, tc, ts || "", tt || "",
         tmoy != null ? tmoy.toFixed(2) : "",
         tscoreMoy ?? "", "",
@@ -287,7 +245,7 @@ export default function SeancesArchers() {
 
       autoTable(pdf, {
         head: [
-          [{ content: fmtMois(month).toUpperCase(), colSpan: NC, styles: {
+          [{ content: fmtYM(month).toUpperCase(), colSpan: NC, styles: {
             fillColor: [255, 0, 122], textColor: [255, 255, 255],
             fontStyle: "bold", fontSize: 9, halign: "left",
             cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
@@ -450,7 +408,7 @@ export default function SeancesArchers() {
                     );
                   })}
                   <tr key={`sub-${month}`} style={s.trSub}>
-                    <td style={{ ...s.tdSub, textAlign: "left" }}>{fmtMois(month)}</td>
+                    <td style={{ ...s.tdSub, textAlign: "left" }}>{fmtYM(month)}</td>
                     <td style={{ ...s.tdSub, textAlign: "left" }}>{rows.length} séance{rows.length > 1 ? "s" : ""}</td>
                     <td style={s.tdSub} /><td style={s.tdSub} /><td style={s.tdSub} />
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subP > 0 ? subP : "—"}</td>
@@ -475,22 +433,13 @@ export default function SeancesArchers() {
           {filtered.length !== saisonSeances.length && ` (sur ${saisonSeances.length} cette saison)`}
         </div>
       )}
+
     </div>
   );
 }
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} className="coach-filter-select">
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
 
 function CalendarIcon() {
   return (
@@ -561,7 +510,7 @@ const s = {
     borderBottom: "var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
-  tr:  { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
+  tr:  { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td:  { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
 

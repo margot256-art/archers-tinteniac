@@ -1,37 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
-import { collection, addDoc, serverTimestamp, doc, onSnapshot } from "firebase/firestore";
+import { useState, useMemo, useId, cloneElement } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
+import { useObjectif } from "../../hooks/useObjectif";
+import confetti from "canvas-confetti";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
 
-const PRIMARY   = "#FF007A";
-const BLUE      = "#3b82f6";
 const DISTANCES  = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 
 const todayYM = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-};
-
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
-
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
 };
 
 const INIT = {
@@ -51,24 +33,21 @@ const INIT = {
 export default function Saisie() {
   const { user }    = useAuth();
   const { seances } = useSeances();
+  const rawObjectif = useObjectif();
 
   const [form,        setForm]        = useState(INIT);
   const [loading,     setLoading]     = useState(false);
   const [success,     setSuccess]     = useState(false);
   const [error,       setError]       = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [volEntr, setVolEntr] = useState(null);
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
 
-  // Objectif mensuel pour la jauge
-  useEffect(() => {
-    if (!user) return;
-    const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
-    const unsub = onSnapshot(doc(db, "objectifs", archerId), (snap) => {
-      setVolEntr(snap.exists() ? (snap.data().volEntr || 0) : null);
-    });
-    return () => unsub();
-  }, [user]);
+  const volEntr = useMemo(() => {
+    if (!rawObjectif) return null;
+    if (rawObjectif.saisons?.[CURRENT_SAISON]) return rawObjectif.saisons[CURRENT_SAISON].volEntr ?? 0;
+    if (rawObjectif.volEntr != null) return rawObjectif.volEntr;
+    return null;
+  }, [rawObjectif]);
 
   const set = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -137,6 +116,18 @@ export default function Saisie() {
       });
       setSuccess(true);
       setForm((prev) => ({ ...INIT, date: prev.date, distance: prev.distance, type: prev.type }));
+      if (volEntr > 0 && form.type === "Entraînement") {
+        const newVolume = currentVolume + totalFleches;
+        const oldPct = Math.round(currentVolume / volEntr * 100);
+        const newPct = Math.round(newVolume / volEntr * 100);
+        if (oldPct < 100 && newPct >= 100) {
+          const fire = (x, angle) => confetti({ particleCount: 60, angle, spread: 55, origin: { x, y: 0.9 }, colors: ["#FF007A", "#ff69b4", "#ffffff", "#FFD700", "#ff4500"], startVelocity: 45, gravity: 0.8, ticks: 200 });
+          fire(0.2, 60);
+          setTimeout(() => fire(0.8, 120), 150);
+          setTimeout(() => fire(0.5, 90), 300);
+          setTimeout(() => confetti({ particleCount: 80, spread: 100, origin: { x: 0.5, y: 0.5 }, colors: ["#FF007A", "#ff69b4", "#ffffff", "#FFD700"], startVelocity: 30, gravity: 0.6, ticks: 250 }), 450);
+        }
+      }
     } catch (err) {
       console.error("[Saisie] erreur Firestore :", err);
       setError("Erreur lors de l'enregistrement. Réessayez.");
@@ -154,10 +145,6 @@ export default function Saisie() {
   }, [seances]);
 
   const currentYM = todayYM();
-
-  const getCompte = (s) => s.compte ?? s.volumeCompte ?? 0;
-  const getPaille = (s) => s.paille ?? s.volumePaille ?? 0;
-  const getBlason = (s) => s.blason ?? s.volumeBlason ?? 0;
 
   const currentVolume = useMemo(() =>
     seances
@@ -390,16 +377,16 @@ export default function Saisie() {
                         {row.comp.moyFl ?? "—"}
                       </td>
                       <td style={s.tdR}>{row.comp.scoreMoy ?? "—"}</td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "var(--border-strong)" }}>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)", borderLeft: "var(--border-strong)" }}>
                         {row.total.count || "—"}
                       </td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                         {row.total.fleches ? row.total.fleches.toLocaleString("fr-FR") : "—"}
                       </td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                         {row.total.moyFl ?? "—"}
                       </td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                         {row.total.scoreMoy ?? "—"}
                       </td>
                     </tr>
@@ -420,13 +407,13 @@ export default function Saisie() {
                     </td>
                     <td style={s.tdR}>—</td>
                     <td style={s.tdR}>—</td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff", borderLeft: "var(--border-strong)" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)", borderLeft: "var(--border-strong)" }}>
                       {tableTotals.total.count || "—"}
                     </td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                       {tableTotals.total.fleches ? tableTotals.total.fleches.toLocaleString("fr-FR") : "—"}
                     </td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "#fff" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                       {tableTotals.total.moyFl ?? "—"}
                     </td>
                     <td style={s.tdR}>—</td>
@@ -483,10 +470,11 @@ export default function Saisie() {
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
 function Field({ label, children, error }) {
+  const id = useId();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-      <label className="field-label" style={s.label}>{label}</label>
-      {children}
+      <label htmlFor={id} className="field-label" style={s.label}>{label}</label>
+      {cloneElement(children, { id })}
       {error && <span style={s.fieldError}>{error}</span>}
     </div>
   );
@@ -635,7 +623,7 @@ const s = {
   thEntrEnd: { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)", borderRight: "var(--border-3)" },
   thComp:    { color: BLUE,      backgroundColor: "rgba(59,130,246,0.1)" },
   thTotal:   { color: "var(--text)", backgroundColor: "var(--input-bg)", borderLeft: "var(--border-strong)" },
-  tr:        { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
+  tr:        { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   trTotal:     { borderTop: "var(--border-3)", backgroundColor: "var(--surface-raised)" },
   td:        { padding: "8px 7px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR:       { padding: "8px 7px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
@@ -648,7 +636,7 @@ const s = {
   statCards: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" },
   statCard:  {
     backgroundColor: "var(--surface)", borderRadius: "10px",
-    boxShadow: "0 1px 8px rgba(0,0,0,0.3)",
+    boxShadow: "var(--shadow-card)",
     padding: "16px 18px", display: "flex", flexDirection: "column", gap: "4px",
   },
   statLabel: {
@@ -660,7 +648,7 @@ const s = {
 
   emptyStats: {
     backgroundColor: "var(--surface)", borderRadius: "10px",
-    boxShadow: "0 1px 8px rgba(0,0,0,0.3)",
+    boxShadow: "var(--shadow-card)",
     padding: "32px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px",
   },
 };

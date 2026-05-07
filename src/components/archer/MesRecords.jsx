@@ -1,30 +1,8 @@
 import { useState, useMemo } from "react";
 import { useSeances } from "../../hooks/useSeances";
+import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
 
-const PRIMARY    = "#FF007A";
-const BLUE       = "#3b82f6";
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-const getCompte  = (s) => s.compte ?? s.volumeCompte ?? 0;
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-};
-
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
 
 // ── Icône calendrier ──────────────────────────────────────────────────────────
 
@@ -219,7 +197,7 @@ const s = {
   // carte distance
   card: {
     backgroundColor: "var(--surface)", borderRadius: "14px",
-    boxShadow: "0 2px 14px rgba(0,0,0,0.35)",
+    boxShadow: "var(--shadow-card)",
     padding: "18px 20px",
     display: "flex", flexDirection: "column", gap: "12px",
   },

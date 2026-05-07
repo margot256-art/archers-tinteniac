@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { PRIMARY } from "../../utils/seances";
 
-const normAp  = (s) => s.replace(/['`´ʼ'ʹ]/g, "’");
+const normAp  = (s) => s.replace(/[‘`´ʼ’ʹ]/g, "’");
 const toDocId = (prenom, nom) =>
   normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`).replace(/\s+/g, "_");
-
-const PRIMARY = "#FF007A";
 
 const styles = {
   page: {
@@ -254,8 +253,9 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
             <form onSubmit={handleSubmit}>
               <div style={styles.fieldGroup}>
                 <div style={styles.field}>
-                  <label style={styles.label}>Prénom</label>
+                  <label htmlFor="login-prenom" style={styles.label}>Prénom</label>
                   <input
+                    id="login-prenom"
                     style={styles.input}
                     className="login-input"
                     type="text"
@@ -268,8 +268,9 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
                   />
                 </div>
                 <div style={styles.field}>
-                  <label style={styles.label}>Nom</label>
+                  <label htmlFor="login-nom" style={styles.label}>Nom</label>
                   <input
+                    id="login-nom"
                     style={styles.input}
                     className="login-input"
                     type="text"
@@ -284,8 +285,9 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
               </div>
 
               <div style={styles.fieldFull}>
-                <label style={styles.label}>Mot de passe</label>
+                <label htmlFor="login-password" style={styles.label}>Mot de passe</label>
                 <input
+                  id="login-password"
                   style={styles.input}
                   className="login-input"
                   type="password"
@@ -331,8 +333,9 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
               <form onSubmit={handleReset}>
                 <div style={styles.fieldGroup}>
                   <div style={styles.field}>
-                    <label style={styles.label}>Prénom</label>
+                    <label htmlFor="reset-prenom" style={styles.label}>Prénom</label>
                     <input
+                      id="reset-prenom"
                       style={styles.input}
                       className="login-input"
                       type="text"
@@ -344,8 +347,9 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
                     />
                   </div>
                   <div style={styles.field}>
-                    <label style={styles.label}>Nom</label>
+                    <label htmlFor="reset-nom" style={styles.label}>Nom</label>
                     <input
+                      id="reset-nom"
                       style={styles.input}
                       className="login-input"
                       type="text"

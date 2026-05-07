@@ -14,6 +14,8 @@ import {
 } from "chart.js";
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
 import { useAllSeances } from "../../hooks/useAllSeances";
+import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
+import FilterSelect from "../shared/FilterSelect";
 
 // ── Plugin ligne horizontale (objectif) ────────────────────────────────────────
 const horizontalLinePlugin = {
@@ -43,8 +45,6 @@ ChartJS.register(
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
-const PRIMARY    = "#FF007A";
-const BLUE       = "#3b82f6";
 const OBJ_COLOR  = "#F59E0B";
 
 const ARCHER_COLORS = [
@@ -60,18 +60,8 @@ const MONTHS_FR   = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const fmtDate    = (iso) => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
-const getSaison  = (iso) => { const [y, m] = iso.split("-").map(Number); return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`; };
-const normFactor = (d)   => (d === "5m" || d === "18m") ? 60 : 72;
-const getCompte  = (s)   => s.compte ?? s.volumeCompte ?? 0;
 const fmtSaison  = (sn)  => "S" + sn.split("/")[1];
 const fmtMonth   = (ym)  => { const [y, m] = ym.split("-"); return `${MONTHS_FR[parseInt(m) - 1]} ${y.slice(2)}`; };
-
-function getCurrentSaison() {
-  const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-}
-const CURRENT_SAISON = getCurrentSaison();
 
 const makeDistBarOpts = (nf, colors) => ({
   responsive: true,
@@ -104,16 +94,6 @@ const makeDistBarOpts = (nf, colors) => ({
 
 // ── Sous-composants ────────────────────────────────────────────────────────────
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <label style={s.filterWrap}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} className="coach-filter-select">
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </label>
-  );
-}
 
 // ── Composant principal ────────────────────────────────────────────────────────
 
@@ -532,7 +512,7 @@ const s = {
   saisonBar: {
     display: "flex", alignItems: "center", gap: "16px",
     backgroundColor: "var(--blue-deep)", borderRadius: "12px",
-    padding: "14px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
+    padding: "14px 20px", boxShadow: "var(--shadow-card)",
     flexWrap: "wrap",
   },
   saisonBarLabel: {

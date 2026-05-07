@@ -13,12 +13,14 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { PRIMARY, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtYM } from "../../utils/seances";
+import { useChartColors } from "../../hooks/useChartColors";
+import FilterSelect from "../shared/FilterSelect";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const PRIMARY = "#FF007A";
 const ORANGE  = "#f97316";
 
 const DISTANCES   = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -31,24 +33,11 @@ const ARCHER_COLORS = [
   "#f43f5e", "#0ea5e9", "#84cc16",
 ];
 
-const MOIS_FR = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const getSaison  = (iso) => { const [y, m] = iso.split("-").map(Number); return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`; };
-const normFactor = (d)   => (d === "5m" || d === "18m") ? 60 : 72;
-const getCompte  = (s)   => s.compte ?? s.volumeCompte ?? 0;
 const sumFleches = (s)   => s.totalFleches != null
   ? s.totalFleches
   : (s.paille ?? s.volumePaille ?? 0) + (s.blason ?? s.volumeBlason ?? 0) + getCompte(s);
-
-function getCurrentSaison() {
-  const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-}
 
 function stdDev(vals) {
   if (vals.length < 2) return null;
@@ -69,8 +58,6 @@ function regulariteLabel(sigma) {
   return "Irrégulier";
 }
 
-const CURRENT_SAISON = getCurrentSaison();
-
 const RANK_STYLE = {
   1: { backgroundColor: PRIMARY,   color: "#fff" },
   2: { backgroundColor: "#8e8e8e", color: "#fff" },
@@ -84,21 +71,11 @@ function RangBadge({ rang }) {
   return <span style={{ ...s.rankBadge, ...extra }}>{ordinal(rang)}</span>;
 }
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <label style={s.filterWrap}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={s.filterSelect}>
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </label>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Classement() {
   const { seances, loading, error } = useAllSeances();
+  const colors = useChartColors();
 
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
   const [filterPeriod, setFilterPeriod] = useState("Toute la saison");
@@ -126,7 +103,7 @@ export default function Classement() {
       });
     const labels = [...months].sort().reverse().map(ym => {
       const [y, m] = ym.split("-").map(Number);
-      return `${MOIS_FR[m - 1]} ${y}`;
+      return `${MOIS[m - 1]} ${y}`;
     });
     return ["Toute la saison", ...labels];
   }, [seances, filterSaison]);
@@ -137,7 +114,7 @@ export default function Classement() {
       if (filterSaison !== "Toutes" && getSaison(s.date) !== filterSaison) return false;
       if (filterPeriod !== "Toute la saison") {
         const parts = filterPeriod.split(" ");
-        const mIdx  = MOIS_FR.indexOf(parts[0]);
+        const mIdx  = MOIS.indexOf(parts[0]);
         const ym    = `${parts[1]}-${String(mIdx + 1).padStart(2, "0")}`;
         if (!s.date.startsWith(ym)) return false;
       }
@@ -241,7 +218,7 @@ export default function Classement() {
         legend: {
           position: "bottom",
           labels: {
-            font: { size: 12 }, color: "var(--text-2)",
+            font: { size: 12 }, color: colors.text2,
             boxWidth: 14, padding: 18,
           },
         },
@@ -253,20 +230,20 @@ export default function Classement() {
       },
       scales: {
         x: {
-          ticks: { font: { size: 12 }, color: "var(--text-muted)" },
-          grid: { color: "var(--border)" },
+          ticks: { font: { size: 12 }, color: colors.muted },
+          grid: { color: colors.grid },
         },
         y: {
           beginAtZero: false,
-          ticks: { font: { size: 11 }, color: "var(--text-dim)" },
-          grid: { color: "var(--border)" },
-          title: { display: true, text: "Meilleur score normalisé", color: "var(--text-dim)", font: { size: 11 } },
+          ticks: { font: { size: 11 }, color: colors.dim },
+          grid: { color: colors.grid },
+          title: { display: true, text: "Meilleur score normalisé", color: colors.dim, font: { size: 11 } },
         },
       },
     };
 
     return { chartData, chartOptions };
-  }, [seances, graphArcher, graphDist, graphType]);
+  }, [seances, graphArcher, graphDist, graphType, colors]);
 
   const hasGraphData = chartData.datasets.some(ds => ds.data.some(v => v !== null));
 
@@ -477,7 +454,7 @@ export default function Classement() {
                 return (
                   <tr key={r.archer} style={{ ...s.tr, ...(top ? s.trTop : {}) }}>
                     <td style={s.td}><RangBadge rang={r.rang} /></td>
-                    <td style={{ ...s.td, fontWeight: top ? "700" : "400", color: top ? "#fff" : "var(--text-2)" }}>
+                    <td style={{ ...s.td, fontWeight: top ? "700" : "400", color: "var(--text)" }}>
                       {r.archer}
                     </td>
                     <td style={s.tdR}>{r.nbSeances}</td>
@@ -541,7 +518,7 @@ const s = {
     backgroundColor: "var(--blue-deep)",
     borderRadius: "12px",
     padding: "14px 20px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
+    boxShadow: "var(--shadow-card)",
     flexWrap: "wrap",
   },
   saisonBarLabel: {
@@ -586,11 +563,11 @@ const s = {
     padding: "11px 14px", textAlign: "left",
     fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "1px solid #252525", whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
   thR:   { textAlign: "right" },
-  tr:    { borderBottom: "1px solid #1e1e1e", transition: "background 0.1s" },
+  tr:    { borderBottom: "1px solid var(--border)", transition: "background 0.1s" },
   trTop: { backgroundColor: "rgba(255,0,122,0.07)" },
   td:    { padding: "11px 14px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR:   { padding: "11px 14px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },

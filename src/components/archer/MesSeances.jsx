@@ -1,48 +1,16 @@
-import { Fragment, useState, useMemo, useEffect } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { Fragment, useState, useMemo, useId, cloneElement } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
+import { useObjectif } from "../../hooks/useObjectif";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate, MOIS, fmtYM, buildMonthTotals } from "../../utils/seances";
+import FilterSelect from "../shared/FilterSelect";
 
-const PRIMARY   = "#FF007A";
-const BLUE      = "#3b82f6";
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const DIST_OPTS = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
-const MOIS      = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-
-const getPaille = s => s.paille  ?? s.volumePaille  ?? 0;
-const getBlason = s => s.blason  ?? s.volumeBlason  ?? 0;
-const getCompte = s => s.compte  ?? s.volumeCompte  ?? 0;
-
-const fmtYM = (ym) => {
-  if (!ym || ym === "0000-00") return "Date inconnue";
-  const [y, m] = ym.split("-");
-  return `${MOIS[parseInt(m) - 1]} ${y}`;
-};
-
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-};
 
 const todayYM = () => {
   const d = new Date();
@@ -54,6 +22,7 @@ const todayYM = () => {
 export default function MesSeances() {
   const { user }   = useAuth();
   const { seances, loading, error, deleteSeance, updateSeance } = useSeances();
+  const rawObjectif = useObjectif();
 
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterType,   setFilterType]   = useState("Tous");
@@ -62,16 +31,6 @@ export default function MesSeances() {
   const [editId,     setEditId]     = useState(null);
   const [editData,   setEditData]   = useState(null);
   const [editSaving, setEditSaving] = useState(false);
-  const [rawObjectif, setRawObjectif] = useState(null);
-
-  useEffect(() => {
-    if (!user) return;
-    const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
-    const unsub = onSnapshot(doc(db, "objectifs", archerId), (snap) => {
-      setRawObjectif(snap.exists() ? snap.data() : null);
-    });
-    return () => unsub();
-  }, [user]);
 
   // volEntr pour la saison filtrée (rétrocompat ancien format)
   const volEntr = useMemo(() => {
@@ -179,20 +138,6 @@ export default function MesSeances() {
   };
 
   // ── Helpers export ────────────────────────────────────────────────────────
-
-  const buildMonthTotals = (group) => {
-    const tp     = group.reduce((n, x) => n + getPaille(x), 0);
-    const tb     = group.reduce((n, x) => n + getBlason(x), 0);
-    const scored = group.filter(x => getCompte(x) > 0 && (x.score ?? 0) > 0);
-    const tc     = scored.reduce((n, x) => n + getCompte(x), 0);
-    const ts     = scored.reduce((n, x) => n + x.score, 0);
-    const tt     = tp + tb + group.reduce((n, x) => n + getCompte(x), 0);
-    const tmoy   = tc > 0 ? ts / tc : null;
-    const dists  = [...new Set(scored.map(x => x.distance))];
-    const tscoreMoy = tmoy != null && dists.length === 1
-      ? Math.round(tmoy * normFactor(dists[0])) : null;
-    return { tp, tb, tc, ts, tt, tmoy, tscoreMoy };
-  };
 
   // ── Export Excel ──────────────────────────────────────────────────────────
 
@@ -442,9 +387,9 @@ export default function MesSeances() {
       <div className="ms-header">
         <h2 style={s.title}>Mes séances</h2>
         <div className="ms-controls">
-          <FilterSelect label="Saison"   value={filterSaison} options={saisons}    onChange={setFilterSaison} />
-          <FilterSelect label="Distance" value={filterDist}   options={DISTANCES} onChange={setFilterDist} />
-          <FilterSelect label="Type"     value={filterType}   options={TYPES}     onChange={setFilterType} />
+          <FilterSelect label="Saison"   value={filterSaison} options={saisons}    onChange={setFilterSaison} className="ms-filter-select" />
+          <FilterSelect label="Distance" value={filterDist}   options={DISTANCES} onChange={setFilterDist}   className="ms-filter-select" />
+          <FilterSelect label="Type"     value={filterType}   options={TYPES}     onChange={setFilterType}   className="ms-filter-select" />
           <button
             style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
             onClick={handleExportExcel}
@@ -691,25 +636,16 @@ export default function MesSeances() {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} className="ms-filter-select">
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
 
 function EditField({ label, children, wide }) {
+  const id = useId();
   return (
     <div style={{
       display: "flex", flexDirection: "column", gap: "5px",
       ...(wide ? { gridColumn: "span 2" } : {}),
     }}>
-      <label className="edit-label-cls" style={s.editLabel}>{label}</label>
-      {children}
+      <label htmlFor={id} className="edit-label-cls" style={s.editLabel}>{label}</label>
+      {cloneElement(children, { id })}
     </div>
   );
 }
@@ -806,7 +742,7 @@ const s = {
     backgroundColor: "var(--surface-raised)",
   },
   thR:      { textAlign: "right" },
-  tr:       { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
+  tr:       { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td:       { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR:      { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   tdAction: { padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" },

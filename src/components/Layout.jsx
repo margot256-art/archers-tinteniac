@@ -1,13 +1,14 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { doc, getDoc, updateDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { PRIMARY } from "../utils/seances";
 
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 // ── Imports lazy (chargement à la demande) ────────────────────────────────────
 const Saisie           = lazy(() => import("./archer/Saisie"));
 const MesSeances       = lazy(() => import("./archer/MesSeances"));
-const StatsMenusuelles = lazy(() => import("./archer/StatsMenusuelles"));
+const StatsMensuelles = lazy(() => import("./archer/StatsMensuelles"));
 const Graphiques       = lazy(() => import("./archer/Graphiques"));
 const MesRecords       = lazy(() => import("./archer/MesRecords"));
 const Dashboard        = lazy(() => import("./coach/Dashboard"));
@@ -17,9 +18,7 @@ const Classement       = lazy(() => import("./coach/Classement"));
 const CoachGraph       = lazy(() => import("./coach/CoachGraph"));
 const Objectifs        = lazy(() => import("./coach/Objectifs"));
 
-// ── Constantes ────────────────────────────────────────────────────────────────
 
-const PRIMARY = "#FF007A";
 
 const ARCHER_TABS = [
   { id: "new-session",    label: "+Séance" },
@@ -44,7 +43,7 @@ function renderTab(id) {
   switch (id) {
     case "new-session":    return <Saisie />;
     case "my-sessions":   return <MesSeances />;
-    case "monthly-stats": return <StatsMenusuelles />;
+    case "monthly-stats": return <StatsMensuelles />;
     case "graphs":        return <Graphiques />;
     case "records":       return <MesRecords />;
     case "dashboard":       return <Dashboard />;
@@ -74,7 +73,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
   const [section,        setSection]        = useState("archer");
   const [activeTab,      setActiveTab]      = useState("new-session");
   const [showChangePwd,  setShowChangePwd]  = useState(false);
-  const [pendingResets,  setPendingResets]  = useState(0);
+const [pendingResets,  setPendingResets]  = useState(0);
 
   useEffect(() => {
     if (!isCoach) return;
@@ -162,7 +161,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
         </div>
 
         {/* Ligne 2 — sections */}
-        <div style={{
+        <div role="tablist" aria-label="Section" style={{
           display: "flex", alignItems: "stretch",
           padding: "0 16px", gap: "4px",
           borderBottom: "1px solid var(--border)",
@@ -192,7 +191,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
         </div>
 
         {/* Ligne 3 — onglets de la section active */}
-        <div style={{
+        <div role="tablist" aria-label="Onglets" style={{
           display: "flex", alignItems: "stretch",
           backgroundColor: "var(--surface-sub)",
           overflowX: "auto", scrollbarWidth: "none",
@@ -216,7 +215,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
       )}
 
       {/* ── Contenu ── */}
-      <main className="layout-main">
+      <main role="tabpanel" className="layout-main">
         <Suspense fallback={<div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Chargement…</div>}>
           {renderTab(activeTab)}
         </Suspense>
@@ -274,13 +273,14 @@ function ChangePasswordModal({ user, onClose }) {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {[
-              { label: "Mot de passe actuel",       val: current,  set: setCurrent  },
-              { label: "Nouveau mot de passe",       val: next,     set: setNext     },
-              { label: "Confirmer le nouveau",       val: confirm,  set: setConfirm  },
-            ].map(({ label, val, set }) => (
+              { label: "Mot de passe actuel",  id: "cpwd-current", val: current, set: setCurrent },
+              { label: "Nouveau mot de passe", id: "cpwd-next",    val: next,    set: setNext    },
+              { label: "Confirmer le nouveau", id: "cpwd-confirm", val: confirm, set: setConfirm },
+            ].map(({ label, id, val, set }) => (
               <div key={label} style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                <label style={sModal.label}>{label}</label>
+                <label htmlFor={id} style={sModal.label}>{label}</label>
                 <input
+                  id={id}
                   type="password"
                   value={val}
                   onChange={e => { set(e.target.value); setError(""); }}
@@ -328,9 +328,11 @@ const sModal = {
   submitBtn:  { backgroundColor: "#FF007A", color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
 };
 
-function SectionBtn({ label, active, onClick }) {
+const SectionBtn = memo(function SectionBtn({ label, active, onClick }) {
   return (
     <button
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       style={{
         background: "none", border: "none",
@@ -346,11 +348,13 @@ function SectionBtn({ label, active, onClick }) {
       {label}
     </button>
   );
-}
+});
 
-function TabBtn({ label, active, onClick, badge }) {
+const TabBtn = memo(function TabBtn({ label, active, onClick, badge }) {
   return (
     <button
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       style={{
         background: "none", border: "none",
@@ -380,9 +384,9 @@ function TabBtn({ label, active, onClick, badge }) {
       )}
     </button>
   );
-}
+});
 
-function ExternalLinkIcon() {
+const ExternalLinkIcon = memo(function ExternalLinkIcon() {
   return (
     <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -391,9 +395,9 @@ function ExternalLinkIcon() {
       <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
   );
-}
+});
 
-function SunIcon() {
+const SunIcon = memo(function SunIcon() {
   return (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -408,13 +412,13 @@ function SunIcon() {
       <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
     </svg>
   );
-}
+});
 
-function MoonIcon() {
+const MoonIcon = memo(function MoonIcon() {
   return (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );
-}
+});

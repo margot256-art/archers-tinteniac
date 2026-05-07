@@ -1,39 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { useState, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
+import { useObjectif } from "../../hooks/useObjectif";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtYM } from "../../utils/seances";
+import FilterSelect from "../shared/FilterSelect";
 
-const PRIMARY    = "#FF007A";
-const BLUE       = "#3b82f6";
 const DISTANCES  = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const MOIS_FR    = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-
-const getPaille = s => s.paille ?? s.volumePaille ?? 0;
-const getBlason = s => s.blason ?? s.volumeBlason ?? 0;
-const getCompte = s => s.compte ?? s.volumeCompte ?? 0;
-
-const fmtMois = (yyyyMM) => {
-  const [y, m] = yyyyMM.split("-");
-  return `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
-};
-
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
 
 const fmtDec = (v) => (v != null ? v.toFixed(2) : "—");
 const fmtInt = (v) => (v != null ? String(v) : "—");
@@ -42,21 +17,12 @@ const fmtInt = (v) => (v != null ? String(v) : "—");
 
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
-export default function StatsMenusuelles() {
+export default function StatsMensuelles() {
   const { user }                        = useAuth();
   const { seances, loading, error }     = useSeances();
+  const rawObjectif                     = useObjectif();
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
-  const [rawObjectif,  setRawObjectif]  = useState(null);
-
-  useEffect(() => {
-    if (!user) return;
-    const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
-    const unsub = onSnapshot(doc(db, "objectifs", archerId), snap =>
-      setRawObjectif(snap.exists() ? snap.data() : null)
-    );
-    return () => unsub();
-  }, [user]);
 
   // Objectifs pour la saison sélectionnée (rétrocompat ancien format)
   const objectives = useMemo(() => {
@@ -187,7 +153,7 @@ export default function StatsMenusuelles() {
   const EXPORT_NC = EXPORT_COLS.length; // 13
 
   const rowToArr = (row, asString = false) => [
-    fmtMois(row.month),
+    fmtYM(row.month),
     row.distance,
     row.nbrEntr     || "",
     row.nbrComp     || "",
@@ -479,7 +445,7 @@ export default function StatsMenusuelles() {
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                       >
-                        <td style={{ ...s.td, fontWeight: "500" }}>{fmtMois(row.month)}</td>
+                        <td style={{ ...s.td, fontWeight: "500" }}>{fmtYM(row.month)}</td>
                         <td style={s.td}><span style={s.badge}>{row.distance}</span></td>
                         <td style={{ ...s.tdNum, color: row.nbrEntr ? PRIMARY : "var(--text-dim)", fontWeight: "600" }}>{row.nbrEntr || "—"}</td>
                         <td style={{ ...s.tdNum, color: row.nbrComp ? BLUE    : "var(--text-dim)", fontWeight: "600" }}>{row.nbrComp || "—"}</td>
@@ -519,16 +485,6 @@ export default function StatsMenusuelles() {
 
 // ── Sous-composant ────────────────────────────────────────────────────────────
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={s.filterSelect}>
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
 
 function ObjGauge({ label, color, row, objScore }) {
   const { current, delta, pct } = row;
@@ -603,7 +559,7 @@ const s = {
   thSubEntr: { ...thBase, fontWeight: "600", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)" },
   thSubComp: { ...thBase, fontWeight: "600", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)" },
 
-  tr:    { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
+  tr:    { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td:    { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdNum: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   badge: {
@@ -626,7 +582,7 @@ const s = {
   },
   objHeader: {
     display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap",
-    padding: "16px 20px", borderBottom: "1px solid #222",
+    padding: "16px 20px", borderBottom: "1px solid var(--border-2)",
   },
   objTitle:  { fontSize: "13px", fontWeight: "700", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.06em" },
   objHint:   { fontSize: "11px", color: "var(--text-3)", marginLeft: "auto" },
@@ -636,7 +592,7 @@ const s = {
     alignItems: "center",
     gap: "16px",
     padding: "14px 20px",
-    borderBottom: "1px solid #1e1e1e",
+    borderBottom: "1px solid var(--border)",
   },
   objLeft:    { display: "flex", flexDirection: "column", gap: "4px" },
   objBadge:   { backgroundColor: "var(--input-bg)", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "700", color: "var(--text-3)", alignSelf: "flex-start" },

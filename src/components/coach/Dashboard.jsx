@@ -19,8 +19,8 @@ function useResetRequests() {
   return requests;
 }
 import { useAllSeances } from "../../hooks/useAllSeances";
+import { PRIMARY, fmtDate, CURRENT_SAISON } from "../../utils/seances";
 
-const PRIMARY = "#FF007A";
 const GREEN   = "#16a34a";
 const RED     = "#ef4444";
 const ORANGE  = "#f97316";
@@ -54,7 +54,6 @@ function daysSince(iso) {
   return Math.floor((today - new Date(iso + "T00:00:00")) / 86400000);
 }
 
-const fmtDate    = (iso) => { if (!iso) return "—"; const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; };
 const sumFleches = (s)   => s.totalFleches ?? (s.paille ?? s.volumePaille ?? 0) + (s.blason ?? s.volumeBlason ?? 0) + (s.compte ?? s.volumeCompte ?? 0);
 const getMoy     = (s)   => {
   const c  = s.compte ?? s.volumeCompte ?? 0;
@@ -175,7 +174,7 @@ export default function Dashboard() {
           (s.compte ?? s.volumeCompte ?? 0),
         0
       );
-      const target = obj?.volEntr ?? 0;
+      const target = obj?.saisons?.[CURRENT_SAISON]?.volEntr ?? obj?.volEntr ?? 0;
       const hasObj = !!obj && target > 0;
       const rawPct = hasObj ? Math.round((vol / target) * 100) : null;
       const barPct = hasObj ? Math.min(rawPct, 100) : null;
@@ -431,19 +430,19 @@ function NewArcherModal({ onClose }) {
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={{ display: "flex", gap: "12px" }}>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "5px" }}>
-                <label style={sModal.label}>Prénom</label>
-                <input type="text" value={prenom} onChange={e => { setPrenom(e.target.value); setError(""); }}
+                <label htmlFor="na-prenom" style={sModal.label}>Prénom</label>
+                <input id="na-prenom" type="text" value={prenom} onChange={e => { setPrenom(e.target.value); setError(""); }}
                   style={inputStyle} placeholder="Margot" autoFocus />
               </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "5px" }}>
-                <label style={sModal.label}>Nom</label>
-                <input type="text" value={nom} onChange={e => { setNom(e.target.value); setError(""); }}
+                <label htmlFor="na-nom" style={sModal.label}>Nom</label>
+                <input id="na-nom" type="text" value={nom} onChange={e => { setNom(e.target.value); setError(""); }}
                   style={inputStyle} placeholder="Trevilly" />
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              <label style={sModal.label}>Mot de passe</label>
-              <input type="text" value={pwd} onChange={e => { setPwd(e.target.value); setError(""); }}
+              <label htmlFor="na-pwd" style={sModal.label}>Mot de passe</label>
+              <input id="na-pwd" type="text" value={pwd} onChange={e => { setPwd(e.target.value); setError(""); }}
                 style={inputStyle} placeholder="Mot de passe initial" />
             </div>
             {error && <div style={sModal.error}>{error}</div>}
@@ -529,7 +528,7 @@ const s = {
     backgroundColor: "var(--blue-deep)",
     borderRadius: "12px",
     padding: "20px 28px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
+    boxShadow: "var(--shadow-card)",
   },
   bannerTitle: {
     fontSize: "20px", fontWeight: "700", color: "var(--text)",
@@ -563,7 +562,7 @@ const s = {
   lastRow: {
     display: "flex", justifyContent: "space-between", alignItems: "center",
     padding: "11px 4px",
-    borderBottom: "1px solid #222",
+    borderBottom: "1px solid var(--border)",
   },
   lastName:  { fontSize: "14px", fontWeight: "700", color: "var(--text-2)" },
   lastRight: { fontSize: "13px", fontWeight: "600" },
@@ -594,7 +593,7 @@ const s = {
   },
   volRow: {
     padding: "13px 20px",
-    borderBottom: "1px solid #1e1e1e",
+    borderBottom: "1px solid var(--border)",
     display: "flex", flexDirection: "column", gap: "8px",
   },
   volMeta:  { display: "flex", justifyContent: "space-between", alignItems: "center" },

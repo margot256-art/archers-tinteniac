@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useChartColors } from "../../hooks/useChartColors";
 import {
   Chart as ChartJS,
@@ -13,10 +13,11 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
+import { useObjectif } from "../../hooks/useObjectif";
+import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON } from "../../utils/seances";
+import FilterSelect from "../shared/FilterSelect";
 
 // Dessine une ligne horizontale en pointillé sur le canvas via afterDraw
 const horizontalLinePlugin = {
@@ -45,8 +46,6 @@ ChartJS.register(
   Tooltip, Legend, horizontalLinePlugin
 );
 
-const PRIMARY   = "#FF007A";
-const BLUE      = "#3b82f6";
 const OBJ_COLOR = "#F59E0B";
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const DIST_ONLY = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -63,13 +62,6 @@ const fmtMonth = (ym) => {
   return `${MONTHS_FR[parseInt(m) - 1]} ${y.slice(2)}`;
 };
 
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-const getCompte  = s => s.compte ?? s.volumeCompte ?? 0;
 const fmtSaison  = s => "S" + s.split("/")[1];
 
 const makeDistBarOpts = (nf, colors) => ({
@@ -128,29 +120,15 @@ const makeDistBarOpts = (nf, colors) => ({
   },
 });
 
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
+
 
 export default function Graphiques() {
   const { user }                        = useAuth();
   const { seances, loading, error }     = useSeances();
+  const rawObjectif                     = useObjectif();
   const colors                          = useChartColors();
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
-  const [rawObjectif,  setRawObjectif]  = useState(null);
-
-  useEffect(() => {
-    if (!user) return;
-    const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
-    const unsub = onSnapshot(doc(db, "objectifs", archerId), (snap) => {
-      setRawObjectif(snap.exists() ? snap.data() : null);
-    });
-    return () => unsub();
-  }, [user]);
 
   // Objectifs pour la saison sélectionnée (rétrocompat ancien format)
   const objectives = useMemo(() => {
@@ -498,16 +476,6 @@ export default function Graphiques() {
   );
 }
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={s.filterSelect}>
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
 
 const s = {
   page: { display: "flex", flexDirection: "column", gap: "20px" },

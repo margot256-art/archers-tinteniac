@@ -2,14 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
+import { PRIMARY, CURRENT_SAISON } from "../../utils/seances";
 
-const PRIMARY   = "#FF007A";
 const DIST_LIST = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-
-const CURRENT_SAISON = (() => {
-  const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
 
 // Lit les objectifs d'un archer pour une saison donnée (rétrocompat ancien format)
 function getObjForSaison(raw, saison) {
@@ -103,7 +98,7 @@ function ArcherCard({ archer, objectif, saison, onSave }) {
         <div style={s.distGrid}>
           {DIST_LIST.map((d) => (
             <div key={d} style={s.distRow}>
-              <span style={s.distLabel}>{d}</span>
+              <span style={s.distLabel} aria-hidden="true">{d}</span>
               <input
                 type="number"
                 min="0"
@@ -112,6 +107,7 @@ function ArcherCard({ archer, objectif, saison, onSave }) {
                 onChange={setDist(d)}
                 placeholder="—"
                 style={s.input}
+                aria-label={`Score cible ${d}`}
               />
             </div>
           ))}
@@ -128,6 +124,7 @@ function ArcherCard({ archer, objectif, saison, onSave }) {
           onChange={(e) => setVolEntr(e.target.value)}
           placeholder="ex : 300"
           style={{ ...s.input, width: "110px" }}
+          aria-label="Volume mensuel entraînement (flèches)"
         />
       </div>
 

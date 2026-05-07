@@ -3,11 +3,10 @@ import { useAllSeances } from "../../hooks/useAllSeances";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtYM } from "../../utils/seances";
+import FilterSelect from "../shared/FilterSelect";
 
-const PRIMARY    = "#FF007A";
-const BLUE       = "#3b82f6";
 const DISTANCES  = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const MOIS_FR    = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const DIST_ORDER = ["5m","18m","20m","30m","40m","50m","60m","70m"];
 
 const AVATAR_COLORS = [
@@ -15,27 +14,6 @@ const AVATAR_COLORS = [
   "#10b981","#3b82f6","#f59e0b","#14b8a6","#84cc16","#ef4444",
 ];
 
-const normFactor = (dist) => (dist === "5m" || dist === "18m") ? 60 : 72;
-const getPaille  = s => s.paille ?? s.volumePaille ?? 0;
-const getBlason  = s => s.blason ?? s.volumeBlason ?? 0;
-const getCompte  = s => s.compte ?? s.volumeCompte ?? 0;
-
-const fmtMois = (yyyyMM) => {
-  const [y, m] = yyyyMM.split("-");
-  return `${MOIS_FR[parseInt(m, 10) - 1]} ${y}`;
-};
-
-const getSaison = (iso) => {
-  const [y, m] = iso.split("-").map(Number);
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-};
-
-const CURRENT_SAISON = (() => {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const y = d.getFullYear();
-  return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
-})();
 
 const fmtDec = (v) => (v != null ? v.toFixed(2) : "—");
 const fmtInt = (v) => (v != null ? String(v) : "—");
@@ -197,7 +175,7 @@ export default function StatsCoach() {
   const EXPORT_NUM_COLS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
   const rowToArr = (row, asString = false) => [
-    fmtMois(row.month),
+    fmtYM(row.month),
     row.archer,
     row.distance,
     row.nbrEntr     || "",
@@ -510,7 +488,7 @@ export default function StatsCoach() {
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                     >
-                      <td style={{ ...s.td, fontWeight: "500" }}>{fmtMois(row.month)}</td>
+                      <td style={{ ...s.td, fontWeight: "500" }}>{fmtYM(row.month)}</td>
                       <td style={{ ...s.td, fontWeight: "700" }}>{row.archer}</td>
                       <td style={s.td}><span style={s.badge}>{row.distance}</span></td>
                       <td style={{ ...s.tdNum, color: row.nbrEntr ? PRIMARY : "var(--text-dim)", fontWeight: "600" }}>{row.nbrEntr || "—"}</td>
@@ -573,16 +551,6 @@ function MoyDistCard({ moyByDist }) {
   );
 }
 
-function FilterSelect({ label, value, options, onChange }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={s.filterLabel}>{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} className="coach-filter-select">
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -681,7 +649,7 @@ const s = {
   thSubEntr:  { ...thBase, fontWeight: "600", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)" },
   thSubComp:  { ...thBase, fontWeight: "600", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)" },
 
-  tr:    { borderBottom: "1px solid #1e1e1e", transition: "background-color 0.1s" },
+  tr:    { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td:    { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdNum: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   badge: {

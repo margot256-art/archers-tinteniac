@@ -5,7 +5,7 @@ import { db } from "../lib/firebase";
 export function useAllSeances() {
   const [seances, setSeances] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error,   setError]   = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "seances"), orderBy("date", "desc"));

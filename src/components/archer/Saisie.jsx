@@ -583,7 +583,8 @@ const s = {
   },
   objOverlay: {
     position: "fixed", inset: 0, zIndex: 500,
-    display: "flex", alignItems: "center", justifyContent: "center",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    gap: "16px",
     pointerEvents: "none",
   },
   objBanner: {

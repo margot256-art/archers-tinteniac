@@ -77,7 +77,7 @@ const styles = {
   },
   input: {
     padding: "10px 12px",
-    border: "var(--border-2)",
+    border: "1.5px solid var(--border-2)",
     borderRadius: "8px",
     fontSize: "14px",
     color: "var(--text)",

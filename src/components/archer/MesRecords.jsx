@@ -249,7 +249,7 @@ const s = {
   },
   cardHead: {
     display: "flex", alignItems: "baseline", gap: "7px",
-    paddingBottom: "10px", borderBottom: "var(--border)",
+    paddingBottom: "10px", borderBottom: "1px solid var(--border)",
   },
   cardDistKey: {
     fontSize: "10px", fontWeight: "700", color: "var(--text-dim)",

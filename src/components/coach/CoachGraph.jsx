@@ -549,7 +549,7 @@ const s = {
   },
   sectionCardHeader: {
     display: "flex", alignItems: "center", gap: "10px",
-    paddingBottom: "16px", borderBottom: "var(--border)",
+    paddingBottom: "16px", borderBottom: "1px solid var(--border)",
     flexWrap: "wrap",
   },
   hint: { fontSize: "11px", color: "var(--text-dim)", fontStyle: "italic" },

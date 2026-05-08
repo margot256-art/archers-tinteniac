@@ -447,12 +447,14 @@ export default function Graphiques() {
       </div>
 
       {/* Meilleur score moy. par distance — 1 graphique / distance, toutes saisons */}
-      {distBarCharts.length > 0 && (
-        <div style={s.sectionCard}>
-          <div style={s.sectionCardHeader}>
-            <span style={s.sectionCardTitle}>Meilleur score moy. par distance — toutes saisons</span>
-            <span style={s.hint}>Moyenne top 3 · ×60 (5m/18m) · ×72 autres</span>
-          </div>
+      <div style={s.sectionCard}>
+        <div style={s.sectionCardHeader}>
+          <span style={s.sectionCardTitle}>Meilleur score moy. par distance — toutes saisons</span>
+          <span style={s.hint}>Moyenne top 3 · ×60 (5m/18m) · ×72 autres</span>
+        </div>
+        {distBarCharts.length === 0 ? (
+          <div style={s.empty}>Aucune séance avec tir compté enregistrée.</div>
+        ) : (
           <div style={s.distGrid}>
             {distBarCharts.map(({ dist, nf, data, opts, objVal }) => (
               <div key={dist} style={s.distCard}>
@@ -470,8 +472,8 @@ export default function Graphiques() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -490,7 +492,7 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
   filterSelect: {
-    padding: "7px 10px", border: "var(--border-2)", borderRadius: "7px",
+    padding: "7px 10px", border: "1.5px solid var(--border-2)", borderRadius: "7px",
     fontSize: "13px", color: "var(--text)", backgroundColor: "var(--surface-raised)",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
@@ -523,7 +525,7 @@ const s = {
   sectionCardHeader: {
     display: "flex", alignItems: "center", gap: "10px",
     paddingBottom: "16px",
-    borderBottom: "var(--border)",
+    borderBottom: "1px solid var(--border)",
     flexWrap: "wrap",
   },
   sectionCardTitle: {

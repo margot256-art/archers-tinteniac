@@ -500,14 +500,14 @@ const s = {
     padding: "11px 12px", textAlign: "left",
     fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
   thR: {
     padding: "11px 12px", textAlign: "right",
     fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
   tr:  { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
@@ -527,7 +527,7 @@ const s = {
     padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-3)",
   },
 
-  trSub: { backgroundColor: "var(--surface-raised)", borderTop: "var(--border)", borderBottom: "var(--border)" },
+  trSub: { backgroundColor: "var(--surface-raised)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" },
   tdSub: { padding: "9px 12px", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", fontStyle: "italic" },
 
   empty: { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },

@@ -558,7 +558,7 @@ const thBase = {
   padding: "10px 12px",
   fontSize: "11px", fontWeight: "700",
   textTransform: "uppercase", letterSpacing: "0.06em",
-  borderBottom: "var(--border)", whiteSpace: "nowrap",
+  borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
   backgroundColor: "var(--surface-raised)", color: "var(--text-dim)",
 };
 
@@ -587,7 +587,7 @@ const s = {
   },
   saisonSelect: {
     padding: "7px 12px", borderRadius: "8px",
-    border: "var(--border-2)",
+    border: "1.5px solid var(--border-2)",
     backgroundColor: "var(--surface-raised)", color: "var(--blue-soft)",
     fontSize: "14px", fontWeight: "600",
     cursor: "pointer", outline: "none", fontFamily: "inherit",
@@ -641,8 +641,8 @@ const s = {
 
   th:         { ...thBase, textAlign: "left" },
   thR:        { ...thBase, textAlign: "right" },
-  thGrpSeance:{ ...thBase, textAlign: "center", borderLeft: "var(--border)", borderRight: "var(--border)" },
-  thGrpVol:   { ...thBase, textAlign: "center", borderLeft: "var(--border)", borderRight: "var(--border)" },
+  thGrpSeance:{ ...thBase, textAlign: "center", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" },
+  thGrpVol:   { ...thBase, textAlign: "center", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" },
   thGrpEntr:  { ...thBase, textAlign: "center", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)", borderLeft: "2px solid rgba(255,0,122,0.3)" },
   thGrpComp:  { ...thBase, textAlign: "center", color: BLUE,    backgroundColor: "rgba(59,130,246,0.1)", borderLeft: "2px solid rgba(59,130,246,0.3)" },
   thSub:      { ...thBase, fontWeight: "600", color: "var(--text-dim)" },

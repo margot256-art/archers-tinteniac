@@ -1,4 +1,4 @@
-import { Fragment, useState, useMemo, useId, cloneElement } from "react";
+import { Fragment, useState, useMemo, useEffect, useId, cloneElement } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
@@ -27,6 +27,7 @@ export default function MesSeances() {
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterType,   setFilterType]   = useState("Tous");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
+  const [filterMois,   setFilterMois]   = useState("Tous");
   const [confirmId,  setConfirmId]  = useState(null);
   const [editId,     setEditId]     = useState(null);
   const [editData,   setEditData]   = useState(null);
@@ -54,14 +55,28 @@ export default function MesSeances() {
     return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
   }, [seances]);
 
+  const moisOptions = useMemo(() => {
+    const base = seances.filter(s => {
+      const okSaison = filterSaison === "Toutes" || (s.date && getSaison(s.date) === filterSaison);
+      const okDist   = filterDist   === "Toutes" || s.distance === filterDist;
+      const okType   = filterType   === "Tous"   || s.type     === filterType;
+      return okSaison && okDist && okType && s.date;
+    });
+    const yms = [...new Set(base.map(s => s.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
+    return ["Tous", ...yms.map(ym => fmtYM(ym))];
+  }, [seances, filterSaison, filterDist, filterType]);
+
+  useEffect(() => { setFilterMois("Tous"); }, [filterSaison]);
+
   const filtered = useMemo(() =>
     seances.filter(s => {
       const okSaison = filterSaison === "Toutes" || (s.date && getSaison(s.date) === filterSaison);
       const okDist   = filterDist   === "Toutes" || s.distance === filterDist;
       const okType   = filterType   === "Tous"   || s.type     === filterType;
-      return okSaison && okDist && okType;
+      const okMois   = filterMois   === "Tous"   || (s.date && fmtYM(s.date.slice(0, 7)) === filterMois);
+      return okSaison && okDist && okType && okMois;
     }),
-    [seances, filterSaison, filterDist, filterType]
+    [seances, filterSaison, filterDist, filterType, filterMois]
   );
 
   const grouped = useMemo(() => {
@@ -387,9 +402,10 @@ export default function MesSeances() {
       <div className="ms-header">
         <h2 style={s.title}>Mes séances</h2>
         <div className="ms-controls">
-          <FilterSelect label="Saison"   value={filterSaison} options={saisons}    onChange={setFilterSaison} className="ms-filter-select" />
-          <FilterSelect label="Distance" value={filterDist}   options={DISTANCES} onChange={setFilterDist}   className="ms-filter-select" />
-          <FilterSelect label="Type"     value={filterType}   options={TYPES}     onChange={setFilterType}   className="ms-filter-select" />
+          <FilterSelect label="Saison"   value={filterSaison} options={saisons}     onChange={setFilterSaison} className="ms-filter-select" />
+          <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}  onChange={setFilterDist}   className="ms-filter-select" />
+          <FilterSelect label="Type"     value={filterType}   options={TYPES}      onChange={setFilterType}   className="ms-filter-select" />
+          <FilterSelect label="Mois"     value={filterMois}   options={moisOptions} onChange={setFilterMois}   className="ms-filter-select" />
           <button
             style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
             onClick={handleExportExcel}
@@ -711,14 +727,14 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   editInput: {
-    padding: "8px 10px", border: "var(--border-2)", borderRadius: "7px",
+    padding: "8px 10px", border: "1.5px solid var(--border-2)", borderRadius: "7px",
     fontSize: "13px", color: "var(--text)", fontFamily: "inherit",
     outline: "none", backgroundColor: "var(--input-bg)",
     width: "100%", boxSizing: "border-box",
   },
   editFooter: { display: "flex", justifyContent: "flex-end", gap: "10px" },
   cancelBtn:  {
-    background: "none", border: "var(--border-strong)", borderRadius: "7px",
+    background: "none", border: "1px solid var(--border-strong)", borderRadius: "7px",
     padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)",
     cursor: "pointer", fontFamily: "inherit",
   },
@@ -738,7 +754,7 @@ const s = {
     padding: "12px 12px", textAlign: "left",
     fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
   thR:      { textAlign: "right" },
@@ -750,8 +766,8 @@ const s = {
   // ligne totaux mensuels
   trTotal: {
     backgroundColor: "var(--surface-raised)",
-    borderTop: "var(--border-3)",
-    borderBottom: "var(--border-3)",
+    borderTop: "1px solid var(--border-3)",
+    borderBottom: "1px solid var(--border-3)",
   },
   tdMonthLabel: {
     padding: "9px 12px", color: "var(--text-dim)",

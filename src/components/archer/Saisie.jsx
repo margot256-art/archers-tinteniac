@@ -183,18 +183,6 @@ export default function Saisie() {
     [seances, filterSaison]
   );
 
-  const cards = useMemo(() => {
-    const scored  = saisonSeances.filter(s => (s.score || 0) > 0 && getCompte(s) > 0);
-    const totSc   = scored.reduce((n, s) => n + s.score, 0);
-    const totVol  = scored.reduce((n, s) => n + getCompte(s), 0);
-    return {
-      nbSeances:  saisonSeances.length,
-      totFleches: saisonSeances.reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0),
-      maMoyenne:  totVol > 0 ? (totSc / totVol).toFixed(2) : null,
-      lastDate:   saisonSeances[0]?.date ?? null,
-    };
-  }, [saisonSeances]);
-
   const { tableRows, tableTotals } = useMemo(() => {
     const rowStats = (list, dist) => {
       const nf     = normFactor(dist);
@@ -400,7 +388,7 @@ export default function Saisie() {
                       <td style={{ ...s.tdR, color: row.entr.moyFl ? PRIMARY : "var(--text-3)", fontWeight: "600" }}>
                         {row.entr.moyFl ?? "—"}
                       </td>
-                      <td style={{ ...s.tdR, borderRight: "var(--border-3)" }}>
+                      <td style={{ ...s.tdR, borderRight: "1px solid var(--border-3)" }}>
                         {row.entr.scoreMoy ?? "—"}
                       </td>
                       <td style={s.tdR}>{row.comp.count || "—"}</td>
@@ -409,7 +397,7 @@ export default function Saisie() {
                         {row.comp.moyFl ?? "—"}
                       </td>
                       <td style={s.tdR}>{row.comp.scoreMoy ?? "—"}</td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)", borderLeft: "var(--border-strong)" }}>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)", borderLeft: "1px solid var(--border-strong)" }}>
                         {row.total.count || "—"}
                       </td>
                       <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
@@ -432,14 +420,14 @@ export default function Saisie() {
                       {tableTotals.entr.fleches ? tableTotals.entr.fleches.toLocaleString("fr-FR") : "—"}
                     </td>
                     <td style={s.tdR}>—</td>
-                    <td style={{ ...s.tdR, borderRight: "var(--border-3)" }}>—</td>
+                    <td style={{ ...s.tdR, borderRight: "1px solid var(--border-3)" }}>—</td>
                     <td style={s.tdR}>{tableTotals.comp.count || "—"}</td>
                     <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
                       {tableTotals.comp.fleches ? tableTotals.comp.fleches.toLocaleString("fr-FR") : "—"}
                     </td>
                     <td style={s.tdR}>—</td>
                     <td style={s.tdR}>—</td>
-                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)", borderLeft: "var(--border-strong)" }}>
+                    <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)", borderLeft: "1px solid var(--border-strong)" }}>
                       {tableTotals.total.count || "—"}
                     </td>
                     <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>
@@ -536,16 +524,6 @@ function StatLine({ label, value, accent, color }) {
   );
 }
 
-function StatCard({ label, value, sub, accent }) {
-  return (
-    <div style={s.statCard}>
-      <div style={s.statLabel}>{label}</div>
-      <div style={{ ...s.statValue, ...(accent ? { color: PRIMARY } : {}) }}>{value}</div>
-      {sub && <div style={s.statSub}>{sub}</div>}
-    </div>
-  );
-}
-
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = {
@@ -566,7 +544,7 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.07em",
   },
   input: {
-    padding: "10px 12px", border: "var(--border-2)", borderRadius: "8px",
+    padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
     fontSize: "14px", color: "var(--text)", outline: "none",
     fontFamily: "inherit", backgroundColor: "var(--input-bg)",
     width: "100%", boxSizing: "border-box",
@@ -575,7 +553,7 @@ const s = {
   summary: {
     display: "flex", alignItems: "center", justifyContent: "space-around",
     backgroundColor: "var(--surface-raised)", borderRadius: "10px",
-    padding: "20px", border: "var(--border)",
+    padding: "20px", border: "1px solid var(--border)",
   },
   sep:      { width: "1px", height: "44px", backgroundColor: "var(--border-3)" },
   msgError: {
@@ -643,7 +621,7 @@ const s = {
   },
   saisonSelect: {
     padding: "4px 10px", borderRadius: "7px",
-    border: "var(--border-2)",
+    border: "1.5px solid var(--border-2)",
     backgroundColor: "var(--input-bg)",
     color: "var(--text-2)",
     fontSize: "12px", fontWeight: "600",
@@ -661,41 +639,27 @@ const s = {
     padding: "8px 7px", textAlign: "left",
     fontSize: "10px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.03em",
-    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
   thR: {
     padding: "8px 7px", textAlign: "right",
     fontSize: "10px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.03em",
-    borderBottom: "var(--border)", whiteSpace: "nowrap",
+    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
   },
   thEntr:    { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)" },
-  thEntrEnd: { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)", borderRight: "var(--border-3)" },
+  thEntrEnd: { color: PRIMARY,   backgroundColor: "rgba(255,0,122,0.1)", borderRight: "1px solid var(--border-3)" },
   thComp:    { color: BLUE,      backgroundColor: "rgba(59,130,246,0.1)" },
-  thTotal:   { color: "var(--text)", backgroundColor: "var(--input-bg)", borderLeft: "var(--border-strong)" },
+  thTotal:   { color: "var(--text)", backgroundColor: "var(--input-bg)", borderLeft: "1px solid var(--border-strong)" },
   tr:        { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
-  trTotal:     { borderTop: "var(--border-3)", backgroundColor: "var(--surface-raised)" },
+  trTotal:     { borderTop: "1px solid var(--border-3)", backgroundColor: "var(--surface-raised)" },
   td:        { padding: "8px 7px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR:       { padding: "8px 7px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
   badge: {
     backgroundColor: "var(--border)", borderRadius: "5px",
     padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)",
   },
-
-  // cartes stats
-  statCards: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" },
-  statCard:  {
-    backgroundColor: "var(--surface)", borderRadius: "10px",
-    boxShadow: "var(--shadow-card)",
-    padding: "16px 18px", display: "flex", flexDirection: "column", gap: "4px",
-  },
-  statLabel: {
-    fontSize: "11px", fontWeight: "600", color: "var(--text-dim)",
-    textTransform: "uppercase", letterSpacing: "0.06em",
-  },
-  statValue: { fontSize: "22px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
-  statSub:   { fontSize: "11px", color: "var(--text-dim)" },
 
   emptyStats: {
     backgroundColor: "var(--surface)", borderRadius: "10px",

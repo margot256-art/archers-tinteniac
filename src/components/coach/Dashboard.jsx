@@ -403,7 +403,7 @@ function NewArcherModal({ onClose }) {
   };
 
   const inputStyle = {
-    padding: "10px 12px", border: "var(--border-2)", borderRadius: "8px",
+    padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
     fontSize: "14px", color: "var(--text)", backgroundColor: "var(--input-bg)",
     outline: "none", fontFamily: "inherit", width: "100%", boxSizing: "border-box",
   };
@@ -470,7 +470,7 @@ const sModal = {
   error:        { backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#ef4444" },
   success:      { backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "#16a34a", display: "flex", flexDirection: "column", gap: "12px" },
   primaryBtn:   { backgroundColor: PRIMARY, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
-  secondaryBtn: { background: "none", border: "var(--border-3)", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" },
+  secondaryBtn: { background: "none", border: "1px solid var(--border-3)", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" },
 };
 
 // ── styles ────────────────────────────────────────────────────────────────────
@@ -506,13 +506,13 @@ const s = {
   },
   resetRow: {
     display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px",
-    paddingTop: "10px", borderTop: "var(--border)",
+    paddingTop: "10px", borderTop: "1px solid var(--border)",
   },
   resetName:    { fontSize: "14px", color: "var(--text)", fontWeight: "600", flex: "1 1 120px" },
   resetActions: { display: "flex", gap: "8px", flex: "2 1 240px" },
   resetInput: {
     flex: 1, padding: "7px 10px",
-    border: "var(--border-2)", borderRadius: "7px",
+    border: "1.5px solid var(--border-2)", borderRadius: "7px",
     fontSize: "13px", color: "var(--text)", backgroundColor: "var(--input-bg)",
     outline: "none", fontFamily: "inherit",
   },

@@ -544,7 +544,7 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
   },
   filterSelect: {
-    padding: "6px 10px", border: "var(--border-2)", borderRadius: "7px",
+    padding: "6px 10px", border: "1.5px solid var(--border-2)", borderRadius: "7px",
     fontSize: "13px", color: "var(--text)", backgroundColor: "var(--surface-raised)",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },

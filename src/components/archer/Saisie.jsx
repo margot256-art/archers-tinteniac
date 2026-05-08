@@ -39,6 +39,7 @@ export default function Saisie() {
   const [loading,     setLoading]     = useState(false);
   const [success,     setSuccess]     = useState(false);
   const [objAccompli, setObjAccompli] = useState(false);
+  const [recordMsg,   setRecordMsg]   = useState("");
   const [error,       setError]       = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
@@ -54,6 +55,7 @@ export default function Saisie() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setSuccess(false);
     setObjAccompli(false);
+    setRecordMsg("");
     setError("");
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -99,6 +101,15 @@ export default function Saisie() {
     }
     setFieldErrors({});
     setLoading(true);
+
+    // Record entraînement : meilleur score normalisé existant pour cette distance
+    const nf = normFactor(form.distance);
+    const currentBestNorm = form.type === "Entraînement" && score > 0 && compte > 0
+      ? seances
+          .filter(s => s.distance === form.distance && s.type === "Entraînement" && getCompte(s) > 0 && (s.score ?? 0) > 0)
+          .reduce((best, s) => Math.max(best, Math.round(s.score / getCompte(s) * nf)), 0)
+      : null;
+
     try {
       await addDoc(collection(db, "seances"), {
         archer:       `${user.prenom} ${user.nom}`,
@@ -126,6 +137,15 @@ export default function Saisie() {
           launchFireworks();
           setObjAccompli(true);
           setTimeout(() => setObjAccompli(false), 3500);
+        }
+      }
+
+      if (currentBestNorm !== null) {
+        const newNorm = Math.round(score / compte * nf);
+        if (newNorm > currentBestNorm) {
+          launchFireworks();
+          setRecordMsg(`🎯 Nouveau record entraînement à ${form.distance} !`);
+          setTimeout(() => setRecordMsg(""), 3500);
         }
       }
     } catch (err) {
@@ -218,11 +238,10 @@ export default function Saisie() {
 
   return (
     <div style={s.outer}>
-      {objAccompli && (
+      {(objAccompli || recordMsg) && (
         <div style={s.objOverlay}>
-          <div style={s.objBanner}>
-            🏆 Objectif volume accompli !
-          </div>
+          {objAccompli && <div style={s.objBanner}>🏆 Objectif volume accompli !</div>}
+          {recordMsg   && <div style={s.objBanner}>{recordMsg}</div>}
         </div>
       )}
 

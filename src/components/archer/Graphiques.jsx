@@ -356,88 +356,7 @@ export default function Graphiques() {
     };
   }, [seances, filterDist, filterSaison, objectives, colors.theme]);
 
-  // ── Chart 3 : évolution du record par saison ─────────────────────────────────
-  const { recordData, recordOpts, hasRecordData } = useMemo(() => {
-    const src = seances.filter(s => {
-      if (!s.date) return false;
-      const okSaison = filterSaison === "Toutes" || getSaison(s.date) === filterSaison;
-      const okDist   = filterDist   === "Toutes" || s.distance === filterDist;
-      return okSaison && okDist && getCompte(s) > 0 && (s.score ?? 0) > 0;
-    });
-
-    const allSaisons = [...new Set(
-      seances
-        .filter(s => s.date && (filterDist === "Toutes" || s.distance === filterDist))
-        .map(s => getSaison(s.date))
-    )].sort();
-
-    if (!allSaisons.length) return { recordData: null, recordOpts: null, hasRecordData: false };
-
-    const bestByType = (type, saison) => {
-      const hits = src.filter(s => s.type === type && getSaison(s.date) === saison);
-      if (!hits.length) return null;
-      return Math.max(...hits.map(s => Math.round(s.score / getCompte(s) * normFactor(s.distance))));
-    };
-
-    const entrData = allSaisons.map(sn => bestByType("Entraînement", sn));
-    const compData = allSaisons.map(sn => bestByType("Compétition",  sn));
-
-    const datasets = [
-      {
-        label: "Entraînements",
-        data: entrData,
-        borderColor: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)",
-        pointBackgroundColor: PRIMARY,
-        pointRadius: 6, pointHoverRadius: 8,
-        tension: 0.3, spanGaps: true,
-      },
-      {
-        label: "Compétitions",
-        data: compData,
-        borderColor: BLUE, backgroundColor: "rgba(59,130,246,0.08)",
-        pointBackgroundColor: BLUE,
-        pointStyle: "rectRot",
-        pointRadius: 6, pointHoverRadius: 8,
-        borderDash: [6, 3], tension: 0.3, spanGaps: true,
-      },
-    ];
-
-    const opts = {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          ticks: { font: { size: 12 }, color: colors.muted },
-          grid: { color: colors.grid },
-        },
-        y: {
-          beginAtZero: false,
-          ticks: { font: { size: 11 }, color: colors.dim },
-          grid: { color: colors.grid },
-          title: { display: true, text: "Meilleur score normalisé", color: colors.dim, font: { size: 11 } },
-        },
-      },
-      plugins: {
-        legend: {
-          labels: { font: { size: 12 }, color: colors.text, boxWidth: 18, padding: 18 },
-        },
-        tooltip: {
-          callbacks: {
-            title: (items) => items[0]?.label ? `Saison ${items[0].label}` : "",
-            label: (ctx) => ctx.parsed.y != null ? `${ctx.dataset.label} : ${ctx.parsed.y} pts` : null,
-          },
-        },
-      },
-    };
-
-    return {
-      recordData: { labels: allSaisons.map(fmtSaison), datasets },
-      recordOpts: opts,
-      hasRecordData: entrData.some(v => v !== null) || compData.some(v => v !== null),
-    };
-  }, [seances, filterDist, filterSaison, colors.theme]);
-
-  // ── Chart 4 : top 3 moy. par distance, 1 graphique / distance, X = saisons ──
+  // ── Chart 3 : top 3 moy. par distance, 1 graphique / distance, X = saisons ──
   const distBarCharts = useMemo(() => {
     const allSaisons = [...new Set(
       seances.filter(s => s.date).map(s => getSaison(s.date))
@@ -523,22 +442,6 @@ export default function Graphiques() {
         ) : (
           <div style={{ height: 320 }}>
             <Line data={monthlyData} options={monthlyOpts} />
-          </div>
-        )}
-      </div>
-
-      {/* Évolution du record par saison */}
-      <div style={s.card}>
-        <div style={s.cardHeader}>
-          <span style={s.cardTitle}>Évolution du record par saison</span>
-          {filterDist !== "Toutes" && <span style={s.distBadge}>{filterDist}</span>}
-          <span style={s.hint}>Meilleur score normalisé par saison</span>
-        </div>
-        {!hasRecordData ? (
-          <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div>
-        ) : (
-          <div style={{ height: 320 }}>
-            <Line data={recordData} options={recordOpts} />
           </div>
         )}
       </div>

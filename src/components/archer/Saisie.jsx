@@ -102,11 +102,11 @@ export default function Saisie() {
     setFieldErrors({});
     setLoading(true);
 
-    // Record entraînement : meilleur score normalisé existant pour cette distance
+    // Record : meilleur score normalisé existant pour cette distance + type
     const nf = normFactor(form.distance);
-    const currentBestNorm = form.type === "Entraînement" && score > 0 && compte > 0
+    const currentBestNorm = score > 0 && compte > 0
       ? seances
-          .filter(s => s.distance === form.distance && s.type === "Entraînement" && getCompte(s) > 0 && (s.score ?? 0) > 0)
+          .filter(s => s.distance === form.distance && s.type === form.type && getCompte(s) > 0 && (s.score ?? 0) > 0)
           .reduce((best, s) => Math.max(best, Math.round(s.score / getCompte(s) * nf)), 0)
       : null;
 
@@ -144,7 +144,8 @@ export default function Saisie() {
         const newNorm = Math.round(score / compte * nf);
         if (newNorm > currentBestNorm) {
           launchFireworks();
-          setRecordMsg(`🎯 Nouveau record entraînement à ${form.distance} !`);
+          const typeLabel = form.type === "Compétition" ? "compétition" : "entraînement";
+          setRecordMsg(`🎯 Nouveau record ${typeLabel} à ${form.distance} !`);
           setTimeout(() => setRecordMsg(""), 3500);
         }
       }

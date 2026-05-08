@@ -3,6 +3,25 @@ import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { PRIMARY, CURRENT_SAISON } from "../../utils/seances";
+import { getPushSubscription } from "../../hooks/usePushSubscription";
+
+async function notifyArcher(archerId, archerName, saison) {
+  try {
+    const sub = await getPushSubscription(archerId);
+    if (!sub?.endpoint) return;
+    await fetch('/.netlify/functions/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: sub,
+        title: 'Objectifs mis à jour',
+        body: `Ton coach a modifié tes objectifs pour la saison ${saison}.`,
+      }),
+    });
+  } catch {
+    // Silently ignore — ne pas bloquer la sauvegarde
+  }
+}
 
 const DIST_LIST = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
@@ -76,6 +95,8 @@ function ArcherCard({ archer, objectif, saison, onSave }) {
     try {
       await onSave(distances, volEntr);
       setFeedback("ok");
+      const safeId = archer.id ?? archer.name.trim().toLowerCase().replace(/\s+/g, "_");
+      notifyArcher(safeId, archer.name, saison);
     } catch {
       setFeedback("err");
     } finally {

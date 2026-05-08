@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { doc, getDoc, updateDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { PRIMARY } from "../utils/seances";
+import { usePushStatus, subscribePush, unsubscribePush } from "../hooks/usePushSubscription";
 
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
@@ -73,7 +74,26 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
   const [section,        setSection]        = useState("archer");
   const [activeTab,      setActiveTab]      = useState("new-session");
   const [showChangePwd,  setShowChangePwd]  = useState(false);
-const [pendingResets,  setPendingResets]  = useState(0);
+  const [pendingResets,  setPendingResets]  = useState(0);
+
+  const pushStatus    = usePushStatus();
+  const [pushBusy,    setPushBusy]    = useState(false);
+
+  const handleBell = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (pushStatus === 'subscribed') {
+        await unsubscribePush(user.id);
+        window.location.reload(); // rafraîchit le statut
+      } else {
+        await subscribePush(user.id);
+        window.location.reload();
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!isCoach) return;
@@ -117,6 +137,28 @@ const [pendingResets,  setPendingResets]  = useState(0);
                 }}>Coach</span>
               )}
             </span>
+            {!isCoach && pushStatus !== 'unsupported' && pushStatus !== 'loading' && (
+              <button
+                onClick={handleBell}
+                disabled={pushBusy || pushStatus === 'denied'}
+                title={
+                  pushStatus === 'subscribed' ? "Désactiver les notifications"
+                  : pushStatus === 'denied'   ? "Notifications bloquées (paramètres navigateur)"
+                  : "Activer les notifications"
+                }
+                style={{
+                  background: "none",
+                  border: `1px solid ${pushStatus === 'subscribed' ? PRIMARY : "var(--border-3)"}`,
+                  color: pushStatus === 'subscribed' ? PRIMARY : "var(--text-muted)",
+                  padding: "5px 8px", borderRadius: "6px",
+                  fontSize: "14px", cursor: pushStatus === 'denied' ? "not-allowed" : "pointer",
+                  fontFamily: "inherit", lineHeight: 1,
+                  opacity: pushBusy ? 0.5 : 1,
+                }}
+              >
+                <BellIcon filled={pushStatus === 'subscribed'} />
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
@@ -419,6 +461,17 @@ const MoonIcon = memo(function MoonIcon() {
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+});
+
+const BellIcon = memo(function BellIcon({ filled }) {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
   );
 });

@@ -20,13 +20,25 @@ function CalendarIcon() {
 
 // ── Section entr. / comp. ─────────────────────────────────────────────────────
 
-function RecordSection({ type, color, bgColor, best, max }) {
+function RecordSection({ type, color, bgColor, best, max, history }) {
+  const [open, setOpen] = useState(false);
   const pct = best ? Math.round(best.score / max * 100) : 0;
   return (
     <div style={{ ...s.section, backgroundColor: bgColor }}>
-      <div style={{ ...s.typeBadge, color, borderColor: color + "55" }}>
-        {type.toUpperCase()}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ ...s.typeBadge, color, borderColor: color + "55" }}>
+          {type.toUpperCase()}
+        </div>
+        {history.length > 1 && (
+          <button
+            onClick={() => setOpen(o => !o)}
+            style={{ ...s.historyBtn, color }}
+          >
+            {open ? "▲" : "▼"} {history.length} records
+          </button>
+        )}
       </div>
+
       {best ? (
         <>
           <div style={s.scoreRow}>
@@ -42,6 +54,22 @@ function RecordSection({ type, color, bgColor, best, max }) {
         </>
       ) : (
         <div style={s.noData}>Aucune séance</div>
+      )}
+
+      {open && (
+        <div style={s.historyList}>
+          {[...history].reverse().map((h, i) => (
+            <div key={h.date} style={{ ...s.historyRow, ...(i === 0 ? s.historyRowCurrent : {}) }}>
+              <span style={{ ...s.historyScore, color: i === 0 ? color : "var(--text-2)" }}>
+                {h.score}
+              </span>
+              <span style={s.historyDate}>{fmtDate(h.date)}{h.lieu ? ` · ${h.lieu}` : ""}</span>
+              {h.delta != null && (
+                <span style={{ ...s.historyDelta, color }}>+{h.delta}</span>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -90,11 +118,27 @@ export default function MesRecords() {
         return best;
       };
 
+      const getHistory = (type) => {
+        const hits = distSrc
+          .filter(s => s.type === type)
+          .map(s => ({ score: Math.round(s.score / getCompte(s) * nf), date: s.date, lieu: s.lieu || null }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        const history = [];
+        let prev = 0;
+        for (const h of hits) {
+          if (h.score > prev) {
+            history.push({ ...h, delta: prev > 0 ? h.score - prev : null });
+            prev = h.score;
+          }
+        }
+        return history;
+      };
+
       const entr = getBest("Entraînement");
       const comp = getBest("Compétition");
       if (!entr && !comp) return null;
 
-      return { dist, nf, max, entr, comp };
+      return { dist, nf, max, entr, comp, entrHistory: getHistory("Entraînement"), compHistory: getHistory("Compétition") };
     }).filter(Boolean);
   }, [seances, filterSaison]);
 
@@ -125,7 +169,7 @@ export default function MesRecords() {
         <div style={s.empty}>{toutesLesSaisons ? "Aucune séance avec tir compté." : "Aucune séance avec tir compté pour cette saison."}</div>
       ) : (
         <div style={s.grid}>
-          {records.map(({ dist, nf, max, entr, comp }) => (
+          {records.map(({ dist, nf, max, entr, comp, entrHistory, compHistory }) => (
             <div key={dist} style={s.card}>
               <div style={s.cardHead}>
                 <span style={s.cardDistKey}>DISTANCE :</span>
@@ -139,6 +183,7 @@ export default function MesRecords() {
                 bgColor="rgba(255,0,122,0.1)"
                 best={entr}
                 max={max}
+                history={entrHistory}
               />
               <RecordSection
                 type="Compétition"
@@ -146,6 +191,7 @@ export default function MesRecords() {
                 bgColor="rgba(59,130,246,0.1)"
                 best={comp}
                 max={max}
+                history={compHistory}
               />
             </div>
           ))}
@@ -248,6 +294,33 @@ const s = {
   barFill: { height: "100%", borderRadius: "3px", transition: "width 0.4s ease" },
 
   noData: { fontSize: "12px", color: "var(--text-3)", fontStyle: "italic" },
+
+  historyBtn: {
+    background: "none", border: "none", cursor: "pointer",
+    fontSize: "11px", fontWeight: "700", fontFamily: "inherit",
+    opacity: 0.75, padding: "2px 0",
+  },
+  historyList: {
+    display: "flex", flexDirection: "column", gap: "1px",
+    borderTop: "1px solid var(--border)", marginTop: "4px", paddingTop: "8px",
+  },
+  historyRow: {
+    display: "flex", alignItems: "baseline", gap: "8px",
+    padding: "5px 0",
+    borderBottom: "1px solid var(--border)",
+  },
+  historyRowCurrent: {
+    fontWeight: "700",
+  },
+  historyScore: {
+    fontSize: "16px", fontWeight: "700", minWidth: "36px",
+  },
+  historyDate: {
+    fontSize: "12px", color: "var(--text-muted)", flex: 1,
+  },
+  historyDelta: {
+    fontSize: "12px", fontWeight: "700",
+  },
 
   // états
   info:   { color: "var(--text-muted)", fontSize: "14px" },

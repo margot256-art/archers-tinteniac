@@ -94,8 +94,23 @@ export function useAuth() {
         return { success: false, error: "Mot de passe incorrect." };
       }
 
-      const userData = { prenom: p, nom: n, role: "archer", id: docId };
-      try { localStorage.setItem(USER_KEY, `${p} ${n}`); localStorage.removeItem(COACH_KEY); } catch {}
+      // Use the canonical name stored in Firestore, not what the user typed
+      let canonPrenom, canonNom;
+      if (data.prenom) {
+        canonPrenom = normName(data.prenom);
+        canonNom    = normName(data.nom);
+      } else if (data.nom) {
+        // Old format: full name stored in `nom`
+        const parts = data.nom.trim().split(/\s+/);
+        canonPrenom = normName(parts[0] ?? p);
+        canonNom    = normName(parts.slice(1).join(" ") || n);
+      } else {
+        canonPrenom = p;
+        canonNom    = n;
+      }
+
+      const userData = { prenom: canonPrenom, nom: canonNom, role: "archer", id: docId };
+      try { localStorage.setItem(USER_KEY, JSON.stringify(userData)); localStorage.removeItem(COACH_KEY); } catch {}
       setUser(userData);
       setIsCoach(false);
       return { success: true, role: "archer" };

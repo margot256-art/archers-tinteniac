@@ -125,6 +125,7 @@ export default function Saisie() {
         if (oldPct < 100 && newPct >= 100) {
           launchFireworks();
           setObjAccompli(true);
+          setTimeout(() => setObjAccompli(false), 3500);
         }
       }
     } catch (err) {
@@ -217,6 +218,13 @@ export default function Saisie() {
 
   return (
     <div style={s.outer}>
+      {objAccompli && (
+        <div style={s.objOverlay}>
+          <div style={s.objBanner}>
+            🏆 Objectif volume accompli !
+          </div>
+        </div>
+      )}
 
       {/* ── Formulaire ── */}
       <div style={s.formZone}>
@@ -292,9 +300,8 @@ export default function Saisie() {
             />
           </div>
 
-          {error        && <div style={s.msgError}>{error}</div>}
-          {success      && <div style={s.msgSuccess}>✓ Séance enregistrée avec succès !</div>}
-          {objAccompli  && <div style={s.msgObj}>🏆 Objectif volume accompli !</div>}
+          {error   && <div style={s.msgError}>{error}</div>}
+          {success && <div style={s.msgSuccess}>✓ Séance enregistrée avec succès !</div>}
 
           <button
             type="submit"
@@ -555,11 +562,22 @@ const s = {
     borderRadius: "8px", padding: "10px 14px", fontSize: "13px",
     color: "#16a34a", fontWeight: "500",
   },
-  msgObj: {
-    backgroundColor: "rgba(255,0,122,0.08)", border: `1.5px solid ${PRIMARY}`,
-    borderRadius: "8px", padding: "12px 16px", fontSize: "14px",
-    color: PRIMARY, fontWeight: "700", textAlign: "center",
+  objOverlay: {
+    position: "fixed", inset: 0, zIndex: 500,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    pointerEvents: "none",
+  },
+  objBanner: {
+    backgroundColor: "var(--surface)",
+    border: `2px solid ${PRIMARY}`,
+    borderRadius: "16px",
+    padding: "20px 40px",
+    fontSize: "22px", fontWeight: "800",
+    color: PRIMARY,
+    boxShadow: "0 8px 32px rgba(255,0,122,0.25), 0 2px 8px rgba(0,0,0,0.15)",
     letterSpacing: "0.01em",
+    textAlign: "center",
+    animation: "none",
   },
   btn:    {
     padding: "13px", backgroundColor: PRIMARY, color: "#fff",

@@ -38,6 +38,7 @@ export default function Saisie() {
   const [form,        setForm]        = useState(INIT);
   const [loading,     setLoading]     = useState(false);
   const [success,     setSuccess]     = useState(false);
+  const [objAccompli, setObjAccompli] = useState(false);
   const [error,       setError]       = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
@@ -52,6 +53,7 @@ export default function Saisie() {
   const set = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setSuccess(false);
+    setObjAccompli(false);
     setError("");
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -122,6 +124,7 @@ export default function Saisie() {
         const newPct = Math.round(newVolume / volEntr * 100);
         if (oldPct < 100 && newPct >= 100) {
           launchFireworks();
+          setObjAccompli(true);
         }
       }
     } catch (err) {
@@ -289,8 +292,9 @@ export default function Saisie() {
             />
           </div>
 
-          {error   && <div style={s.msgError}>{error}</div>}
-          {success && <div style={s.msgSuccess}>✓ Séance enregistrée avec succès !</div>}
+          {error        && <div style={s.msgError}>{error}</div>}
+          {success      && <div style={s.msgSuccess}>✓ Séance enregistrée avec succès !</div>}
+          {objAccompli  && <div style={s.msgObj}>🏆 Objectif volume accompli !</div>}
 
           <button
             type="submit"
@@ -550,6 +554,12 @@ const s = {
     backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a",
     borderRadius: "8px", padding: "10px 14px", fontSize: "13px",
     color: "#16a34a", fontWeight: "500",
+  },
+  msgObj: {
+    backgroundColor: "rgba(255,0,122,0.08)", border: `1.5px solid ${PRIMARY}`,
+    borderRadius: "8px", padding: "12px 16px", fontSize: "14px",
+    color: PRIMARY, fontWeight: "700", textAlign: "center",
+    letterSpacing: "0.01em",
   },
   btn:    {
     padding: "13px", backgroundColor: PRIMARY, color: "#fff",

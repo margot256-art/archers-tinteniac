@@ -38,6 +38,7 @@ export default function Saisie() {
   const [form,        setForm]        = useState(INIT);
   const [loading,     setLoading]     = useState(false);
   const [success,     setSuccess]     = useState(false);
+  const [btnFlash,    setBtnFlash]    = useState(false);
   const [objAccompli, setObjAccompli] = useState(false);
   const [recordMsg,   setRecordMsg]   = useState("");
   const [error,       setError]       = useState("");
@@ -128,6 +129,9 @@ export default function Saisie() {
         createdAt:    serverTimestamp(),
       });
       setSuccess(true);
+      setBtnFlash(true);
+      navigator.vibrate?.(50);
+      setTimeout(() => setBtnFlash(false), 1500);
       setForm((prev) => ({ ...INIT, date: prev.date, distance: prev.distance, type: prev.type }));
       if (volEntr > 0 && form.type === "Entraînement") {
         const newVolume = currentVolume + totalFleches;
@@ -325,10 +329,11 @@ export default function Saisie() {
 
           <button
             type="submit"
-            disabled={loading}
-            style={{ ...s.btn, ...(loading ? s.btnOff : {}) }}
+            disabled={loading || btnFlash}
+            className={btnFlash ? "btn-pop" : undefined}
+            style={{ ...s.btn, ...(loading ? s.btnOff : {}), ...(btnFlash ? s.btnSuccess : {}) }}
           >
-            {loading ? "Enregistrement…" : "Enregistrer la séance"}
+            {loading ? "Enregistrement…" : btnFlash ? "✓ Enregistré !" : "Enregistrer la séance"}
           </button>
         </form>
       </div>
@@ -606,6 +611,7 @@ const s = {
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   btnOff:     { opacity: 0.6, cursor: "not-allowed" },
+  btnSuccess: { backgroundColor: "#16a34a", cursor: "default" },
   inputError: { borderColor: "#ef4444" },
   fieldError: { fontSize: "11px", color: "#ef4444", fontWeight: "500" },
 

@@ -117,6 +117,16 @@ body {
   background-color: var(--app-bg);
 }
 
+@keyframes btn-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.btn-pop {
+  animation: btn-pop 0.3s ease-out;
+}
+
 /* ── MesSeances responsive ─────────────────────────────────────────────── */
 
 .ms-header {

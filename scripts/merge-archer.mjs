@@ -31,6 +31,8 @@ console.log(`\nFusion : ${FROM_NAMES.join(", ")} → "${TO_NAME}"\n`);
 
 // ── 1. Séances ────────────────────────────────────────────────────────────────
 let totalMigre = 0;
+
+// Renommer les doublons
 for (const fromName of FROM_NAMES) {
   const q = query(collection(db, "seances"), where("archer", "==", fromName));
   const snap = await getDocs(q);
@@ -45,7 +47,21 @@ for (const fromName of FROM_NAMES) {
     }
   }
 }
-console.log(`\nTotal séances migrées : ${totalMigre}`);
+
+// Corriger les archerId "undefined" sur les séances déjà au bon nom
+const qCanon = query(collection(db, "seances"), where("archer", "==", TO_NAME));
+const snapCanon = await getDocs(qCanon);
+let totalArchiverIdFixe = 0;
+for (const d of snapCanon.docs) {
+  const data = d.data();
+  if (data.archerId === "undefined" || data.archerId === undefined) {
+    await updateDoc(doc(db, "seances", d.id), { archerId: TO_ID });
+    console.log(`  ✓ archerId corrigé pour ${d.id} (date: ${data.date})`);
+    totalArchiverIdFixe++;
+  }
+}
+console.log(`\nTotal séances renommées : ${totalMigre}`);
+console.log(`Total archerId corrigés : ${totalArchiverIdFixe}`);
 
 // ── 2. Objectifs ──────────────────────────────────────────────────────────────
 const objFrom = await getDoc(doc(db, "objectifs", FROM_ID));

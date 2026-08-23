@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 const COACH_PASSWORD = "ArchersTinté2026";
@@ -9,7 +9,7 @@ const COACH_KEY = "at_coach";
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 // Toutes les variantes d'apostrophe → apostrophe typographique '
-const normAp = (s) => s.replace(/['`´ʼ'ʹ]/g, "’");
+const normAp = (s) => s.replace(/['`´ʼ'ʹ]/g, "'");
 
 // Construit l'ID Firestore : minuscules + espaces→_ + apostrophe normalisée
 const toDocId = (prenom, nom) =>
@@ -17,6 +17,9 @@ const toDocId = (prenom, nom) =>
 
 // Normalise le prénom/nom affiché (conserve la casse, normalise l'apostrophe)
 const normName = (s) => normAp(s.trim());
+
+// Supprime les accents pour la comparaison insensible aux accents
+const stripAccents = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 function clearStorage() {
   try { localStorage.removeItem(USER_KEY);  } catch {}
@@ -78,10 +81,22 @@ export function useAuth() {
       return { success: true, role: "coach" };
     }
 
-    const docId = toDocId(p, n);
+    let docId = toDocId(p, n);
 
     try {
-      const snapshot = await getDoc(doc(db, "users", docId));
+      let snapshot = await getDoc(doc(db, "users", docId));
+
+      // Fallback insensible aux accents : si le docId exact n'existe pas,
+      // on cherche un utilisateur dont le nom sans accents correspond
+      if (!snapshot.exists()) {
+        const searchKey = stripAccents(docId);
+        const allUsers  = await getDocs(collection(db, "users"));
+        const match     = allUsers.docs.find(d => stripAccents(d.id) === searchKey);
+        if (match) {
+          snapshot = match;
+          docId    = match.id;
+        }
+      }
 
       if (!snapshot.exists()) {
         return { success: false, error: "Utilisateur introuvable." };

@@ -61,6 +61,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     flex: 1,
+    minWidth: 0,
   },
   fieldFull: {
     display: "flex",
@@ -261,7 +262,7 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
                     type="text"
                     value={prenom}
                     onChange={(e) => setPrenom(e.target.value)}
-                    placeholder="Margot"
+                    placeholder="Prénom"
                     autoComplete="given-name"
                     onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
                     onBlur={(e) => (e.target.style.borderColor = "var(--border-2)")}
@@ -276,7 +277,7 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
                     type="text"
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
-                    placeholder="Trevilly"
+                    placeholder="Nom"
                     autoComplete="family-name"
                     onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
                     onBlur={(e) => (e.target.style.borderColor = "var(--border-2)")}
@@ -341,7 +342,7 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
                       type="text"
                       value={resetPrenom}
                       onChange={(e) => setResetPrenom(e.target.value)}
-                      placeholder="Margot"
+                      placeholder="Prénom"
                       onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
                       onBlur={(e) => (e.target.style.borderColor = "var(--border-2)")}
                     />
@@ -355,7 +356,7 @@ export default function LoginScreen({ login, onLogin, theme, toggleTheme }) {
                       type="text"
                       value={resetNom}
                       onChange={(e) => setResetNom(e.target.value)}
-                      placeholder="Trevilly"
+                      placeholder="Nom"
                       onFocus={(e) => (e.target.style.borderColor = PRIMARY)}
                       onBlur={(e) => (e.target.style.borderColor = "var(--border-2)")}
                     />

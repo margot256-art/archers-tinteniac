@@ -247,6 +247,12 @@ body {
 
 /* ── Login ─────────────────────────────────────────────────────────────── */
 
+.login-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 600px) {
   .login-input {
     font-size: 16px !important;

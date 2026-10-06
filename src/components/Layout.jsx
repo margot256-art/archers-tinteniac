@@ -9,9 +9,7 @@ const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 const Accueil           = lazy(() => import("./archer/Accueil"));
 const SeanceTab         = lazy(() => import("./archer/SeanceTab"));
 const Journal           = lazy(() => import("./archer/Journal"));
-const MesSeances       = lazy(() => import("./archer/MesSeances"));
-const StatsMensuelles = lazy(() => import("./archer/StatsMensuelles"));
-const Graphiques       = lazy(() => import("./archer/Graphiques"));
+const Progression       = lazy(() => import("./archer/Progression"));
 const MesRecords       = lazy(() => import("./archer/MesRecords"));
 const Dashboard        = lazy(() => import("./coach/Dashboard"));
 const SeancesArchers   = lazy(() => import("./coach/SeancesArchers"));
@@ -26,9 +24,7 @@ const ARCHER_TABS = [
   { id: "accueil",        label: "Accueil" },
   { id: "new-session",    label: "+Séance" },
   { id: "journal",        label: "Journal" },
-  { id: "my-sessions",   label: "Mes séances" },
-  { id: "monthly-stats", label: "Stats" },
-  { id: "graphs",        label: "Graphiques" },
+  { id: "progression",    label: "Progression" },
   { id: "records",       label: "Mes records" },
 ];
 
@@ -48,9 +44,7 @@ function renderTab(id, { onAllerNewSession } = {}) {
     case "accueil":         return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} />;
     case "new-session":    return <SeanceTab />;
     case "journal":        return <Journal />;
-    case "my-sessions":   return <MesSeances />;
-    case "monthly-stats": return <StatsMensuelles />;
-    case "graphs":        return <Graphiques />;
+    case "progression":    return <Progression />;
     case "records":       return <MesRecords />;
     case "dashboard":       return <Dashboard />;
     case "archer-sessions": return <SeancesArchers />;

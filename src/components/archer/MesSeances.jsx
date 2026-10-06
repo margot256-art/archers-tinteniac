@@ -1,15 +1,14 @@
-import { Fragment, useState, useMemo, useEffect, useId, cloneElement } from "react";
+import { Fragment, useState, useMemo, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate, MOIS, fmtYM, buildMonthTotals } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
 import FilterSelect from "../shared/FilterSelect";
 
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const DIST_OPTS = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
 
 const todayYM = () => {
@@ -21,17 +20,13 @@ const todayYM = () => {
 
 export default function MesSeances() {
   const { user }   = useAuth();
-  const { seances, loading, error, deleteSeance, updateSeance } = useSeances();
+  const { seances, loading, error } = useSeances();
   const rawObjectif = useObjectif();
 
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterType,   setFilterType]   = useState("Tous");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
   const [filterMois,   setFilterMois]   = useState("Tous");
-  const [confirmId,  setConfirmId]  = useState(null);
-  const [editId,     setEditId]     = useState(null);
-  const [editData,   setEditData]   = useState(null);
-  const [editSaving, setEditSaving] = useState(false);
 
   // volEntr pour la saison filtrée (rétrocompat ancien format)
   const volEntr = useMemo(() => {
@@ -79,85 +74,58 @@ export default function MesSeances() {
     [seances, filterSaison, filterDist, filterType, filterMois]
   );
 
-  const grouped = useMemo(() => {
+  // Une ligne par jour : les exercices de même date (toutes séances confondues)
+  // sont totalisés ensemble. Le détail par exercice se consulte dans l'onglet Journal.
+  const parJour = useMemo(() => {
     const map = new Map();
-    filtered.forEach(s => {
-      const ym = s.date ? s.date.slice(0, 7) : "0000-00";
-      if (!map.has(ym)) map.set(ym, []);
-      map.get(ym).push(s);
+    for (const doc of filtered) {
+      if (!doc.date) continue;
+      if (!map.has(doc.date)) map.set(doc.date, []);
+      map.get(doc.date).push(doc);
+    }
+    return [...map.entries()].map(([date, docs]) => {
+      const volumePaille = docs.reduce((n, x) => n + getPaille(x), 0);
+      const volumeBlason = docs.reduce((n, x) => n + getBlason(x), 0);
+      const volumeCompte = docs.reduce((n, x) => n + getCompte(x), 0);
+      const scored = docs.filter(x => getCompte(x) > 0 && (x.score ?? 0) > 0);
+      const score  = scored.reduce((n, x) => n + x.score, 0);
+      const moy    = scored.length ? score / scored.reduce((n, x) => n + getCompte(x), 0) : null;
+      const distinctDist = [...new Set(scored.map(x => x.distance))];
+      const scoreMoy = moy != null && distinctDist.length === 1 ? Math.round(moy * normFactor(distinctDist[0])) : null;
+
+      const types     = [...new Set(docs.map(x => x.type).filter(Boolean))];
+      const distances = [...new Set(docs.map(x => x.distance).filter(Boolean))];
+      const lieux     = [...new Set(docs.map(x => x.lieu).filter(Boolean))];
+
+      return {
+        date, nb: docs.length,
+        type:     types.length === 1 ? types[0] : null,
+        distance: distances.length === 1 ? distances[0] : null,
+        lieu:     lieux.length === 1 ? lieux[0] : (lieux.length > 1 ? `${lieux.length} lieux` : null),
+        volumePaille, volumeBlason, volumeCompte, score,
+        total: volumePaille + volumeBlason + volumeCompte,
+        moy, scoreMoy,
+      };
     });
-    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 
-  // ── Édition ───────────────────────────────────────────────────────────────
-
-  const startEdit = (seance) => {
-    setEditId(seance.id);
-    setEditData({
-      date:         seance.date         || "",
-      distance:     seance.distance     || "18m",
-      type:         seance.type         || "Entraînement",
-      lieu:         seance.lieu         || "",
-      volumePaille: String(getPaille(seance)),
-      volumeBlason: String(getBlason(seance)),
-      volumeCompte: String(getCompte(seance)),
-      score:        String(seance.score ?? ""),
-      commentaire:  seance.commentaire  || "",
+  const grouped = useMemo(() => {
+    const map = new Map();
+    parJour.forEach(j => {
+      const ym = j.date.slice(0, 7);
+      if (!map.has(ym)) map.set(ym, []);
+      map.get(ym).push(j);
     });
-    setConfirmId(null);
-  };
-
-  const cancelEdit = () => { setEditId(null); setEditData(null); };
-
-  const setEditField = (field) => (e) =>
-    setEditData(prev => ({ ...prev, [field]: e.target.value }));
-
-  const saveEdit = async () => {
-    setEditSaving(true);
-    try {
-      const p  = parseInt(editData.volumePaille) || 0;
-      const b  = parseInt(editData.volumeBlason)  || 0;
-      const c  = parseInt(editData.volumeCompte)  || 0;
-      const sc = parseInt(editData.score)          || 0;
-      await updateSeance(editId, {
-        date:         editData.date,
-        distance:     editData.distance,
-        type:         editData.type,
-        lieu:         editData.lieu.trim() || null,
-        paille:       p,
-        blason:       b,
-        compte:       c,
-        volumePaille: p,
-        volumeBlason: b,
-        volumeCompte: c,
-        score:        sc,
-        totalFleches: p + b + c,
-        moyenne:      c > 0 ? parseFloat((sc / c).toFixed(2)) : null,
-        saison:       editData.date ? getSaison(editData.date) : undefined,
-        commentaire:  editData.commentaire.trim() || null,
-      });
-      cancelEdit();
-    } catch (err) {
-      console.error("[MesSeances] erreur modification :", err);
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
-  // ── Suppression ───────────────────────────────────────────────────────────
-
-  const handleDelete = async (id) => {
-    await deleteSeance(id);
-    setConfirmId(null);
-    if (editId === id) cancelEdit();
-  };
+    for (const arr of map.values()) arr.sort((a, b) => b.date.localeCompare(a.date));
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [parJour]);
 
   // ── Helpers export ────────────────────────────────────────────────────────
 
   // ── Export Excel ──────────────────────────────────────────────────────────
 
   const handleExportExcel = () => {
-    const COLS    = ["Date","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
+    const COLS    = ["Date","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy."];
     const NC      = COLS.length;
     const archer  = user ? `${user.prenom} ${user.nom}` : "";
 
@@ -183,16 +151,13 @@ export default function MesSeances() {
       aoa.push([...COLS]);
       rowMeta.push({ type: "header" });
 
-      // Lignes données
-      group.forEach((s, i) => {
-        const p = getPaille(s); const b = getBlason(s); const c = getCompte(s);
-        const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
+      // Lignes données — une par jour
+      group.forEach((j, i) => {
         aoa.push([
-          s.date || "", s.type || "", s.lieu || "", s.distance || "",
-          p, b, c, s.score ?? "", p + b + c,
-          moy != null ? parseFloat(moy.toFixed(2)) : "",
-          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
-          s.commentaire || "",
+          j.date, j.type || "Mixte", j.lieu || "—", j.distance || "—",
+          j.volumePaille, j.volumeBlason, j.volumeCompte, j.score || "", j.total,
+          j.moy != null ? parseFloat(j.moy.toFixed(2)) : "",
+          j.scoreMoy ?? "",
         ]);
         rowMeta.push({ type: "data", even: i % 2 === 0 });
       });
@@ -203,7 +168,7 @@ export default function MesSeances() {
         `Total — ${fmtYM(ym)}`, "", "", "",
         tp, tb, tc, ts || "", tt || "",
         tmoy != null ? parseFloat(tmoy.toFixed(2)) : "",
-        tscoreMoy ?? "", "",
+        tscoreMoy ?? "",
       ]);
       rowMeta.push({ type: "total" });
       aoa.push(Array(NC).fill(""));
@@ -216,7 +181,7 @@ export default function MesSeances() {
     ws["!cols"]   = [
       { wch: 12 }, { wch: 14 }, { wch: 20 }, { wch: 7 },
       { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  },
-      { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 34 },
+      { wch: 10 }, { wch: 10 }, { wch: 12 },
     ];
 
     // ── Styles ──
@@ -294,9 +259,9 @@ export default function MesSeances() {
     const archer = user ? `${user.prenom} ${user.nom}` : "";
     const pw     = pdf.internal.pageSize.width;
     const ph     = pdf.internal.pageSize.height;
-    const NC     = 12;
-    const COL_HEADS = ["Date","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
-    const COL_W     = [22, 22, 28, 10, 12, 12, 12, 12, 12, 14, 16, 0];
+    const NC     = 11;
+    const COL_HEADS = ["Date","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy."];
+    const COL_W     = [22, 22, 28, 10, 12, 12, 12, 12, 12, 14, 16];
     const RIGHT_COLS = [4, 5, 6, 7, 8, 9, 10];
 
     const colStyles = COL_W.reduce((acc, w, i) => {
@@ -324,25 +289,20 @@ export default function MesSeances() {
         startY = 18;
       }
 
-      const body = group.map(s => {
-        const p = getPaille(s); const b = getBlason(s); const c = getCompte(s);
-        const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
-        return [
-          fmtDate(s.date), s.type || "", s.lieu || "", s.distance || "",
-          p || 0, b || 0, c || 0, s.score ?? "",
-          p + b + c || "",
-          moy != null ? moy.toFixed(2) : "",
-          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
-          s.commentaire || "",
-        ];
-      });
+      const body = group.map(j => [
+        fmtDate(j.date), j.type || "Mixte", j.lieu || "—", j.distance || "—",
+        j.volumePaille || 0, j.volumeBlason || 0, j.volumeCompte || 0, j.score || "",
+        j.total || "",
+        j.moy != null ? j.moy.toFixed(2) : "",
+        j.scoreMoy ?? "",
+      ]);
 
       const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
       const totalRow = [
         `Total — ${fmtYM(ym)}`, "", "", "",
         tp, tb, tc, ts || "", tt || "",
         tmoy != null ? tmoy.toFixed(2) : "",
-        tscoreMoy ?? "", "",
+        tscoreMoy ?? "",
       ];
 
       autoTable(pdf, {
@@ -443,68 +403,9 @@ export default function MesSeances() {
         </div>
       </div>
 
-      {/* Formulaire d'édition */}
-      {editId && editData && (
-        <div style={s.editCard} className="edit-form">
-          <div style={s.editHeader}>
-            <span style={s.editTitle}>Modifier la séance</span>
-            <button style={s.editClose} onClick={cancelEdit}>✕</button>
-          </div>
-          <div className="edit-grid-4">
-            <EditField label="Date">
-              <input type="date" value={editData.date}
-                onChange={setEditField("date")} style={s.editInput} />
-            </EditField>
-            <EditField label="Distance">
-              <select value={editData.distance}
-                onChange={setEditField("distance")} style={s.editInput}>
-                {DIST_OPTS.map(d => <option key={d}>{d}</option>)}
-              </select>
-            </EditField>
-            <EditField label="Type">
-              <select value={editData.type}
-                onChange={setEditField("type")} style={s.editInput}>
-                <option>Entraînement</option>
-                <option>Compétition</option>
-              </select>
-            </EditField>
-            <EditField label="Lieu">
-              <input type="text" value={editData.lieu}
-                onChange={setEditField("lieu")} style={s.editInput} placeholder="—" />
-            </EditField>
-            <EditField label="Vol. paille">
-              <input type="number" min="0" value={editData.volumePaille}
-                onChange={setEditField("volumePaille")} style={s.editInput} />
-            </EditField>
-            <EditField label="Vol. blason">
-              <input type="number" min="0" value={editData.volumeBlason}
-                onChange={setEditField("volumeBlason")} style={s.editInput} />
-            </EditField>
-            <EditField label="Vol. compté">
-              <input type="number" min="0" value={editData.volumeCompte}
-                onChange={setEditField("volumeCompte")} style={s.editInput} />
-            </EditField>
-            <EditField label="Score">
-              <input type="number" min="0" value={editData.score}
-                onChange={setEditField("score")} style={s.editInput} />
-            </EditField>
-            <EditField label="Commentaire" wide>
-              <input type="text" value={editData.commentaire}
-                onChange={setEditField("commentaire")} style={s.editInput} placeholder="—" />
-            </EditField>
-          </div>
-          <div style={s.editFooter}>
-            <button style={s.cancelBtn} onClick={cancelEdit}>Annuler</button>
-            <button
-              style={{ ...s.saveBtn, ...(editSaving ? { opacity: 0.6, cursor: "not-allowed" } : {}) }}
-              onClick={saveEdit}
-              disabled={editSaving}
-            >
-              {editSaving ? "Enregistrement…" : "Sauvegarder"}
-            </button>
-          </div>
-        </div>
-      )}
+      <p style={s.aide}>
+        Une ligne par jour, toutes séances confondues. Pour voir et modifier le détail d'une séance, direction l'onglet « Journal ».
+      </p>
 
       {loading && <div style={s.info}>Chargement…</div>}
       {error   && <div style={s.errMsg}>{error}</div>}
@@ -525,95 +426,49 @@ export default function MesSeances() {
                 <th style={{ ...s.th, ...s.thR }}>Total</th>
                 <th style={{ ...s.th, ...s.thR }}>Moy./fl.</th>
                 <th style={{ ...s.th, ...s.thR }}>Score moy.</th>
-                <th style={s.th}>Commentaire</th>
-                <th style={s.th}></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={13} style={s.empty}>Aucune séance trouvée.</td>
+                  <td colSpan={11} style={s.empty}>Aucune séance trouvée.</td>
                 </tr>
               ) : (
                 grouped.map(([ym, group]) => {
-                  const tp = group.reduce((n, x) => n + getPaille(x), 0);
-                  const tb = group.reduce((n, x) => n + getBlason(x), 0);
-                  const tt = tp + tb + group.reduce((n, x) => n + getCompte(x), 0);
-                  // totaux : seulement les séances avec compte ET score > 0
-                  const scored = group.filter(x => getCompte(x) > 0 && (x.score ?? 0) > 0);
-                  const tc = scored.reduce((n, x) => n + getCompte(x), 0);
-                  const ts = scored.reduce((n, x) => n + x.score, 0);
-                  const tmoy = tc > 0 ? ts / tc : null;
-                  const distinctDist = [...new Set(scored.map(x => x.distance))];
-                  const tscoreMoy = tmoy != null && distinctDist.length === 1
-                    ? Math.round(tmoy * normFactor(distinctDist[0]))
-                    : null;
+                  const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
+
                   return (
                     <Fragment key={ym}>
-                      {group.map((seance) => {
-                        const p = getPaille(seance);
-                        const b = getBlason(seance);
-                        const c = getCompte(seance);
-                        const total = p + b + c;
-                        const moy = c > 0 && (seance.score ?? 0) > 0 ? seance.score / c : null;
-                        const scoreMoy = moy != null ? Math.round(moy * normFactor(seance.distance)) : null;
-                        const typeColor = seance.type === "Compétition" ? BLUE : PRIMARY;
-                        const moyColor  = moy == null ? "var(--text-dim)" : typeColor;
-                        const isEditing = editId === seance.id;
-                        const isConfirm = confirmId === seance.id;
+                      {group.map((jour) => {
+                        const moyColor = jour.moy == null ? "var(--text-dim)" : (jour.type === "Compétition" ? BLUE : PRIMARY);
                         return (
                           <tr
-                            key={seance.id}
-                            style={{ ...s.tr, ...(isEditing ? { backgroundColor: "rgba(255,0,122,0.07)" } : {}) }}
-                            onMouseEnter={e => { if (!isEditing) e.currentTarget.style.backgroundColor = "var(--surface-raised)"; }}
-                            onMouseLeave={e => { if (!isEditing) e.currentTarget.style.backgroundColor = ""; }}
+                            key={jour.date}
+                            style={s.tr}
+                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = "var(--surface-raised)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = ""; }}
                           >
-                            <td style={s.td}>{fmtDate(seance.date)}</td>
+                            <td style={s.td}>{fmtDate(jour.date)}</td>
                             <td style={s.td}>
-                              <span style={{ ...s.typeBadge, ...(seance.type === "Compétition" ? s.typeBadgeComp : {}) }}>
-                                {seance.type}
-                              </span>
+                              {jour.type ? (
+                                <span style={{ ...s.typeBadge, ...(jour.type === "Compétition" ? s.typeBadgeComp : {}) }}>
+                                  {jour.type}
+                                </span>
+                              ) : <span style={s.mixteBadge}>Mixte</span>}
+                              {jour.nb > 1 && <span style={s.protoBadge}>{jour.nb} entrées</span>}
                             </td>
-                            <td style={{ ...s.td, color: "var(--text-muted)" }}>{seance.lieu || "—"}</td>
-                            <td style={s.td}><span style={s.distBadge}>{seance.distance}</span></td>
-                            <td style={s.tdR}>{p}</td>
-                            <td style={s.tdR}>{b}</td>
-                            <td style={s.tdR}>{c}</td>
-                            <td style={{ ...s.tdR, fontWeight: "600" }}>{seance.score ?? "—"}</td>
-                            <td style={s.tdR}>{total || "—"}</td>
+                            <td style={{ ...s.td, color: "var(--text-muted)" }}>{jour.lieu || "—"}</td>
+                            <td style={s.td}>{jour.distance ? <span style={s.distBadge}>{jour.distance}</span> : "—"}</td>
+                            <td style={s.tdR}>{jour.volumePaille}</td>
+                            <td style={s.tdR}>{jour.volumeBlason}</td>
+                            <td style={s.tdR}>{jour.volumeCompte}</td>
+                            <td style={{ ...s.tdR, fontWeight: "600" }}>{jour.score || "—"}</td>
+                            <td style={s.tdR}>{jour.total || "—"}</td>
                             <td style={{ ...s.tdR, color: moyColor, fontWeight: "600" }}>
-                              {moy != null ? moy.toFixed(2) : "—"}
+                              {jour.moy != null ? jour.moy.toFixed(2) : "—"}
                             </td>
                             <td style={{ ...s.tdR, fontWeight: "700", color: moyColor }}>
-                              {scoreMoy ?? "—"}
-                            </td>
-                            <td style={{ ...s.td, color: "var(--text-muted)", whiteSpace: "normal", minWidth: "120px", maxWidth: "280px", wordBreak: "break-word" }}>
-                              {seance.commentaire || "—"}
-                            </td>
-                            <td style={s.tdAction}>
-                              {isConfirm ? (
-                                <div style={s.confirmRow}>
-                                  <button style={s.btnOui} onClick={() => handleDelete(seance.id)}>Oui</button>
-                                  <button style={s.btnNon} onClick={() => setConfirmId(null)}>Non</button>
-                                </div>
-                              ) : (
-                                <div style={{ display: "flex", gap: "2px", justifyContent: "flex-end" }}>
-                                  <button
-                                    style={{ ...s.iconBtn, color: isEditing ? PRIMARY : "var(--text-3)" }}
-                                    title="Modifier"
-                                    onClick={() => isEditing ? cancelEdit() : startEdit(seance)}
-                                  >
-                                    <PencilIcon />
-                                  </button>
-                                  <button
-                                    style={{ ...s.iconBtn, fontSize: "15px" }}
-                                    title="Supprimer"
-                                    onClick={() => { setConfirmId(seance.id); cancelEdit(); }}
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              )}
+                              {jour.scoreMoy ?? "—"}
                             </td>
                           </tr>
                         );
@@ -632,7 +487,6 @@ export default function MesSeances() {
                         <td style={{ ...s.tdRTotal, color: tscoreMoy != null ? "var(--text)" : "var(--text-dim)" }}>
                           {tscoreMoy ?? "—"}
                         </td>
-                        <td colSpan={2} style={s.tdMonthLabel}></td>
                       </tr>
                     </Fragment>
                   );
@@ -643,36 +497,10 @@ export default function MesSeances() {
         </div>
       )}
 
-      {!loading && filtered.length > 0 && (
-        <div style={s.count}>{filtered.length} séance{filtered.length > 1 ? "s" : ""}</div>
+      {!loading && parJour.length > 0 && (
+        <div style={s.count}>{parJour.length} jour{parJour.length > 1 ? "s" : ""} · {filtered.length} entrée{filtered.length > 1 ? "s" : ""}</div>
       )}
     </div>
-  );
-}
-
-// ── Sous-composants ───────────────────────────────────────────────────────────
-
-
-function EditField({ label, children, wide }) {
-  const id = useId();
-  return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: "5px",
-      ...(wide ? { gridColumn: "span 2" } : {}),
-    }}>
-      <label htmlFor={id} className="edit-label-cls" style={s.editLabel}>{label}</label>
-      {cloneElement(children, { id })}
-    </div>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
   );
 }
 
@@ -707,42 +535,7 @@ const s = {
   gaugeTrack:  { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
   gaugeBar:    { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
 
-  // formulaire d'édition
-  editCard: {
-    backgroundColor: "var(--surface)", borderRadius: "12px",
-    boxShadow: "var(--shadow-card)",
-    padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px",
-    borderTop: `3px solid ${PRIMARY}`,
-  },
-  editHeader: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  editTitle:  { fontSize: "14px", fontWeight: "700", color: "var(--text)" },
-  editClose:  {
-    background: "none", border: "none", cursor: "pointer",
-    color: "var(--text-dim)", fontSize: "16px", padding: "2px 6px",
-    borderRadius: "4px", fontFamily: "inherit",
-  },
-  editGrid:  {},
-  editLabel: {
-    fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.07em",
-  },
-  editInput: {
-    padding: "8px 10px", border: "1.5px solid var(--border-2)", borderRadius: "7px",
-    fontSize: "13px", color: "var(--text)", fontFamily: "inherit",
-    outline: "none", backgroundColor: "var(--input-bg)",
-    width: "100%", boxSizing: "border-box",
-  },
-  editFooter: { display: "flex", justifyContent: "flex-end", gap: "10px" },
-  cancelBtn:  {
-    background: "none", border: "1px solid var(--border-strong)", borderRadius: "7px",
-    padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)",
-    cursor: "pointer", fontFamily: "inherit",
-  },
-  saveBtn: {
-    backgroundColor: PRIMARY, color: "#fff", border: "none",
-    borderRadius: "7px", padding: "8px 20px", fontSize: "13px",
-    fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
-  },
+  aide: { fontSize: "12px", color: "var(--text-dim)", fontStyle: "italic", margin: 0 },
 
   // tableau
   tableWrap: {
@@ -761,7 +554,6 @@ const s = {
   tr:       { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td:       { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR:      { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
-  tdAction: { padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" },
 
   // ligne totaux mensuels
   trTotal: {
@@ -789,23 +581,13 @@ const s = {
     borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "500",
   },
   typeBadgeComp: { backgroundColor: "rgba(59,130,246,0.15)", color: BLUE },
-
-  iconBtn: {
-    background: "none", border: "none", cursor: "pointer",
-    color: "var(--text-dim)", padding: "4px 5px", borderRadius: "4px",
-    display: "inline-flex", alignItems: "center",
-    transition: "color 0.15s", fontFamily: "inherit",
+  mixteBadge: {
+    backgroundColor: "var(--border)", color: "var(--text-muted)",
+    borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "500",
   },
-  confirmRow: { display: "flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" },
-  btnOui: {
-    backgroundColor: PRIMARY, color: "#fff", border: "none",
-    borderRadius: "5px", padding: "4px 10px", fontSize: "12px",
-    fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
-  },
-  btnNon: {
-    backgroundColor: "var(--border)", color: "var(--text-muted)", border: "none",
-    borderRadius: "5px", padding: "4px 10px", fontSize: "12px",
-    cursor: "pointer", fontFamily: "inherit",
+  protoBadge: {
+    marginLeft: "6px", backgroundColor: "var(--border)", color: "var(--text-muted)",
+    borderRadius: "5px", padding: "2px 7px", fontSize: "11px", fontWeight: "600",
   },
 
   empty:  { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },

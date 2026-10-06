@@ -6,7 +6,9 @@ import { PRIMARY } from "../utils/seances";
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 // ── Imports lazy (chargement à la demande) ────────────────────────────────────
-const Saisie           = lazy(() => import("./archer/Saisie"));
+const Accueil           = lazy(() => import("./archer/Accueil"));
+const SeanceTab         = lazy(() => import("./archer/SeanceTab"));
+const Journal           = lazy(() => import("./archer/Journal"));
 const MesSeances       = lazy(() => import("./archer/MesSeances"));
 const StatsMensuelles = lazy(() => import("./archer/StatsMensuelles"));
 const Graphiques       = lazy(() => import("./archer/Graphiques"));
@@ -21,7 +23,9 @@ const Objectifs        = lazy(() => import("./coach/Objectifs"));
 
 
 const ARCHER_TABS = [
+  { id: "accueil",        label: "Accueil" },
   { id: "new-session",    label: "+Séance" },
+  { id: "journal",        label: "Journal" },
   { id: "my-sessions",   label: "Mes séances" },
   { id: "monthly-stats", label: "Stats" },
   { id: "graphs",        label: "Graphiques" },
@@ -39,9 +43,11 @@ const COACH_TABS = [
 
 // ── Rendu des onglets ─────────────────────────────────────────────────────────
 
-function renderTab(id) {
+function renderTab(id, { onAllerNewSession } = {}) {
   switch (id) {
-    case "new-session":    return <Saisie />;
+    case "accueil":         return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} />;
+    case "new-session":    return <SeanceTab />;
+    case "journal":        return <Journal />;
     case "my-sessions":   return <MesSeances />;
     case "monthly-stats": return <StatsMensuelles />;
     case "graphs":        return <Graphiques />;
@@ -71,7 +77,7 @@ const sDefault = {
 
 export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) {
   const [section,        setSection]        = useState("archer");
-  const [activeTab,      setActiveTab]      = useState("new-session");
+  const [activeTab,      setActiveTab]      = useState("accueil");
   const [showChangePwd,  setShowChangePwd]  = useState(false);
 const [pendingResets,  setPendingResets]  = useState(0);
 
@@ -84,7 +90,7 @@ const [pendingResets,  setPendingResets]  = useState(0);
 
   const switchSection = (sec) => {
     setSection(sec);
-    if (sec === "archer") setActiveTab("new-session");
+    if (sec === "archer") setActiveTab("accueil");
     if (sec === "coach")  setActiveTab("dashboard");
   };
 
@@ -217,7 +223,7 @@ const [pendingResets,  setPendingResets]  = useState(0);
       {/* ── Contenu ── */}
       <main role="tabpanel" className="layout-main">
         <Suspense fallback={<div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Chargement…</div>}>
-          {renderTab(activeTab)}
+          {renderTab(activeTab, { onAllerNewSession: () => setActiveTab("new-session") })}
         </Suspense>
       </main>
     </div>

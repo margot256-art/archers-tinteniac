@@ -292,24 +292,24 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
             <button style={s.miniBtn} onClick={annulerDerniereFleche} disabled={voleeEnCours.length === 0}>← Annuler la dernière</button>
           </div>
 
-          {voleeEnCours.length > 0 && (
-            <div style={s.recap}>
-              {voleeEnCours.map((code, i) => {
-                const c = couleurZone(code);
-                return (
-                  <button key={i} type="button"
-                    style={{
-                      ...s.recapItem, backgroundColor: c.bg, color: c.text,
-                      ...(selection === i ? s.recapItemSelection : {}),
-                    }}
-                    onClick={() => setSelection(selection === i ? null : i)}
-                  >
-                    {code}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div style={s.recap}>
+            {Array.from({ length: fpv }, (_, i) => {
+              if (i >= voleeEnCours.length) return <span key={i} style={s.recapVide} />;
+              const code = voleeEnCours[i];
+              const c = couleurZone(code);
+              return (
+                <button key={i} type="button"
+                  style={{
+                    ...s.recapItem, backgroundColor: c.bg, color: c.text,
+                    ...(selection === i ? s.recapItemSelection : {}),
+                  }}
+                  onClick={() => setSelection(selection === i ? null : i)}
+                >
+                  {code}
+                </button>
+              );
+            })}
+          </div>
           {selection !== null && <p style={s.aide}>Touchez la nouvelle valeur pour la flèche n°{selection + 1}.</p>}
 
           {modeSaisie === "blason" ? (
@@ -486,6 +486,10 @@ const s = {
   compteurMax: { fontFamily: "var(--mono)", fontSize: "18px", fontWeight: "600", color: "var(--text-dim)" },
 
   recapItemSelection: { outline: `2px solid ${PINK}`, outlineOffset: "1px" },
+  recapVide: {
+    display: "inline-block", minWidth: "26px", minHeight: "20px",
+    borderRadius: "7px", border: "1.5px dashed var(--border-3)",
+  },
   aide: { fontSize: "12px", color: "var(--text-dim)", margin: 0 },
 
   finBandeau: {

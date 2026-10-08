@@ -2,7 +2,7 @@ import { useState } from "react";
 
 // Bouton de suppression à double confirmation, utilisé par tous les écrans
 // d'exercice en mode édition.
-export default function BoutonSupprimer({ onConfirm, disabled }) {
+export default function BoutonSupprimer({ onConfirm, disabled, label = "l'exercice" }) {
   const [confirm, setConfirm] = useState(false);
 
   if (confirm) {
@@ -17,7 +17,7 @@ export default function BoutonSupprimer({ onConfirm, disabled }) {
 
   return (
     <button type="button" style={s.supprimer} onClick={() => setConfirm(true)} disabled={disabled}>
-      🗑 Supprimer l'exercice
+      🗑 Supprimer {label}
     </button>
   );
 }

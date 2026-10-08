@@ -39,6 +39,14 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
   const pctVolume = volEntr > 0 ? Math.min(100, Math.round((volumeMois / volEntr) * 100)) : 0;
   const gaugeColor = pctVolume >= 100 ? PINK : pctVolume >= 80 ? "var(--good)" : pctVolume >= 50 ? "var(--warn)" : "var(--bad)";
 
+  const { nbSeancesSaison, flechesSaison } = useMemo(() => {
+    const src = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
+    return {
+      nbSeancesSaison: src.length,
+      flechesSaison: src.reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0),
+    };
+  }, [seances]);
+
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
 
   const saisonOptions = useMemo(() => {
@@ -114,6 +122,14 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
       )}
 
       <section style={s.section}>
+        <p style={s.sectionLabel}>Saison {CURRENT_SAISON}</p>
+        <div style={s.kpis}>
+          <Kpi valeur={nbSeancesSaison} label={nbSeancesSaison > 1 ? "séances" : "séance"} />
+          <Kpi valeur={flechesSaison.toLocaleString("fr-FR")} label="flèches tirées" />
+        </div>
+      </section>
+
+      <section style={s.section}>
         <div style={s.sectionHead}>
           <p style={s.sectionLabel}>Par distance</p>
           <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
@@ -132,6 +148,15 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function Kpi({ valeur, label }) {
+  return (
+    <div style={s.kpi}>
+      <div className="num" style={s.kpiValeur}>{valeur}</div>
+      <div style={s.kpiLabel}>{label}</div>
     </div>
   );
 }
@@ -208,6 +233,15 @@ const s = {
   gaugePct: { fontSize: "15px", fontWeight: "700" },
   gaugeTrack: { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
   gaugeBar: { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
+
+  kpis: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" },
+  kpi: {
+    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-card)", padding: "16px", textAlign: "center",
+    display: "flex", flexDirection: "column", gap: "4px",
+  },
+  kpiValeur: { fontSize: "26px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
+  kpiLabel:  { fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
 
   distListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
   distGroup: {

@@ -12,6 +12,7 @@ import { couleurZone } from "../../../utils/blason";
 import { flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, dispersion } from "../../../utils/tirCompte";
 import ZoneButtons from "./ZoneButtons";
 import CibleSaisie from "./CibleSaisie";
+import TrispotSaisie from "./TrispotSaisie";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles, PINK } from "./exerciceStyles";
 
@@ -21,8 +22,12 @@ const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const todayISO = () => new Date().toISOString().split("T")[0];
 
 const CLE_MODE_SAISIE = "archers-tinteniac.modeSaisieTir";
+const MODES_VALIDES = ["clavier", "blason", "trispot"];
 function lireModeSaisie() {
-  try { return localStorage.getItem(CLE_MODE_SAISIE) === "blason" ? "blason" : "clavier"; } catch { return "clavier"; }
+  try {
+    const m = localStorage.getItem(CLE_MODE_SAISIE);
+    return MODES_VALIDES.includes(m) ? m : "clavier";
+  } catch { return "clavier"; }
 }
 function ecrireModeSaisie(mode) {
   try { localStorage.setItem(CLE_MODE_SAISIE, mode); } catch { /* stockage indisponible */ }
@@ -252,7 +257,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
         />
         <Segmente
           value={modeSaisie}
-          options={[{ value: "clavier", label: "Clavier" }, { value: "blason", label: "Blason" }]}
+          options={[{ value: "clavier", label: "Clavier" }, { value: "blason", label: "Blason" }, { value: "trispot", label: "Trispot" }]}
           onChange={setModeSaisie}
         />
       </div>
@@ -313,6 +318,16 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
               disabled={saisieDisabled}
               impactsRecents={impactEnCours.filter(Boolean)}
               impactsEstompes={impacts.flat().filter(Boolean)}
+            />
+          ) : modeSaisie === "trispot" ? (
+            <TrispotSaisie
+              voleeEnCours={voleeEnCours}
+              impactEnCours={impactEnCours}
+              fpv={fpv}
+              selection={selection}
+              onImpact={saisirCode}
+              onSelectionner={(i) => setSelection(selection === i ? null : i)}
+              disabled={position.terminee}
             />
           ) : (
             <ZoneButtons onPress={saisirCode} disabled={saisieDisabled} />

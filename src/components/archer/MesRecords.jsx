@@ -169,7 +169,7 @@ export default function MesRecords() {
         <div style={s.empty}>{toutesLesSaisons ? "Aucune séance avec tir compté." : "Aucune séance avec tir compté pour cette saison."}</div>
       ) : (
         <div style={s.grid}>
-          {records.map(({ dist, nf, max, entr, comp, entrHistory, compHistory }) => (
+          {records.map(({ dist, max, entr, comp, entrHistory, compHistory }) => (
             <div key={dist} style={s.card}>
               <div style={s.cardHead}>
                 <span style={s.cardDistKey}>DISTANCE :</span>
@@ -180,7 +180,7 @@ export default function MesRecords() {
               <RecordSection
                 type="Entraînement"
                 color={PRIMARY}
-                bgColor="rgba(255,0,122,0.1)"
+                bgColor="var(--pink-soft)"
                 best={entr}
                 max={max}
                 history={entrHistory}
@@ -188,7 +188,7 @@ export default function MesRecords() {
               <RecordSection
                 type="Compétition"
                 color={BLUE}
-                bgColor="rgba(59,130,246,0.1)"
+                bgColor="var(--blue-soft)"
                 best={comp}
                 max={max}
                 history={compHistory}
@@ -208,21 +208,21 @@ const s = {
 
   // barre saison
   saisonBar: {
-    backgroundColor: "var(--blue-deep)",
+    backgroundColor: "var(--surface)", border: "1px solid var(--border)",
     borderRadius: "10px",
     padding: "13px 18px",
     display: "flex", alignItems: "center", gap: "10px",
     boxShadow: "var(--shadow-card)",
     alignSelf: "flex-start",
   },
-  calIcon:    { color: "var(--blue-dark)", display: "flex", alignItems: "center" },
+  calIcon:    { color: PRIMARY, display: "flex", alignItems: "center" },
   saisonBarLabel: {
-    fontSize: "13px", fontWeight: "700", color: "var(--blue-soft2)",
+    fontSize: "13px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.08em",
   },
   saisonSelect: {
-    backgroundColor: "var(--blue-mid)", color: "var(--blue-text)",
-    border: "1px solid #2e4a80", borderRadius: "7px",
+    backgroundColor: "var(--input-bg)", color: "var(--text-2)",
+    border: "1.5px solid var(--border-2)", borderRadius: "7px",
     padding: "7px 12px", fontSize: "14px", fontWeight: "600",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
@@ -256,7 +256,7 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.1em",
   },
   cardDistVal: {
-    fontSize: "18px", fontWeight: "800", color: "var(--text)",
+    fontFamily: "var(--display)", fontSize: "18px", fontWeight: "600", color: "var(--text)",
     letterSpacing: "-0.01em",
   },
   cardMax: {
@@ -280,7 +280,7 @@ const s = {
 
   // score
   scoreRow: { display: "flex", alignItems: "baseline", gap: "6px" },
-  bigScore: { fontSize: "38px", fontWeight: "800", lineHeight: 1, letterSpacing: "-0.02em" },
+  bigScore: { fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums", fontSize: "38px", fontWeight: "700", lineHeight: 1, letterSpacing: "-0.01em" },
   scoreCtx: { fontSize: "14px", color: "var(--text-dim)", fontWeight: "500" },
 
   // date / lieu
@@ -313,6 +313,7 @@ const s = {
     fontWeight: "700",
   },
   historyScore: {
+    fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums",
     fontSize: "16px", fontWeight: "700", minWidth: "36px",
   },
   historyDate: {
@@ -326,7 +327,7 @@ const s = {
   info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px",
+    backgroundColor: "var(--pink-soft)", borderRadius: "8px",
     border: `1px solid ${PRIMARY}`,
   },
   empty: {

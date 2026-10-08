@@ -219,9 +219,9 @@ export default function Totaux() {
 function ObjGauge({ label, color, row }) {
   const { current, delta, pct } = row;
   const hasData = current != null;
-  const barColor = !hasData ? "var(--border)" : pct >= 100 ? "#16a34a" : pct >= 80 ? color : pct >= 60 ? "#f97316" : "#ef4444";
+  const barColor = !hasData ? "var(--border)" : pct >= 100 ? "var(--good)" : pct >= 80 ? color : pct >= 60 ? "var(--warn)" : "var(--bad)";
   const deltaStr = delta == null ? null : delta >= 0 ? `+${delta}` : `${delta}`;
-  const deltaCol = delta == null ? "var(--text-dim)" : delta >= 0 ? "#16a34a" : "#ef4444";
+  const deltaCol = delta == null ? "var(--text-dim)" : delta >= 0 ? "var(--good)" : "var(--bad)";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
       <span style={{ fontSize: "10px", fontWeight: "700", color, width: "32px", flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
@@ -257,18 +257,18 @@ const s = {
   thR: { ...thBase, textAlign: "right" },
   thGrpSeance: { ...thBase, textAlign: "center", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" },
   thGrpVol: { ...thBase, textAlign: "center", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" },
-  thGrpEntr: { ...thBase, textAlign: "center", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)", borderLeft: "2px solid rgba(255,0,122,0.3)" },
-  thGrpComp: { ...thBase, textAlign: "center", color: BLUE, backgroundColor: "rgba(59,130,246,0.1)", borderLeft: "2px solid rgba(59,130,246,0.3)" },
+  thGrpEntr: { ...thBase, textAlign: "center", color: PRIMARY, backgroundColor: "var(--pink-soft)", borderLeft: "2px solid var(--pink-line)" },
+  thGrpComp: { ...thBase, textAlign: "center", color: BLUE, backgroundColor: "var(--blue-soft)", borderLeft: "2px solid var(--blue-line)" },
   thSub: { ...thBase, fontWeight: "600", color: "var(--text-dim)" },
-  thSubEntr: { ...thBase, fontWeight: "600", color: PRIMARY, backgroundColor: "rgba(255,0,122,0.1)" },
-  thSubComp: { ...thBase, fontWeight: "600", color: BLUE, backgroundColor: "rgba(59,130,246,0.1)" },
+  thSubEntr: { ...thBase, fontWeight: "600", color: PRIMARY, backgroundColor: "var(--pink-soft)" },
+  thSubComp: { ...thBase, fontWeight: "600", color: BLUE, backgroundColor: "var(--blue-soft)" },
   tr: { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td: { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
-  tdNum: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
+  tdNum: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums" },
   badge: { backgroundColor: "var(--border)", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)" },
   empty: { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
   info: { color: "var(--text-muted)", fontSize: "14px" },
-  errMsg: { color: PRIMARY, fontSize: "13px", padding: "10px 14px", backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}` },
+  errMsg: { color: PRIMARY, fontSize: "13px", padding: "10px 14px", backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}` },
   count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },
   objCard: { backgroundColor: "var(--surface)", borderRadius: "12px", boxShadow: "var(--shadow-card)", overflow: "hidden" },
   objHeader: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", padding: "16px 20px", borderBottom: "1px solid var(--border-2)" },

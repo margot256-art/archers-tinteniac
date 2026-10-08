@@ -46,7 +46,7 @@ ChartJS.register(
   Tooltip, Legend, horizontalLinePlugin
 );
 
-const OBJ_COLOR = "#F59E0B";
+const OBJ_COLOR = "#d99a2b"; // ≈ var(--warn), littéral car dessiné sur canvas
 const DISTANCES = ["Toutes", ...DIST_ORDER];
 
 const fmtDate = (iso) => {
@@ -306,15 +306,15 @@ const s = {
   filters: { display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
   card: { backgroundColor: "var(--surface)", borderRadius: "12px", boxShadow: "var(--shadow-card)", padding: "20px 24px 24px" },
   cardHeader: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
-  cardTitle: { fontSize: "14px", fontWeight: "600", color: "var(--text-2)" },
+  cardTitle: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text-2)" },
   distBadge: { backgroundColor: "var(--border)", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)" },
   hint: { fontSize: "11px", color: "var(--text-dim)", fontStyle: "italic", marginLeft: "auto" },
   sectionCard: { backgroundColor: "var(--surface)", borderRadius: "12px", boxShadow: "var(--shadow-card)", padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: "20px" },
   sectionCardHeader: { display: "flex", alignItems: "center", gap: "10px", paddingBottom: "16px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" },
-  sectionCardTitle: { fontSize: "14px", fontWeight: "600", color: "var(--text-2)" },
+  sectionCardTitle: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text-2)" },
   distGrid: { display: "flex", flexDirection: "column", gap: "16px" },
   distCard: { backgroundColor: "var(--surface-sub)", borderRadius: "10px", border: "1px solid var(--border)", padding: "16px 20px 20px" },
   empty: { textAlign: "center", color: "var(--text-dim)", fontSize: "14px", padding: "52px 0" },
   info: { color: "var(--text-muted)", fontSize: "14px" },
-  errMsg: { color: PRIMARY, fontSize: "13px", padding: "10px 14px", backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}` },
+  errMsg: { color: PRIMARY, fontSize: "13px", padding: "10px 14px", backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}` },
 };

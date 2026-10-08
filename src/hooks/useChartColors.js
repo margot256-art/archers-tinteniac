@@ -15,11 +15,11 @@ export function useChartColors() {
 
   const dark = theme !== "light";
   return {
-    text:    dark ? "#e8e8e8" : "#1a1a1a",
-    text2:   dark ? "#d0d0d0" : "#444444",
-    muted:   dark ? "#888888" : "#777777",
-    dim:     dark ? "#666666" : "#999999",
-    grid:    dark ? "#2a2a2a" : "#e0e0e0",
+    text:    dark ? "#f1efec" : "#1d1b16",
+    text2:   dark ? "#d6d4d0" : "#38352c",
+    muted:   dark ? "#8d8b8f" : "#716c5c",
+    dim:     dark ? "#6c6a70" : "#9a9480",
+    grid:    dark ? "#2c2c33" : "#e1dbc8",
     theme,
   };
 }

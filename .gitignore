@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Maquettes de design (scratch, pas l'application)
+.design/
+
 # Environment variables
 .env
 .env.*

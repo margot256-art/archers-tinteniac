@@ -1,480 +1,89 @@
+/* ── Polices ───────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+/* ── Thème « Blason » — sombre par défaut ─────────────────────────────────
+   Fond quasi noir, accent rose magenta (Entraînement / action principale)
+   et bleu (Compétition / secondaire), hérités de l'identité existante du
+   club. Fraunces pour les titres, IBM Plex Sans pour l'interface, IBM Plex
+   Mono pour tout ce qui s'aligne en colonnes (scores, dates, totaux). ─── */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --app-bg:         #121214;
+  --surface:        #1b1b20;
+  --surface-raised: #232329;
+  --surface-sub:    #18181c;
+  --input-bg:       #1e1e24;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --text:        #f1efec;
+  --text-2:      #d6d4d0;
+  --text-3:      #b8b6b3;
+  --text-muted:  #8d8b8f;
+  --text-dim:    #6c6a70;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
+  --border:        #2c2c33;
+  --border-2:      #333339;
+  --border-3:      #3c3c44;
+  --border-strong: #4c4c56;
+
+  --shadow-nav:   0 2px 10px rgba(0,0,0,0.5);
+  --shadow-card:  0 2px 14px rgba(0,0,0,0.4);
+  --shadow-modal: 0 12px 40px rgba(0,0,0,0.6);
+
+  --pink:      #FF007A;
+  --pink-soft: rgba(255,0,122,0.14);
+  --pink-line: rgba(255,0,122,0.4);
+  --blue:      #3b82f6;
+  --blue-soft: rgba(59,130,246,0.14);
+  --blue-line: rgba(59,130,246,0.4);
+  --good:  #3fa06f;
+  --warn:  #d99a2b;
+  --bad:   #e5484d;
+
+  --sans: 'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Fraunces', Georgia, serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+
+  color-scheme: dark;
+  font: 15px/1.5 var(--sans);
   color: var(--text);
-  background: var(--bg);
+  background: var(--app-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* ── Thème clair (explicite uniquement) ───────────────────────────────── */
+:root[data-theme="light"] {
+  --app-bg:         #f3f1ea;
+  --surface:        #fffdf8;
+  --surface-raised: #ece8dc;
+  --surface-sub:    #f8f6ef;
+  --input-bg:       #ece8dc;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+  --text:        #1d1b16;
+  --text-2:      #38352c;
+  --text-3:      #534f42;
+  --text-muted:  #716c5c;
+  --text-dim:    #9a9480;
 
-/* ── Thème sombre (défaut) ─────────────────────────────────────────────── */
-:root {
-  --app-bg:         #111111;
-  --surface:        #1a1a1a;
-  --surface-raised: #1e1e1e;
-  --surface-sub:    #141414;
-  --input-bg:       #252525;
+  --border:        #e1dbc8;
+  --border-2:      #d6cfb8;
+  --border-3:      #c7bf9f;
+  --border-strong: #ada386;
 
-  --text:        #e8e8e8;
-  --text-2:      #d0d0d0;
-  --text-3:      #bbbbbb;
-  --text-muted:  #888888;
-  --text-dim:    #666666;
+  --shadow-nav:   0 1px 3px rgba(40,30,0,0.08), 0 1px 0 rgba(40,30,0,0.04);
+  --shadow-card:  0 1px 4px rgba(40,30,0,0.06), 0 2px 12px rgba(40,30,0,0.05);
+  --shadow-modal: 0 20px 60px rgba(40,30,0,0.18), 0 8px 20px rgba(40,30,0,0.08);
 
-  --border:        #2a2a2a;
-  --border-2:      #2e2e2e;
-  --border-3:      #333333;
-  --border-strong: #444444;
+  --pink-soft: rgba(255,0,122,0.1);
+  --blue-soft: rgba(59,130,246,0.1);
 
-  --shadow-nav:  0 2px 8px rgba(0,0,0,0.4);
-  --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
-  --shadow-modal:0 8px 32px rgba(0,0,0,0.5);
-
-  --blue-deep:  #1a2744;
-  --blue-mid:   #243660;
-  --blue-dark:  #2e4a80;
-  --blue-text:  #e0eaf8;
-  --blue-soft:  #c8daf5;
-  --blue-soft2: #c8d8f0;
-}
-
-/* ── Thème clair ───────────────────────────────────────────────────────── */
-[data-theme="light"] {
-  --app-bg:         #f5f5f7;
-  --surface:        #ffffff;
-  --surface-raised: #f0f1f4;
-  --surface-sub:    #f8f9fb;
-  --input-bg:       #f3f4f6;
-
-  --text:        #111827;
-  --text-2:      #374151;
-  --text-3:      #4b5563;
-  --text-muted:  #6b7280;
-  --text-dim:    #9ca3af;
-
-  --border:        #e5e7eb;
-  --border-2:      #d1d5db;
-  --border-3:      #b8bcc4;
-  --border-strong: #9da3ae;
-
-  --shadow-nav:  0 1px 3px rgba(0,0,0,0.08), 0 1px 0 rgba(0,0,0,0.04);
-  --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 2px 10px rgba(0,0,0,0.04);
-  --shadow-modal: 0 20px 60px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.08);
-
-  --blue-deep:  #eff6ff;
-  --blue-mid:   #dbeafe;
-  --blue-dark:  #93c5fd;
-  --blue-text:  #1e3a5f;
-  --blue-soft:  #f0f9ff;
-  --blue-soft2: #dbeafe;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   background-color: var(--app-bg);
-}
-
-@keyframes btn-pop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.06); }
-  100% { transform: scale(1); }
-}
-
-.btn-pop {
-  animation: btn-pop 0.3s ease-out;
-}
-
-/* ── MesSeances responsive ─────────────────────────────────────────────── */
-
-.ms-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.ms-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.ms-filter-select {
-  padding: 7px 10px;
-  border: 1.5px solid var(--border-2);
-  border-radius: 7px;
-  font-size: 13px;
-  color: var(--text);
-  background-color: var(--surface-raised);
-  outline: none;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.edit-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px 16px;
-}
-
-@media (max-width: 600px) {
-  .ms-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .ms-controls {
-    width: 100%;
-    gap: 8px;
-  }
-
-  .ms-filter-select {
-    font-size: 16px;
-    padding: 10px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .edit-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .edit-form .edit-label-cls {
-    font-size: 13px;
-  }
-
-  .edit-form input,
-  .edit-form select {
-    font-size: 16px;
-    padding: 10px;
-  }
-
-  .ms-table th,
-  .ms-table td {
-    padding: 8px 8px;
-    font-size: 12px;
-  }
-}
-
-/* ── Layout nav & main responsive ─────────────────────────────────────── */
-
-.layout-nav-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 24px;
-  border-bottom: 1px solid var(--border);
-}
-
-.layout-nav-title {
-  color: var(--text);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.01em;
-}
-
-.layout-nav-username {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.layout-main {
-  padding: 28px 24px;
-}
-
-@media (max-width: 600px) {
-  .layout-nav-top {
-    padding: 8px 12px;
-  }
-
-  .layout-nav-title {
-    display: none;
-  }
-
-  .layout-nav-username {
-    font-size: 12px;
-  }
-
-  .layout-main {
-    padding: 16px 12px;
-  }
-}
-
-/* ── Login ─────────────────────────────────────────────────────────────── */
-
-.login-input {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-}
-
-@media (max-width: 600px) {
-  .login-input {
-    font-size: 16px !important;
-    padding: 12px !important;
-  }
-}
-
-/* ── MesSeances gauge ──────────────────────────────────────────────────── */
-
-.ms-gauge-box {
-  background-color: var(--surface);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-@media (max-width: 600px) {
-  .ms-gauge-box {
-    padding: 12px 14px;
-  }
-}
-
-/* ── Coach pages responsive ────────────────────────────────────────────── */
-
-.coach-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-
-.coach-filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.coach-filter-group {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.coach-filter-select {
-  padding: 7px 10px;
-  border: 1.5px solid var(--border-2);
-  border-radius: 7px;
-  font-size: 13px;
-  color: var(--text);
-  background-color: var(--surface-raised);
-  outline: none;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-@media (max-width: 600px) {
-  .coach-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .coach-filter-bar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .coach-filter-group {
-    gap: 10px;
-    width: 100%;
-  }
-
-  .coach-filter-select {
-    font-size: 16px;
-    padding: 10px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .coach-table th,
-  .coach-table td {
-    padding: 8px 8px;
-    font-size: 12px;
-  }
-}
-
-/* ── Saisie : cartes distance mobile ───────────────────────────────────── */
-
-.saisie-table-desktop { display: none; }
-.saisie-cards-mobile  {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
-}
-
-.sdc-summary {
-  grid-column: 1 / -1;
-}
-
-.sdc-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background-color: var(--surface);
-  border-radius: 10px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.sdc-summary strong {
-  color: var(--text);
-  font-weight: 700;
-}
-
-.sdc-summary-sep {
-  color: var(--border-strong);
-}
-
-.saisie-dist-card {
-  background-color: var(--surface);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-
-.sdc-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background-color: var(--surface-raised);
-  border-bottom: 1px solid var(--border);
-}
-
-.sdc-dist {
-  background-color: var(--border-2);
-  border-radius: 5px;
-  padding: 3px 10px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.sdc-total {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.sdc-body {
-  display: flex;
-  gap: 0;
-}
-
-.sdc-col {
-  flex: 1;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.sdc-divider {
-  width: 1px;
-  background-color: var(--border);
-  margin: 10px 0;
-}
-
-.sdc-col-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 2px;
-}
-
-.sdc-entr .sdc-col-label { color: #FF007A; }
-.sdc-comp .sdc-col-label { color: #3b82f6; }
-
-.sdc-stat-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.sdc-stat-label {
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-.sdc-stat-value {
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-/* ── Saisie responsive ─────────────────────────────────────────────────── */
-
-.form-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 600px) {
-  .form-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .saisie-form .field-label {
-    font-size: 13px;
-  }
-
-  .saisie-form input,
-  .saisie-form select {
-    font-size: 16px;
-    padding: 12px;
-  }
 }
 
 #root {
@@ -487,46 +96,93 @@ body {
   box-sizing: border-box;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
+h1, h2, h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  color: var(--text);
   margin: 0;
 }
 
-code,
-.counter {
+p { margin: 0; }
+
+.num, .tabular {
   font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+@keyframes btn-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.btn-pop { animation: btn-pop 0.3s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── Grilles de formulaire réutilisées (Saisie, exercices) ────────────── */
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .form-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .saisie-form input, .saisie-form select { font-size: 16px; padding: 12px; }
+}
+
+/* ── Layout : en-tête et contenu ───────────────────────────────────────── */
+.layout-nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.layout-nav-title {
+  color: var(--text);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.layout-nav-username {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.layout-main {
+  padding: 28px 24px 48px;
+  flex: 1;
+}
+@media (max-width: 600px) {
+  .layout-nav-top { padding: 10px 14px; }
+  .layout-nav-title { display: none; }
+  .layout-nav-username { font-size: 12px; }
+  .layout-main { padding: 18px 14px 36px; }
+}
+
+/* ── Login ─────────────────────────────────────────────────────────────── */
+.login-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .login-input { font-size: 16px !important; padding: 12px !important; }
+}
+
+/* ── Tableaux denses (Progression, coach) ─────────────────────────────── */
+@media (max-width: 700px) {
+  .dense-table th, .dense-table td { padding: 8px 8px; font-size: 12px; }
+}
+
+/* ── Cartes d'archer (coach) en grille ─────────────────────────────────── */
+.coach-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 600px) {
+  .coach-cards-grid { grid-template-columns: repeat(2, 1fr); }
 }

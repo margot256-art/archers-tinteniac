@@ -53,19 +53,13 @@ function useObjectifsManager() {
 
 // ── carte par archer ──────────────────────────────────────────────────────────
 
-function ArcherCard({ archer, objectif, saison, onSave }) {
+function ArcherCard({ archer, objectif, onSave }) {
   const [distances, setDistances] = useState(
     Object.fromEntries(DIST_LIST.map((d) => [d, String(objectif?.distances?.[d] ?? "")]))
   );
   const [volEntr,  setVolEntr]  = useState(String(objectif?.volEntr ?? ""));
   const [saving,   setSaving]   = useState(false);
   const [feedback, setFeedback] = useState(null);
-
-  // Resync si saison change
-  useEffect(() => {
-    setDistances(Object.fromEntries(DIST_LIST.map((d) => [d, String(objectif?.distances?.[d] ?? "")])));
-    setVolEntr(String(objectif?.volEntr ?? ""));
-  }, [saison, objectif]);
 
   const setDist = (d) => (e) =>
     setDistances((prev) => ({ ...prev, [d]: e.target.value }));
@@ -193,7 +187,7 @@ export default function Objectifs() {
             <select
               value={saison}
               onChange={e => setSaison(e.target.value)}
-              className="coach-filter-select"
+              style={s.saisonSelect}
             >
               {saisonOptions.map(sn => <option key={sn}>{sn}</option>)}
             </select>
@@ -214,7 +208,6 @@ export default function Objectifs() {
                 key={a.name + saison}
                 archer={a}
                 objectif={getObjForSaison(raw, saison)}
-                saison={saison}
                 onSave={(distances, volEntr) => {
                   const safeId = a.id ?? a.name.trim().toLowerCase().replace(/\s+/g, "_");
                   return saveObjectif(safeId, a.name, saison, distances, volEntr);
@@ -238,12 +231,18 @@ const s = {
   page:      { display: "flex", flexDirection: "column", gap: "20px" },
   header:      { display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" },
   headerRight: { display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" },
-  pageTitle:   { fontSize: "20px", fontWeight: "700", color: "var(--text)", margin: 0 },
+  pageTitle:   { fontFamily: "var(--display)", fontSize: "21px", fontWeight: "600", color: "var(--text)", margin: 0 },
   subtitle:    { fontSize: "13px", color: "var(--text-dim)" },
   saisonWrap: { display: "flex", alignItems: "center", gap: "8px" },
   saisonLabel: {
     fontSize: "11px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.07em",
+  },
+  saisonSelect: {
+    backgroundColor: "var(--input-bg)", color: "var(--text-2)",
+    border: "1.5px solid var(--border-2)", borderRadius: "7px",
+    padding: "7px 12px", fontSize: "14px", fontWeight: "600",
+    outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
   info:      { color: "var(--text-muted)", fontSize: "14px" },
   emptyPage: {
@@ -273,7 +272,7 @@ const s = {
   dot: {
     position: "absolute", top: "18px", right: "18px",
     width: "8px", height: "8px", borderRadius: "50%",
-    backgroundColor: "#16a34a", display: "block", flexShrink: 0,
+    backgroundColor: "var(--good)", display: "block", flexShrink: 0,
   },
 
   // sections
@@ -303,8 +302,8 @@ const s = {
     paddingTop: "4px", borderTop: "1px solid var(--border)",
   },
   feedbackArea: { minHeight: "20px" },
-  feedOk:  { fontSize: "12px", color: "#16a34a", fontWeight: "600" },
-  feedErr: { fontSize: "12px", color: "#ef4444", fontWeight: "600" },
+  feedOk:  { fontSize: "12px", color: "var(--good)", fontWeight: "600" },
+  feedErr: { fontSize: "12px", color: "var(--bad)", fontWeight: "600" },
   btn: {
     backgroundColor: PRIMARY, color: "#fff",
     border: "none", borderRadius: "7px",

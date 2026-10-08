@@ -13,9 +13,7 @@ const Progression     = lazy(() => import("./archer/Progression"));
 const MesRecords      = lazy(() => import("./archer/MesRecords"));
 const Dashboard       = lazy(() => import("./coach/Dashboard"));
 const CoachJournal    = lazy(() => import("./coach/CoachJournal"));
-const StatsCoach      = lazy(() => import("./coach/StatsCoach"));
-const Classement      = lazy(() => import("./coach/Classement"));
-const CoachGraph      = lazy(() => import("./coach/CoachGraph"));
+const ProgressionClub = lazy(() => import("./coach/ProgressionClub"));
 const Objectifs       = lazy(() => import("./coach/Objectifs"));
 
 // "new-session" n'est volontairement pas dans cette liste : ce n'est pas un
@@ -28,27 +26,23 @@ const ARCHER_TABS = [
 ];
 
 const COACH_TABS = [
-  { id: "dashboard",       label: "Tableau de bord" },
-  { id: "coach-journal",   label: "Journal" },
-  { id: "coach-stats",     label: "Stats" },
-  { id: "ranking",         label: "Classement" },
-  { id: "coach-graphs",    label: "Graphiques" },
-  { id: "objectives",      label: "Objectifs" },
+  { id: "dashboard",          label: "Tableau de bord" },
+  { id: "coach-journal",      label: "Journal" },
+  { id: "progression-club",   label: "Progression club" },
+  { id: "objectives",         label: "Objectifs" },
 ];
 
 function renderTab(id, { onAllerNewSession } = {}) {
   switch (id) {
-    case "accueil":         return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} />;
-    case "new-session":     return <SeanceTab />;
-    case "journal":         return <Journal />;
-    case "progression":     return <Progression />;
-    case "records":         return <MesRecords />;
-    case "dashboard":       return <Dashboard />;
-    case "coach-journal":   return <CoachJournal />;
-    case "coach-stats":     return <StatsCoach />;
-    case "ranking":         return <Classement />;
-    case "coach-graphs":    return <CoachGraph />;
-    case "objectives":      return <Objectifs />;
+    case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} />;
+    case "new-session":      return <SeanceTab />;
+    case "journal":          return <Journal />;
+    case "progression":      return <Progression />;
+    case "records":          return <MesRecords />;
+    case "dashboard":        return <Dashboard />;
+    case "coach-journal":    return <CoachJournal />;
+    case "progression-club": return <ProgressionClub />;
+    case "objectives":       return <Objectifs />;
     default:
       return <div style={sDefault}>Vue <strong style={{ color: "var(--text)" }}>{id}</strong> — à venir</div>;
   }

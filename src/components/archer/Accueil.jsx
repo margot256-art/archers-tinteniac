@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { PRIMARY as PINK, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 
 const JOURS_30 = 30 * 24 * 60 * 60 * 1000;
@@ -59,25 +59,31 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
   }, [seances, seuil30]);
 
   const parDistance = useMemo(() => {
+    const vide = () => ({ nbSeances: 0, fleches: 0, scoreSum: 0, compteSum: 0 });
+    const finalise = (g, d) => {
+      const moyenne = g.compteSum > 0 ? g.scoreSum / g.compteSum : null;
+      return {
+        nbSeances: g.nbSeances, fleches: g.fleches,
+        moyenne, scoreMoyen: moyenne != null ? Math.round(moyenne * normFactor(d)) : null,
+      };
+    };
+
     const saisonSeances = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
     const map = {};
     for (const s of saisonSeances) {
       if (!s.distance) continue;
-      if (!map[s.distance]) map[s.distance] = { nbSeances: 0, fleches: 0, scoreSum: 0, compteSum: 0 };
-      const g = map[s.distance];
+      if (!map[s.distance]) map[s.distance] = { entr: vide(), comp: vide() };
+      const g = s.type === "Compétition" ? map[s.distance].comp : map[s.distance].entr;
       g.nbSeances++;
       g.fleches += getPaille(s) + getBlason(s) + getCompte(s);
       const c = getCompte(s);
       if (c > 0 && (s.score ?? 0) > 0) { g.scoreSum += s.score; g.compteSum += c; }
     }
-    return DIST_ORDER.filter((d) => map[d]).map((d) => {
-      const g = map[d];
-      const moyenne = g.compteSum > 0 ? g.scoreSum / g.compteSum : null;
-      return {
-        distance: d, nbSeances: g.nbSeances, fleches: g.fleches,
-        moyenne, scoreMoyen: moyenne != null ? Math.round(moyenne * normFactor(d)) : null,
-      };
-    });
+    return DIST_ORDER.filter((d) => map[d]).map((d) => ({
+      distance: d,
+      entr: finalise(map[d].entr, d),
+      comp: finalise(map[d].comp, d),
+    }));
   }, [seances]);
 
   if (loading) return <div style={s.info}>Chargement…</div>;
@@ -134,14 +140,10 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
         ) : (
           <div style={s.distListe}>
             {parDistance.map((d) => (
-              <div key={d.distance} style={s.distRow}>
+              <div key={d.distance} style={s.distGroup}>
                 <span style={s.distBadge}>{d.distance}</span>
-                <div style={s.distStats}>
-                  <DistStat valeur={d.nbSeances} label={d.nbSeances > 1 ? "séances" : "séance"} />
-                  <DistStat valeur={d.fleches.toLocaleString("fr-FR")} label="flèches" />
-                  <DistStat valeur={d.moyenne != null ? d.moyenne.toFixed(2) : "—"} label="moy./fl." accent={d.moyenne != null} />
-                  <DistStat valeur={d.scoreMoyen ?? "—"} label="score moy." accent={d.scoreMoyen != null} />
-                </div>
+                <TypeRow label="Entraînement" color={PINK} bg="var(--pink-soft)" data={d.entr} />
+                <TypeRow label="Compétition"  color={BLUE} bg="var(--blue-soft)" data={d.comp} />
               </div>
             ))}
           </div>
@@ -160,10 +162,24 @@ function Kpi({ valeur, label }) {
   );
 }
 
-function DistStat({ valeur, label, accent }) {
+function TypeRow({ label, color, bg, data }) {
+  return (
+    <div style={s.typeRow}>
+      <span style={{ ...s.typeTag, color, backgroundColor: bg }}>{label}</span>
+      <div style={s.distStats}>
+        <DistStat valeur={data.nbSeances} label={data.nbSeances > 1 ? "séances" : "séance"} />
+        <DistStat valeur={data.fleches.toLocaleString("fr-FR")} label="flèches" />
+        <DistStat valeur={data.moyenne != null ? data.moyenne.toFixed(2) : "—"} label="moy./fl." accent={data.moyenne != null} color={color} />
+        <DistStat valeur={data.scoreMoyen ?? "—"} label="score moy." accent={data.scoreMoyen != null} color={color} />
+      </div>
+    </div>
+  );
+}
+
+function DistStat({ valeur, label, accent, color = PINK }) {
   return (
     <div style={s.distStat}>
-      <div className="num" style={{ ...s.distStatValeur, color: accent ? PINK : "var(--text)" }}>{valeur}</div>
+      <div className="num" style={{ ...s.distStatValeur, color: accent ? color : "var(--text)" }}>{valeur}</div>
       <div style={s.distStatLabel}>{label}</div>
     </div>
   );
@@ -228,13 +244,18 @@ const s = {
   kpiLabel:  { fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
 
   distListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
-  distRow: {
+  distGroup: {
     backgroundColor: "var(--surface)", padding: "14px 16px",
-    display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap",
+    display: "flex", flexDirection: "column", gap: "10px",
   },
   distBadge: {
     fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text)",
-    backgroundColor: "var(--surface-raised)", borderRadius: "8px", padding: "4px 10px", flexShrink: 0,
+    backgroundColor: "var(--surface-raised)", borderRadius: "8px", padding: "4px 10px", alignSelf: "flex-start",
+  },
+  typeRow: { display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" },
+  typeTag: {
+    fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em",
+    borderRadius: "5px", padding: "3px 8px", flexShrink: 0, width: "88px", textAlign: "center",
   },
   distStats: { display: "flex", gap: "20px", flexWrap: "wrap", marginLeft: "auto" },
   distStat: { textAlign: "right" },

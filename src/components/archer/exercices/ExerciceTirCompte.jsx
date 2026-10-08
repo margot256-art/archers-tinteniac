@@ -125,8 +125,18 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       return;
     }
     if (voleeEnCours.length >= fpv) return;
-    setVoleeEnCours((prev) => [...prev, code]);
-    setImpactEnCours((prev) => [...prev, impact]);
+    const nouvelleVolee = [...voleeEnCours, code];
+    const nouvelImpact  = [...impactEnCours, impact];
+    if (nouvelleVolee.length === fpv) {
+      // Dernière flèche de la volée : on la valide automatiquement.
+      setVolees((prev) => [...prev, nouvelleVolee]);
+      setImpacts((prev) => [...prev, nouvelImpact]);
+      setVoleeEnCours([]);
+      setImpactEnCours([]);
+    } else {
+      setVoleeEnCours(nouvelleVolee);
+      setImpactEnCours(nouvelImpact);
+    }
   };
 
   const annulerDerniereFleche = () => {

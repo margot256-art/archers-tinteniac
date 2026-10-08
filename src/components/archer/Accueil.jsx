@@ -1,14 +1,21 @@
 import { useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
-import { PRIMARY as PINK, getPaille, getBlason, getCompte, fmtDate } from "../../utils/seances";
+import { useObjectif } from "../../hooks/useObjectif";
+import { PRIMARY as PINK, getPaille, getBlason, getCompte, fmtDate, fmtYM, CURRENT_SAISON } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 
 const JOURS_30 = 30 * 24 * 60 * 60 * 1000;
 
+const todayYM = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
 export default function Accueil({ onReprendre, onNouvelleSeance }) {
   const { user } = useAuth();
   const { seances, loading, error } = useSeances();
+  const rawObjectif = useObjectif();
 
   const enCours = lireSeanceEnCours(user?.id);
 
@@ -17,6 +24,25 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
     d.setTime(d.getTime() - JOURS_30);
     return d.toISOString().split("T")[0];
   }, []);
+
+  const currentYM = useMemo(() => todayYM(), []);
+
+  const volEntr = useMemo(() => {
+    if (!rawObjectif) return null;
+    if (rawObjectif.saisons?.[CURRENT_SAISON]) return rawObjectif.saisons[CURRENT_SAISON].volEntr ?? 0;
+    if (rawObjectif.volEntr != null) return rawObjectif.volEntr;
+    return null;
+  }, [rawObjectif]);
+
+  const volumeMois = useMemo(() =>
+    seances
+      .filter((s) => s.type === "Entraînement" && s.date?.startsWith(currentYM))
+      .reduce((sum, s) => sum + getPaille(s) + getBlason(s) + getCompte(s), 0),
+    [seances, currentYM]
+  );
+
+  const pctVolume = volEntr > 0 ? Math.min(100, Math.round((volumeMois / volEntr) * 100)) : 0;
+  const gaugeColor = pctVolume >= 100 ? PINK : pctVolume >= 80 ? "var(--good)" : pctVolume >= 50 ? "var(--warn)" : "var(--bad)";
 
   const { fleches30, tirsComptes30, moyenne30 } = useMemo(() => {
     const recentes = seances.filter((s) => s.date && s.date >= seuil30);
@@ -54,6 +80,21 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
           <p style={s.heroSous}>Vos séances, vos exercices et vos scores — même sans réseau.</p>
           <button style={s.cta} onClick={onNouvelleSeance}>＋ Nouvelle séance</button>
         </div>
+      )}
+
+      {volEntr > 0 && (
+        <section style={s.section}>
+          <p style={s.sectionLabel}>Volume d'entraînement — {fmtYM(currentYM)}</p>
+          <div style={s.gaugeBox}>
+            <div style={s.gaugeRow}>
+              <span className="num" style={s.gaugeFigures}>{volumeMois} / {volEntr} flèches</span>
+              <span className="num" style={{ ...s.gaugePct, color: gaugeColor }}>{pctVolume}%</span>
+            </div>
+            <div style={s.gaugeTrack}>
+              <div style={{ ...s.gaugeBar, width: `${pctVolume}%`, backgroundColor: gaugeColor }} />
+            </div>
+          </div>
+        </section>
       )}
 
       <section style={s.section}>
@@ -127,6 +168,17 @@ const s = {
     fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase",
     color: "var(--text-dim)", fontWeight: "600", margin: 0,
   },
+
+  gaugeBox: {
+    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-card)", padding: "16px 18px",
+    display: "flex", flexDirection: "column", gap: "10px",
+  },
+  gaugeRow: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px" },
+  gaugeFigures: { fontSize: "13px", color: "var(--text-2)", fontWeight: "600" },
+  gaugePct: { fontSize: "15px", fontWeight: "700" },
+  gaugeTrack: { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
+  gaugeBar: { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
 
   kpis: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" },
   kpi: {

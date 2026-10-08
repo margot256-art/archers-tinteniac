@@ -6,7 +6,6 @@ import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, get
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 import FilterSelect from "../shared/FilterSelect";
 
-const JOURS_30 = 30 * 24 * 60 * 60 * 1000;
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
 const todayYM = () => {
@@ -20,12 +19,6 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
   const rawObjectif = useObjectif();
 
   const enCours = lireSeanceEnCours(user?.id);
-
-  const seuil30 = useMemo(() => {
-    const d = new Date();
-    d.setTime(d.getTime() - JOURS_30);
-    return d.toISOString().split("T")[0];
-  }, []);
 
   const currentYM = useMemo(() => todayYM(), []);
 
@@ -45,19 +38,6 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
 
   const pctVolume = volEntr > 0 ? Math.min(100, Math.round((volumeMois / volEntr) * 100)) : 0;
   const gaugeColor = pctVolume >= 100 ? PINK : pctVolume >= 80 ? "var(--good)" : pctVolume >= 50 ? "var(--warn)" : "var(--bad)";
-
-  const { fleches30, tirsComptes30, moyenne30 } = useMemo(() => {
-    const recentes = seances.filter((s) => s.date && s.date >= seuil30);
-    const fleches30 = recentes.reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0);
-    const scorees   = recentes.filter((s) => getCompte(s) > 0 && (s.score ?? 0) > 0);
-    const totSc = scorees.reduce((n, s) => n + s.score, 0);
-    const totFl = scorees.reduce((n, s) => n + getCompte(s), 0);
-    return {
-      fleches30,
-      tirsComptes30: scorees.length,
-      moyenne30: totFl > 0 ? totSc / totFl : null,
-    };
-  }, [seances, seuil30]);
 
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
 
@@ -134,15 +114,6 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
       )}
 
       <section style={s.section}>
-        <p style={s.sectionLabel}>30 derniers jours</p>
-        <div style={s.kpis}>
-          <Kpi valeur={fleches30} label="flèches tirées" />
-          <Kpi valeur={tirsComptes30} label={tirsComptes30 > 1 ? "tirs comptés" : "tir compté"} />
-          <Kpi valeur={moyenne30 != null ? moyenne30.toFixed(2) : "—"} label="moy. / flèche" />
-        </div>
-      </section>
-
-      <section style={s.section}>
         <div style={s.sectionHead}>
           <p style={s.sectionLabel}>Par distance</p>
           <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
@@ -161,15 +132,6 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function Kpi({ valeur, label }) {
-  return (
-    <div style={s.kpi}>
-      <div className="num" style={s.kpiValeur}>{valeur}</div>
-      <div style={s.kpiLabel}>{label}</div>
     </div>
   );
 }
@@ -246,15 +208,6 @@ const s = {
   gaugePct: { fontSize: "15px", fontWeight: "700" },
   gaugeTrack: { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
   gaugeBar: { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
-
-  kpis: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" },
-  kpi: {
-    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
-    boxShadow: "var(--shadow-card)", padding: "16px", textAlign: "center",
-    display: "flex", flexDirection: "column", gap: "4px",
-  },
-  kpiValeur: { fontSize: "26px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
-  kpiLabel:  { fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
 
   distListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
   distGroup: {

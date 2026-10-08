@@ -49,8 +49,12 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
   const [format,   setFormat]   = useState(existant?.format ?? "standard"); // "standard" | "libre"
   const [nbSeries, setNbSeries] = useState(existant?.nbSeries ?? 2);
 
-  const [volees,  setVolees]  = useState(existant?.volees ?? []); // [[code, ...], ...] — volées validées
-  const [impacts, setImpacts] = useState(existant?.impacts ?? (existant?.volees ?? []).map(() => [])); // parallèle
+  // Stockage Firestore : volees = [{ codes: [...], impacts: [...] }, ...] (Firestore interdit les
+  // tableaux directement imbriqués dans un tableau — d'où l'enveloppe par objet). En mémoire, on
+  // garde deux tableaux parallèles (codes / impacts) pour simplifier la logique de saisie.
+  const voleesExistantes = existant?.volees ?? [];
+  const [volees,  setVolees]  = useState(() => voleesExistantes.map((v) => v.codes ?? []));   // [[code, ...], ...] — volées validées
+  const [impacts, setImpacts] = useState(() => voleesExistantes.map((v) => v.impacts ?? [])); // parallèle
 
   const [voleeEnCours,  setVoleeEnCours]  = useState([]);
   const [impactEnCours, setImpactEnCours] = useState([]);
@@ -168,8 +172,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       protocole:    "tir-compte",
       format,
       nbSeries:     reglages.voleesParSerie ? nbSeries : null,
-      volees,
-      impacts,
+      volees:       volees.map((codes, i) => ({ codes, impacts: impacts[i] ?? [] })),
       volumePaille: 0,
       volumeBlason: 0,
       volumeCompte: resume.fleches,

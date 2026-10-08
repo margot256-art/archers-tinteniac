@@ -31,7 +31,9 @@ export default function ExercicePotentielMax({ seanceInfo, seanceId, existant, o
   const [lieu,     setLieu]     = useState(existant?.lieu ?? seanceInfo?.lieu ?? "");
   const [commentaire, setCommentaire] = useState(existant?.commentaire ?? "");
 
-  const [volees,       setVolees]       = useState(existant?.volees ?? []); // [[code, code, ...], ...]
+  // Stockage Firestore : volees = [{ codes: [...] }, ...] (Firestore interdit les tableaux
+  // directement imbriqués dans un tableau — d'où l'enveloppe par objet).
+  const [volees,       setVolees]       = useState(() => (existant?.volees ?? []).map((v) => v.codes ?? [])); // [[code, code, ...], ...]
   const [voleeEnCours, setVoleeEnCours] = useState([]);
 
   const [saving, setSaving] = useState(false);
@@ -82,7 +84,7 @@ export default function ExercicePotentielMax({ seanceInfo, seanceId, existant, o
       type,
       lieu:         lieu.trim() || null,
       protocole:    "potentiel-max",
-      volees:       finales,
+      volees:       finales.map((codes) => ({ codes })),
       volumePaille: 0,
       volumeBlason: 0,
       volumeCompte: flechesFinal,

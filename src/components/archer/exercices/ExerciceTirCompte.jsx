@@ -1,14 +1,20 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { normFactor } from "../../../utils/seances";
+import { pointsZone } from "../../../utils/blason";
+import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles as s } from "./exerciceStyles";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
+const estSalle = (distance) => distance === "5m" || distance === "18m";
+const flechesParVolee = (distance) => (estSalle(distance) ? 3 : 6);
 
 const todayISO = () => new Date().toISOString().split("T")[0];
+
+const scoreVolee = (codes) => codes.reduce((n, c) => n + pointsZone(c), 0);
 
 export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTermine, onAnnuler }) {
   const { user } = useAuth();
@@ -19,35 +25,40 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
   const [distance, setDistance] = useState(existant?.distance ?? seanceInfo?.distance ?? "18m");
   const [type,     setType]     = useState(existant?.type ?? seanceInfo?.type ?? "Entraînement");
   const [lieu,     setLieu]     = useState(existant?.lieu ?? seanceInfo?.lieu ?? "");
+  const [commentaire, setCommentaire] = useState(existant?.commentaire ?? "");
 
-  const [volumePaille, setVolumePaille] = useState(existant ? String(existant.volumePaille ?? 0) : "");
-  const [volumeBlason, setVolumeBlason] = useState(existant ? String(existant.volumeBlason ?? 0) : "");
-  const [volumeCompte, setVolumeCompte] = useState(existant ? String(existant.volumeCompte ?? 0) : "");
-  const [score,        setScore]        = useState(existant ? String(existant.score ?? 0) : "");
-  const [commentaire,  setCommentaire]  = useState(existant?.commentaire ?? "");
+  const [volees,       setVolees]       = useState(existant?.volees ?? []); // [[code, code, ...], ...]
+  const [voleeEnCours, setVoleeEnCours] = useState([]);
 
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
-  const paille = parseInt(volumePaille) || 0;
-  const blason = parseInt(volumeBlason) || 0;
-  const compte = parseInt(volumeCompte) || 0;
-  const sc     = parseInt(score)        || 0;
-  const totalFleches = paille + blason + compte;
-  const moyenne       = compte > 0 ? sc / compte : null;
-  const base           = normFactor(distance);
+  const fpv  = flechesParVolee(distance);
+  const base = normFactor(distance);
+
+  const { cumul, flechesTirees, moyenne, projection } = useMemo(() => {
+    const cumul         = volees.reduce((n, v) => n + scoreVolee(v), 0);
+    const flechesTirees = volees.reduce((n, v) => n + v.length, 0);
+    const moyenne        = flechesTirees > 0 ? cumul / flechesTirees : null;
+    return { cumul, flechesTirees, moyenne, projection: moyenne != null ? Math.round(moyenne * base) : null };
+  }, [volees, base]);
+
+  const ajouterFleche = (code) => {
+    if (voleeEnCours.length >= fpv) return;
+    setVoleeEnCours((prev) => [...prev, code]);
+  };
+
+  const validerVolee = () => {
+    if (voleeEnCours.length !== fpv) return;
+    setVolees((prev) => [...prev, voleeEnCours]);
+    setVoleeEnCours([]);
+  };
+
+  const annulerVolee = () => setVoleeEnCours([]);
 
   const handleTerminer = async () => {
-    if (totalFleches === 0) {
-      setError("Veuillez saisir au moins un volume de flèches.");
-      return;
-    }
-    if (sc > 0 && compte === 0) {
-      setError("Un score nécessite un volume de tir compté.");
-      return;
-    }
-    if (sc > compte * 10 && compte > 0) {
-      setError(`Score trop élevé : maximum possible = ${compte * 10} (${compte} flèches × 10).`);
+    if (volees.length === 0) {
+      setError(`Complétez au moins une volée de ${fpv} flèches avant de terminer.`);
       return;
     }
     setError("");
@@ -60,12 +71,13 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       type,
       lieu:         lieu.trim() || null,
       protocole:    "tir-compte",
-      volumePaille: paille,
-      volumeBlason: blason,
-      volumeCompte: compte,
-      score:        sc,
-      totalFleches,
-      moyenne:      moyenne !== null ? parseFloat(moyenne.toFixed(2)) : null,
+      volees,
+      volumePaille: 0,
+      volumeBlason: 0,
+      volumeCompte: flechesTirees,
+      score:        cumul,
+      totalFleches: flechesTirees,
+      moyenne:      moyenne != null ? parseFloat(moyenne.toFixed(2)) : null,
       commentaire:  commentaire.trim() || null,
       ...(seanceId ? { seanceId } : {}),
     };
@@ -101,7 +113,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
         <h2 style={s.title}>{enEdition ? "Modifier — Tir compté" : "Tir compté"}</h2>
         <button style={s.annulerBtn} onClick={onAnnuler}>✕ Annuler</button>
       </div>
-      <p style={s.resume}>Score sur un nombre de flèches comptées.</p>
+      <p style={s.resume}>Volées de {fpv} flèches. Chaque flèche compte dans le score.</p>
 
       {autonome && (
         <div className="form-grid-4">
@@ -109,7 +121,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
             <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} style={s.input} />
           </Field>
           <Field label="Distance">
-            <select value={distance} onChange={(e) => setDistance(e.target.value)} style={s.input}>
+            <select value={distance} onChange={(e) => setDistance(e.target.value)} style={s.input} disabled={volees.length > 0}>
               {DISTANCES.map((d) => <option key={d}>{d}</option>)}
             </select>
           </Field>
@@ -125,26 +137,29 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
         </div>
       )}
 
-      <div className="form-grid-4">
-        <Field label="Vol. paille">
-          <input type="number" min="0" value={volumePaille} onChange={(e) => setVolumePaille(e.target.value)} style={s.input} placeholder="0" />
-        </Field>
-        <Field label="Vol. blason">
-          <input type="number" min="0" value={volumeBlason} onChange={(e) => setVolumeBlason(e.target.value)} style={s.input} placeholder="0" />
-        </Field>
-        <Field label="Vol. tir compté">
-          <input type="number" min="0" value={volumeCompte} onChange={(e) => setVolumeCompte(e.target.value)} style={s.input} placeholder="0" />
-        </Field>
-        <Field label="Score">
-          <input type="number" min="0" value={score} onChange={(e) => setScore(e.target.value)} style={s.input} placeholder="0" />
-        </Field>
+      <div style={s.compteurBox}>
+        <div style={s.compteurTotal}>{volees.length > 0 ? cumul : "—"}</div>
+        <div style={s.compteurLabel}>
+          {flechesTirees} fl.{moyenne != null && ` · moy. ${moyenne.toFixed(2)} · ≈ ${projection} sur ${base}`} · {volees.length} volée{volees.length > 1 ? "s" : ""}
+        </div>
       </div>
 
-      <div style={s.compteurBox}>
-        <div style={s.compteurTotal}>{sc || "—"}</div>
-        <div style={s.compteurLabel}>
-          {totalFleches} fl.{moyenne !== null && ` · moy. ${moyenne.toFixed(2)} · ≈ ${Math.round(moyenne * base)} sur ${base}`}
+      <div style={s.voleeEnCoursBox}>
+        <div style={s.voleeEnCoursHead}>
+          <span>Volée en cours — {voleeEnCours.length}/{fpv} flèche{fpv > 1 ? "s" : ""}</span>
+          {voleeEnCours.length > 0 && <button style={s.miniBtn} onClick={annulerVolee}>Vider</button>}
         </div>
+        <ZoneButtons onPress={ajouterFleche} disabled={voleeEnCours.length >= fpv} />
+        {voleeEnCours.length > 0 && (
+          <div style={s.recap}>
+            {voleeEnCours.map((code, i) => (
+              <span key={i} style={s.recapItem}>{code}</span>
+            ))}
+          </div>
+        )}
+        <button style={s.validerBtn} onClick={validerVolee} disabled={voleeEnCours.length !== fpv}>
+          ✓ Valider la volée
+        </button>
       </div>
 
       <Field label="Commentaire (optionnel)">
@@ -170,4 +185,3 @@ function Field({ label, children }) {
     </div>
   );
 }
-

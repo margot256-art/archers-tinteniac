@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSeances } from "../../hooks/useSeances";
-import { PRIMARY, fmtDate } from "../../utils/seances";
+import { PRIMARY as PINK, fmtDate } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
 import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
 
@@ -101,15 +101,15 @@ const s = {
 
   liste: { display: "flex", flexDirection: "column", gap: "10px" },
   sessionCard: {
-    backgroundColor: "var(--surface)", borderRadius: "12px",
+    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
     boxShadow: "var(--shadow-card)", padding: "16px 18px",
     display: "flex", flexDirection: "column", gap: "6px",
-    textAlign: "left", border: "none", cursor: "pointer", fontFamily: "inherit",
+    textAlign: "left", cursor: "pointer", fontFamily: "inherit",
   },
   sessionHead: { display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "4px 12px" },
-  sessionDate: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
+  sessionDate: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text)" },
   sessionMeta: { fontSize: "12px", color: "var(--text-muted)" },
-  sessionExercices: { fontSize: "13px", color: PRIMARY, fontWeight: "600" },
+  sessionExercices: { fontSize: "13px", color: PINK, fontWeight: "600" },
 
   retourBtn: {
     alignSelf: "flex-start", background: "none", border: "none",
@@ -117,27 +117,27 @@ const s = {
     padding: "4px 0",
   },
   detailHead: { display: "flex", flexDirection: "column", gap: "2px" },
-  detailDate: { fontSize: "20px", fontWeight: "800", color: "var(--text)", margin: 0 },
+  detailDate: { fontFamily: "var(--display)", fontSize: "20px", fontWeight: "600", color: "var(--text)", margin: 0 },
   detailMeta: { fontSize: "13px", color: "var(--text-muted)", margin: 0 },
 
-  exerciceListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", boxShadow: "var(--shadow-card)" },
+  exerciceListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
   exerciceRow: {
     display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px",
     backgroundColor: "var(--surface)", border: "none", cursor: "pointer", fontFamily: "inherit",
     padding: "14px 16px", textAlign: "left",
   },
   exerciceNom:      { fontSize: "14px", fontWeight: "700", color: "var(--text)", flex: "1 1 auto" },
-  exerciceResultat: { fontSize: "15px", fontWeight: "800", color: PRIMARY },
+  exerciceResultat: { fontFamily: "var(--mono)", fontSize: "15px", fontWeight: "700", color: PINK },
   exerciceModifier: { fontSize: "11px", color: "var(--text-dim)", whiteSpace: "nowrap" },
 
   empty: {
-    backgroundColor: "var(--surface)", borderRadius: "12px",
+    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
     boxShadow: "var(--shadow-card)", padding: "40px", textAlign: "center",
     color: "var(--text-dim)", fontSize: "14px",
   },
   info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
-    color: PRIMARY, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
+    color: PINK, fontSize: "13px", padding: "10px 14px",
+    backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PINK}`,
   },
 };

@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
-import { PRIMARY, fmtDate } from "../../utils/seances";
+import { fmtDate } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
 import { lireSeanceEnCours, ecrireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
+import { exerciceStyles, PINK } from "./exercices/exerciceStyles";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const todayISO = () => new Date().toISOString().split("T")[0];
@@ -163,29 +164,7 @@ function Field({ label, children }) {
 }
 
 const s = {
-  page: {
-    backgroundColor: "var(--surface)", borderRadius: "14px",
-    boxShadow: "var(--shadow-card)", padding: "22px",
-    display: "flex", flexDirection: "column", gap: "16px",
-  },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  title:  { fontSize: "18px", fontWeight: "800", color: "var(--text)", margin: 0 },
-  annulerBtn: {
-    background: "none", border: "1px solid var(--border-3)", color: "var(--text-muted)",
-    borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer", fontFamily: "inherit",
-  },
-  resume: { fontSize: "13px", color: "var(--text-muted)", margin: 0 },
-
-  label: {
-    fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.06em",
-  },
-  input: {
-    padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
-    fontSize: "14px", color: "var(--text)", outline: "none",
-    fontFamily: "inherit", backgroundColor: "var(--input-bg)",
-    width: "100%", boxSizing: "border-box",
-  },
+  ...exerciceStyles,
 
   choixGrid: {
     display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "10px",
@@ -205,15 +184,9 @@ const s = {
     border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
   },
   recapNom: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)", flex: "1 1 auto" },
-  recapResultat: { fontSize: "14px", fontWeight: "800", color: PRIMARY },
+  recapResultat: { fontFamily: "var(--mono)", fontSize: "14px", fontWeight: "800", color: PINK },
   recapModifier: { fontSize: "11px", color: "var(--text-dim)", whiteSpace: "nowrap" },
 
   ajoutZone: { display: "flex", flexDirection: "column", gap: "8px" },
   ajoutLabel: { fontSize: "12px", color: "var(--text-dim)" },
-
-  terminerBtn: {
-    backgroundColor: "#16a34a", color: "#fff", border: "none",
-    borderRadius: "10px", padding: "14px", fontSize: "15px", fontWeight: "700",
-    cursor: "pointer", fontFamily: "inherit",
-  },
 };

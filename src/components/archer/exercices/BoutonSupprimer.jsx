@@ -26,7 +26,7 @@ const s = {
   row: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" },
   texte: { color: "var(--text-muted)" },
   oui: {
-    backgroundColor: "#ef4444", color: "#fff", border: "none",
+    backgroundColor: "var(--bad)", color: "#fff", border: "none",
     borderRadius: "6px", padding: "6px 12px", fontSize: "12px", fontWeight: "700",
     cursor: "pointer", fontFamily: "inherit",
   },
@@ -36,7 +36,7 @@ const s = {
     cursor: "pointer", fontFamily: "inherit",
   },
   supprimer: {
-    background: "none", border: "1px solid #ef4444", color: "#ef4444",
+    background: "none", border: "1px solid var(--bad)", color: "var(--bad)",
     borderRadius: "8px", padding: "10px", fontSize: "13px", fontWeight: "600",
     cursor: "pointer", fontFamily: "inherit",
   },

@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
-import { PRIMARY, normFactor } from "../../../utils/seances";
+import { normFactor } from "../../../utils/seances";
 import { pointsZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
+import { exerciceStyles } from "./exerciceStyles";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const MIN_FLECHES = 3;
@@ -201,70 +202,6 @@ function Field({ label, children }) {
 }
 
 const s = {
-  page: {
-    backgroundColor: "var(--surface)", borderRadius: "14px",
-    boxShadow: "var(--shadow-card)", padding: "22px",
-    display: "flex", flexDirection: "column", gap: "16px",
-  },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  title:  { fontSize: "18px", fontWeight: "800", color: "var(--text)", margin: 0 },
-  annulerBtn: {
-    background: "none", border: "1px solid var(--border-3)", color: "var(--text-muted)",
-    borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer", fontFamily: "inherit",
-  },
-  resume: { fontSize: "13px", color: "var(--text-muted)", margin: 0 },
-
-  label: {
-    fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.06em",
-  },
-  input: {
-    padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
-    fontSize: "14px", color: "var(--text)", outline: "none",
-    fontFamily: "inherit", backgroundColor: "var(--input-bg)",
-    width: "100%", boxSizing: "border-box",
-  },
-
-  compteurBox: {
-    backgroundColor: "var(--surface-raised)", borderRadius: "12px",
-    border: "1px solid var(--border)", padding: "20px", textAlign: "center",
-    display: "flex", flexDirection: "column", gap: "8px", alignItems: "center",
-  },
-  compteurTotal: { fontSize: "36px", fontWeight: "800", color: PRIMARY, lineHeight: 1, letterSpacing: "-0.02em" },
-  compteurLabel: { fontSize: "12px", color: "var(--text-muted)" },
-
-  voleeEnCoursBox: {
-    display: "flex", flexDirection: "column", gap: "10px",
-    border: "1px solid var(--border)", borderRadius: "12px", padding: "16px",
-  },
-  voleeEnCoursHead: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    fontSize: "12px", fontWeight: "700", color: "var(--text-2)",
-    textTransform: "uppercase", letterSpacing: "0.05em",
-  },
-  miniBtn: {
-    background: "none", border: "1px solid var(--border-3)", color: "var(--text-muted)",
-    borderRadius: "6px", padding: "3px 8px", fontSize: "11px", cursor: "pointer", fontFamily: "inherit",
-  },
-  recap: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  recapItem: {
-    fontSize: "12px", fontWeight: "700", color: PRIMARY,
-    backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "6px", padding: "3px 8px",
-  },
-  recapItemHorsJeu: { color: "var(--text-dim)", backgroundColor: "var(--surface-raised)", textDecoration: "line-through" },
-  validerBtn: {
-    backgroundColor: PRIMARY, color: "#fff", border: "none",
-    borderRadius: "8px", padding: "11px", fontSize: "14px", fontWeight: "700",
-    cursor: "pointer", fontFamily: "inherit",
-  },
-
-  msgError: {
-    backgroundColor: "rgba(255,0,122,0.1)", border: `1px solid ${PRIMARY}`, borderRadius: "8px",
-    padding: "10px 14px", fontSize: "13px", color: PRIMARY,
-  },
-  terminerBtn: {
-    backgroundColor: "#16a34a", color: "#fff", border: "none",
-    borderRadius: "10px", padding: "14px", fontSize: "15px", fontWeight: "700",
-    cursor: "pointer", fontFamily: "inherit",
-  },
+  ...exerciceStyles,
+  recapItemHorsJeu: { color: "var(--text-dim)", backgroundColor: "var(--surface-sub)", textDecoration: "line-through" },
 };

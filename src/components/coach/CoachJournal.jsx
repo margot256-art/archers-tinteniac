@@ -3,16 +3,16 @@ import { useAllSeances } from "../../hooks/useAllSeances";
 import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
+import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
 
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
 
-
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function SeancesArchers() {
+export default function CoachJournal() {
   const { seances, loading, error } = useAllSeances();
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
   const [filterArcher, setFilterArcher] = useState("Tous");
@@ -62,17 +62,30 @@ export default function SeancesArchers() {
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
-
-  const COL_HEADS  = ["Date","Archer","Type","Lieu","Dist.","Paille","Blason","Compté","Score","Total fl.","Moy./fl.","Score moy.","Commentaire"];
-  const NC         = 13;
-  const RIGHT_COLS = [5, 6, 7, 8, 9, 10, 11];
+  const COL_HEADS  = ["Date", "Archer", "Type", "Lieu", "Dist.", "Protocole", "Paille", "Blason", "Compté", "Résultat", "Commentaire"];
+  const NC         = 11;
+  const RIGHT_COLS = [6, 7, 8, 9];
 
   const exportTitle = filterArcher !== "Tous"
-    ? `Séances archers — ${filterArcher} — Saison ${filterSaison}`
-    : `Séances archers — Saison ${filterSaison}`;
+    ? `Journal — ${filterArcher} — Saison ${filterSaison}`
+    : `Journal — Saison ${filterSaison}`;
+
+  const rowCells = (s) => {
+    const p    = getPaille(s);
+    const b    = getBlason(s);
+    const c    = getCompte(s);
+    const proto = PROTOCOLE_PAR_ID[protocoleDe(s)];
+    const ind   = indicateurExercice(protocoleDe(s), s);
+    return [
+      s.date || "", s.archer || "", s.type || "", s.lieu || "", s.distance || "",
+      proto?.nom ?? s.protocole ?? "—",
+      p, b, c,
+      ind?.texte ?? "—",
+      s.commentaire || "",
+    ];
+  };
 
   const handleExportExcel = () => {
-    const numCols = RIGHT_COLS;
     const aoa     = [];
     const merges  = [];
     const rowMeta = [];
@@ -93,26 +106,14 @@ export default function SeancesArchers() {
       rowMeta.push({ type: "header" });
 
       group.forEach((s, i) => {
-        const p   = getPaille(s);
-        const b   = getBlason(s);
-        const c   = getCompte(s);
-        const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
-        aoa.push([
-          s.date || "", s.archer || "", s.type || "", s.lieu || "", s.distance || "",
-          p, b, c, s.score ?? "", p + b + c || "",
-          moy != null ? parseFloat(moy.toFixed(2)) : "",
-          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
-          s.commentaire || "",
-        ]);
+        aoa.push(rowCells(s));
         rowMeta.push({ type: "data", even: i % 2 === 0 });
       });
 
-      const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
+      const { tp, tb, tc, tt } = buildMonthTotals(group);
       aoa.push([
-        `Total — ${fmtYM(month)}`, "", "", "", "",
-        tp, tb, tc, ts || "", tt || "",
-        tmoy != null ? parseFloat(tmoy.toFixed(2)) : "",
-        tscoreMoy ?? "", "",
+        `Total — ${fmtYM(month)}`, "", "", "", "", "",
+        tp, tb, tc, tt ? `${tt} fl.` : "", "",
       ]);
       rowMeta.push({ type: "total" });
       aoa.push(Array(NC).fill(""));
@@ -122,9 +123,8 @@ export default function SeancesArchers() {
     const ws      = XLSX.utils.aoa_to_sheet(aoa);
     ws["!merges"] = merges;
     ws["!cols"]   = [
-      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 7 },
-      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 10 },
-      { wch: 10 }, { wch: 12 }, { wch: 34 },
+      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 7 }, { wch: 16 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 12 }, { wch: 34 },
     ];
 
     const ST = {
@@ -141,23 +141,23 @@ export default function SeancesArchers() {
       header: (c) => ({
         font: { bold: true, sz: 9, color: { rgb: "000000" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFCCE5" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
         border: { bottom: { style: "medium", color: { rgb: "FF007A" } } },
       }),
       dataEven: (c) => ({
         font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
       }),
       dataOdd: (c) => ({
         font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFF0F6" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
       }),
       total: (c) => ({
         font: { bold: true, sz: 9, color: { rgb: "FFFFFF" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
-        alignment: { horizontal: numCols.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
         border: {
           top:    { style: "medium", color: { rgb: "B30057" } },
           bottom: { style: "thin",   color: { rgb: "B30057" } },
@@ -185,15 +185,15 @@ export default function SeancesArchers() {
     ws["!rows"] = rowHeights;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Séances");
-    XLSX.writeFile(wb, `seances-archers-${filterSaison.replace("/", "-")}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Journal");
+    XLSX.writeFile(wb, `journal-coach-${filterSaison.replace("/", "-")}.xlsx`);
   };
 
   const handleExportPDF = () => {
     const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pw    = pdf.internal.pageSize.width;
     const ph    = pdf.internal.pageSize.height;
-    const COL_W = [20, 26, 22, 20, 10, 12, 12, 12, 12, 14, 14, 14, 0];
+    const COL_W = [20, 26, 22, 20, 10, 24, 12, 12, 12, 18, 0];
 
     const colStyles = COL_W.reduce((acc, w, i) => {
       acc[i] = w > 0 ? { cellWidth: w } : {};
@@ -220,27 +220,12 @@ export default function SeancesArchers() {
         startY = 18;
       }
 
-      const body = group.map(s => {
-        const p   = getPaille(s);
-        const b   = getBlason(s);
-        const c   = getCompte(s);
-        const moy = c > 0 && (s.score ?? 0) > 0 ? s.score / c : null;
-        return [
-          fmtDate(s.date), s.archer || "", s.type || "", s.lieu || "", s.distance || "",
-          p || 0, b || 0, c || 0, s.score ?? "",
-          p + b + c || "",
-          moy != null ? moy.toFixed(2) : "",
-          moy != null ? Math.round(moy * normFactor(s.distance)) : "",
-          s.commentaire || "",
-        ];
-      });
+      const body = group.map(rowCells);
 
-      const { tp, tb, tc, ts, tt, tmoy, tscoreMoy } = buildMonthTotals(group);
+      const { tp, tb, tc, tt } = buildMonthTotals(group);
       const totalRow = [
-        `Total — ${fmtYM(month)}`, "", "", "", "",
-        tp, tb, tc, ts || "", tt || "",
-        tmoy != null ? tmoy.toFixed(2) : "",
-        tscoreMoy ?? "", "",
+        `Total — ${fmtYM(month)}`, "", "", "", "", "",
+        tp, tb, tc, tt ? `${tt} fl.` : "", "",
       ];
 
       autoTable(pdf, {
@@ -283,7 +268,7 @@ export default function SeancesArchers() {
       startY = nextY > ph - 30 ? ph : nextY;
     });
 
-    pdf.save(`seances-archers-${filterSaison.replace("/", "-")}.pdf`);
+    pdf.save(`journal-coach-${filterSaison.replace("/", "-")}.pdf`);
   };
 
   if (loading) return <div style={s.info}>Chargement…</div>;
@@ -306,21 +291,21 @@ export default function SeancesArchers() {
       </div>
 
       {/* ── Filtres + Export ── */}
-      <div className="coach-filter-bar">
-        <div className="coach-filter-group">
+      <div style={s.filterBar}>
+        <div style={s.filterGroup}>
           <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
         </div>
         <div style={{ display: "flex", gap: "6px" }}>
           <button
-            style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+            style={{ ...s.exportBtn, ...(filtered.length === 0 ? s.off : {}) }}
             onClick={handleExportExcel}
             disabled={filtered.length === 0}
             title="Exporter en Excel (.xlsx)"
           >↓ Excel</button>
           <button
-            style={{ ...s.exportBtn, ...(filtered.length === 0 ? { opacity: 0.4, cursor: "not-allowed" } : {}) }}
+            style={{ ...s.exportBtn, ...(filtered.length === 0 ? s.off : {}) }}
             onClick={handleExportPDF}
             disabled={filtered.length === 0}
             title="Exporter en PDF"
@@ -330,7 +315,7 @@ export default function SeancesArchers() {
 
       {/* ── Tableau ── */}
       <div style={s.tableWrap}>
-        <table style={s.table} className="coach-table">
+        <table style={s.table}>
           <thead>
             <tr>
               <th style={s.th}>Date</th>
@@ -338,42 +323,30 @@ export default function SeancesArchers() {
               <th style={s.th}>Type</th>
               <th style={s.th}>Lieu</th>
               <th style={s.th}>Dist.</th>
+              <th style={s.th}>Protocole</th>
               <th style={s.thR}>Paille</th>
               <th style={s.thR}>Blason</th>
               <th style={s.thR}>Compté</th>
-              <th style={s.thR}>Score</th>
-              <th style={s.thR}>Total</th>
-              <th style={s.thR}>Moy./fl.</th>
-              <th style={s.thR}>Score moy.</th>
+              <th style={s.thR}>Résultat</th>
               <th style={s.th}>Commentaire</th>
             </tr>
           </thead>
           <tbody>
             {groupedByMonth.length === 0 ? (
-              <tr><td colSpan={13} style={s.empty}>Aucune séance trouvée.</td></tr>
+              <tr><td colSpan={NC} style={s.empty}>Aucune séance trouvée.</td></tr>
             ) : groupedByMonth.map(({ month, rows }) => {
               const subP   = rows.reduce((n, s) => n + getPaille(s), 0);
               const subB   = rows.reduce((n, s) => n + getBlason(s), 0);
               const subC   = rows.reduce((n, s) => n + getCompte(s), 0);
-              const subSc  = rows.reduce((n, s) => n + (s.score ?? 0), 0);
               const subTot = subP + subB + subC;
-              const scored = rows.filter(s => getCompte(s) > 0 && (s.score ?? 0) > 0);
-              const subMoy = scored.length > 0
-                ? scored.reduce((sum, s) => sum + s.score / getCompte(s), 0) / scored.length
-                : null;
-              const subSm = scored.length > 0
-                ? Math.round(scored.reduce((sum, s) => sum + (s.score / getCompte(s)) * normFactor(s.distance), 0) / scored.length)
-                : null;
               return (
                 <Fragment key={month}>
                   {rows.map(seance => {
-                    const p   = getPaille(seance);
-                    const b   = getBlason(seance);
-                    const c   = getCompte(seance);
-                    const sc  = seance.score ?? 0;
-                    const tot = p + b + c;
-                    const moy = c > 0 && sc > 0 ? sc / c : null;
-                    const sm  = moy != null ? Math.round(moy * normFactor(seance.distance)) : null;
+                    const p     = getPaille(seance);
+                    const b     = getBlason(seance);
+                    const c     = getCompte(seance);
+                    const proto = PROTOCOLE_PAR_ID[protocoleDe(seance)];
+                    const ind   = indicateurExercice(protocoleDe(seance), seance);
                     return (
                       <tr key={seance.id} style={s.tr}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
@@ -390,16 +363,14 @@ export default function SeancesArchers() {
                         <td style={s.td}>
                           {seance.distance ? <span style={s.distBadge}>{seance.distance}</span> : "—"}
                         </td>
+                        <td style={s.td}>
+                          <span style={s.protoBadge}>{proto?.nom ?? seance.protocole ?? "—"}</span>
+                        </td>
                         <td style={s.tdR}>{p > 0 ? p : "—"}</td>
                         <td style={s.tdR}>{b > 0 ? b : "—"}</td>
                         <td style={s.tdR}>{c > 0 ? c : "—"}</td>
-                        <td style={{ ...s.tdR, fontWeight: "600" }}>{sc > 0 ? sc : "—"}</td>
-                        <td style={s.tdR}>{tot > 0 ? tot : "—"}</td>
-                        <td style={{ ...s.tdR, color: moy != null ? PRIMARY : "var(--text-dim)", fontWeight: "600" }}>
-                          {moy != null ? moy.toFixed(2) : "—"}
-                        </td>
-                        <td style={{ ...s.tdR, fontWeight: sm != null ? "700" : "400", color: sm != null ? "var(--text)" : "var(--text-dim)" }}>
-                          {sm != null ? sm : "—"}
+                        <td style={{ ...s.tdR, fontWeight: ind ? "700" : "400", color: ind ? PRIMARY : "var(--text-dim)" }}>
+                          {ind?.texte ?? "—"}
                         </td>
                         <td style={{ ...s.td, color: "var(--text-dim)", minWidth: "160px", maxWidth: "320px", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: "1.4" }}>
                           {seance.commentaire || "—"}
@@ -410,14 +381,11 @@ export default function SeancesArchers() {
                   <tr key={`sub-${month}`} style={s.trSub}>
                     <td style={{ ...s.tdSub, textAlign: "left" }}>{fmtYM(month)}</td>
                     <td style={{ ...s.tdSub, textAlign: "left" }}>{rows.length} séance{rows.length > 1 ? "s" : ""}</td>
-                    <td style={s.tdSub} /><td style={s.tdSub} /><td style={s.tdSub} />
+                    <td style={s.tdSub} /><td style={s.tdSub} /><td style={s.tdSub} /><td style={s.tdSub} />
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subP > 0 ? subP : "—"}</td>
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subB > 0 ? subB : "—"}</td>
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subC > 0 ? subC : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subSc > 0 ? subSc : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subTot > 0 ? subTot : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subMoy != null ? subMoy.toFixed(2) : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subSm != null ? subSm : "—"}</td>
+                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subTot > 0 ? `${subTot} fl.` : "—"}</td>
                     <td style={s.tdSub} />
                   </tr>
                 </Fragment>
@@ -440,11 +408,10 @@ export default function SeancesArchers() {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-
 function CalendarIcon() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none"
-      stroke="var(--blue-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8"  y1="2" x2="8"  y2="6" />
@@ -460,36 +427,35 @@ const s = {
   info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
+    backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
 
   saisonBar: {
-    backgroundColor: "var(--blue-deep)", borderRadius: "10px",
+    backgroundColor: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px",
     padding: "13px 18px",
     display: "flex", alignItems: "center", gap: "10px",
     boxShadow: "var(--shadow-card)",
     alignSelf: "flex-start",
   },
   saisonLabel: {
-    fontSize: "13px", fontWeight: "700", color: "var(--blue-soft2)",
+    fontSize: "13px", fontWeight: "700", color: "var(--text-muted)",
     textTransform: "uppercase", letterSpacing: "0.08em",
   },
   saisonSelect: {
-    backgroundColor: "var(--blue-mid)", color: "var(--blue-text)",
-    border: "1px solid #2e4a80", borderRadius: "7px",
+    backgroundColor: "var(--input-bg)", color: "var(--text-2)",
+    border: "1.5px solid var(--border-2)", borderRadius: "7px",
     padding: "7px 12px", fontSize: "14px", fontWeight: "600",
     outline: "none", fontFamily: "inherit", cursor: "pointer",
   },
 
-  filterLabel: {
-    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.06em",
-  },
+  filterBar:   { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" },
+  filterGroup: { display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
   exportBtn: {
     backgroundColor: "var(--border)", color: "var(--text)", border: "none",
     borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
     fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
+  off: { opacity: 0.4, cursor: "not-allowed" },
 
   tableWrap: {
     backgroundColor: "var(--surface)", borderRadius: "12px",
@@ -512,19 +478,24 @@ const s = {
   },
   tr:  { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
   td:  { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
-  tdR: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap" },
+  tdR: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums" },
 
   typeEntr: {
-    backgroundColor: "rgba(255,0,122,0.15)", color: PRIMARY,
+    backgroundColor: "var(--pink-soft)", color: PRIMARY,
     borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "600",
   },
   typeComp: {
-    backgroundColor: "rgba(59,130,246,0.15)", color: BLUE,
+    backgroundColor: "var(--blue-soft)", color: BLUE,
     borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "600",
   },
   distBadge: {
     backgroundColor: "var(--border)", borderRadius: "5px",
     padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-3)",
+  },
+  protoBadge: {
+    backgroundColor: "var(--input-bg)", borderRadius: "5px",
+    padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
+    whiteSpace: "nowrap",
   },
 
   trSub: { backgroundColor: "var(--surface-raised)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" },

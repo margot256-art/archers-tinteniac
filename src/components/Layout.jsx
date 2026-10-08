@@ -12,7 +12,7 @@ const Journal         = lazy(() => import("./archer/Journal"));
 const Progression     = lazy(() => import("./archer/Progression"));
 const MesRecords      = lazy(() => import("./archer/MesRecords"));
 const Dashboard       = lazy(() => import("./coach/Dashboard"));
-const SeancesArchers  = lazy(() => import("./coach/SeancesArchers"));
+const CoachJournal    = lazy(() => import("./coach/CoachJournal"));
 const StatsCoach      = lazy(() => import("./coach/StatsCoach"));
 const Classement      = lazy(() => import("./coach/Classement"));
 const CoachGraph      = lazy(() => import("./coach/CoachGraph"));
@@ -29,7 +29,7 @@ const ARCHER_TABS = [
 
 const COACH_TABS = [
   { id: "dashboard",       label: "Tableau de bord" },
-  { id: "archer-sessions", label: "Séances archers" },
+  { id: "coach-journal",   label: "Journal" },
   { id: "coach-stats",     label: "Stats" },
   { id: "ranking",         label: "Classement" },
   { id: "coach-graphs",    label: "Graphiques" },
@@ -44,7 +44,7 @@ function renderTab(id, { onAllerNewSession } = {}) {
     case "progression":     return <Progression />;
     case "records":         return <MesRecords />;
     case "dashboard":       return <Dashboard />;
-    case "archer-sessions": return <SeancesArchers />;
+    case "coach-journal":   return <CoachJournal />;
     case "coach-stats":     return <StatsCoach />;
     case "ranking":         return <Classement />;
     case "coach-graphs":    return <CoachGraph />;

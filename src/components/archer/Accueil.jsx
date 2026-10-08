@@ -2,10 +2,11 @@ import { useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { PRIMARY as PINK, getPaille, getBlason, getCompte, fmtDate, fmtYM, CURRENT_SAISON } from "../../utils/seances";
+import { PRIMARY as PINK, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 
 const JOURS_30 = 30 * 24 * 60 * 60 * 1000;
+const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
 const todayYM = () => {
   const d = new Date();
@@ -57,7 +58,27 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
     };
   }, [seances, seuil30]);
 
-  const derniere = seances[0];
+  const parDistance = useMemo(() => {
+    const saisonSeances = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
+    const map = {};
+    for (const s of saisonSeances) {
+      if (!s.distance) continue;
+      if (!map[s.distance]) map[s.distance] = { nbSeances: 0, fleches: 0, scoreSum: 0, compteSum: 0 };
+      const g = map[s.distance];
+      g.nbSeances++;
+      g.fleches += getPaille(s) + getBlason(s) + getCompte(s);
+      const c = getCompte(s);
+      if (c > 0 && (s.score ?? 0) > 0) { g.scoreSum += s.score; g.compteSum += c; }
+    }
+    return DIST_ORDER.filter((d) => map[d]).map((d) => {
+      const g = map[d];
+      const moyenne = g.compteSum > 0 ? g.scoreSum / g.compteSum : null;
+      return {
+        distance: d, nbSeances: g.nbSeances, fleches: g.fleches,
+        moyenne, scoreMoyen: moyenne != null ? Math.round(moyenne * normFactor(d)) : null,
+      };
+    });
+  }, [seances]);
 
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;
@@ -106,18 +127,26 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
         </div>
       </section>
 
-      {derniere && (
-        <section style={s.section}>
-          <p style={s.sectionLabel}>Dernière séance</p>
-          <div style={s.derniereCard}>
-            <div style={s.derniereDate}>{fmtDate(derniere.date)}</div>
-            <div style={s.derniereDetail}>
-              {derniere.distance} · {derniere.type}{derniere.lieu ? ` · ${derniere.lieu}` : ""}
-              {derniere.score > 0 && <span style={s.derniereScore}>{derniere.score} pts</span>}
-            </div>
+      <section style={s.section}>
+        <p style={s.sectionLabel}>Par distance — saison {CURRENT_SAISON}</p>
+        {parDistance.length === 0 ? (
+          <div style={s.distEmpty}>Aucune séance cette saison.</div>
+        ) : (
+          <div style={s.distListe}>
+            {parDistance.map((d) => (
+              <div key={d.distance} style={s.distRow}>
+                <span style={s.distBadge}>{d.distance}</span>
+                <div style={s.distStats}>
+                  <DistStat valeur={d.nbSeances} label={d.nbSeances > 1 ? "séances" : "séance"} />
+                  <DistStat valeur={d.fleches.toLocaleString("fr-FR")} label="flèches" />
+                  <DistStat valeur={d.moyenne != null ? d.moyenne.toFixed(2) : "—"} label="moy./fl." accent={d.moyenne != null} />
+                  <DistStat valeur={d.scoreMoyen ?? "—"} label="score moy." accent={d.scoreMoyen != null} />
+                </div>
+              </div>
+            ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }
@@ -127,6 +156,15 @@ function Kpi({ valeur, label }) {
     <div style={s.kpi}>
       <div className="num" style={s.kpiValeur}>{valeur}</div>
       <div style={s.kpiLabel}>{label}</div>
+    </div>
+  );
+}
+
+function DistStat({ valeur, label, accent }) {
+  return (
+    <div style={s.distStat}>
+      <div className="num" style={{ ...s.distStatValeur, color: accent ? PINK : "var(--text)" }}>{valeur}</div>
+      <div style={s.distStatLabel}>{label}</div>
     </div>
   );
 }
@@ -189,14 +227,23 @@ const s = {
   kpiValeur: { fontSize: "26px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
   kpiLabel:  { fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
 
-  derniereCard: {
-    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
-    boxShadow: "var(--shadow-card)", padding: "16px 18px",
-    display: "flex", flexDirection: "column", gap: "4px",
+  distListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
+  distRow: {
+    backgroundColor: "var(--surface)", padding: "14px 16px",
+    display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap",
   },
-  derniereDate:   { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text)" },
-  derniereDetail: { fontSize: "12px", color: "var(--text-muted)", display: "flex", gap: "8px", alignItems: "baseline" },
-  derniereScore:  { fontFamily: "var(--mono)", color: PINK, fontWeight: "600" },
+  distBadge: {
+    fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text)",
+    backgroundColor: "var(--surface-raised)", borderRadius: "8px", padding: "4px 10px", flexShrink: 0,
+  },
+  distStats: { display: "flex", gap: "20px", flexWrap: "wrap", marginLeft: "auto" },
+  distStat: { textAlign: "right" },
+  distStatValeur: { fontSize: "15px", fontWeight: "700", letterSpacing: "-0.01em" },
+  distStatLabel: { fontSize: "10px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" },
+  distEmpty: {
+    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-card)", padding: "24px", textAlign: "center", color: "var(--text-dim)", fontSize: "13px",
+  },
 
   info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {

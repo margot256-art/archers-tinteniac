@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
 import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
+import FilterSelect from "../shared/FilterSelect";
 
 const JOURS_30 = 30 * 24 * 60 * 60 * 1000;
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -58,6 +59,14 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
     };
   }, [seances, seuil30]);
 
+  const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
+
+  const saisonOptions = useMemo(() => {
+    const set = new Set(seances.filter((s) => s.date).map((s) => getSaison(s.date)));
+    set.add(CURRENT_SAISON);
+    return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
+  }, [seances]);
+
   const parDistance = useMemo(() => {
     const vide = () => ({ nbSeances: 0, fleches: 0, scoreSum: 0, compteSum: 0 });
     const finalise = (g, d) => {
@@ -68,7 +77,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
       };
     };
 
-    const saisonSeances = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
+    const saisonSeances = seances.filter((s) => s.date && (filterSaison === "Toutes" || getSaison(s.date) === filterSaison));
     const map = {};
     for (const s of saisonSeances) {
       if (!s.distance) continue;
@@ -84,7 +93,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
       entr: finalise(map[d].entr, d),
       comp: finalise(map[d].comp, d),
     }));
-  }, [seances]);
+  }, [seances, filterSaison]);
 
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;
@@ -134,9 +143,12 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
       </section>
 
       <section style={s.section}>
-        <p style={s.sectionLabel}>Par distance — saison {CURRENT_SAISON}</p>
+        <div style={s.sectionHead}>
+          <p style={s.sectionLabel}>Par distance</p>
+          <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
+        </div>
         {parDistance.length === 0 ? (
-          <div style={s.distEmpty}>Aucune séance cette saison.</div>
+          <div style={s.distEmpty}>{filterSaison === "Toutes" ? "Aucune séance enregistrée." : "Aucune séance cette saison."}</div>
         ) : (
           <div style={s.distListe}>
             {parDistance.map((d) => (
@@ -218,6 +230,7 @@ const s = {
   },
 
   section: { display: "flex", flexDirection: "column", gap: "12px" },
+  sectionHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" },
   sectionLabel: {
     fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase",
     color: "var(--text-dim)", fontWeight: "600", margin: 0,

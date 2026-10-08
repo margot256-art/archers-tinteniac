@@ -21,9 +21,9 @@ function useResetRequests() {
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { PRIMARY, fmtDate, CURRENT_SAISON } from "../../utils/seances";
 
-const GREEN   = "#16a34a";
-const RED     = "#ef4444";
-const ORANGE  = "#f97316";
+const GREEN   = "var(--good)";
+const RED     = "var(--bad)";
+const ORANGE  = "var(--warn)";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -231,7 +231,7 @@ export default function Dashboard() {
                 </button>
               </div>
               {resetStatus[req.id] === "error" && (
-                <span style={{ fontSize: "11px", color: "#ef4444" }}>Erreur — archer introuvable ?</span>
+                <span style={{ fontSize: "11px", color: "var(--bad)" }}>Erreur — archer introuvable ?</span>
               )}
             </div>
           ))}
@@ -247,6 +247,7 @@ export default function Dashboard() {
           label="🏆 Archer du mois"
           value={archerDuMois ? archerDuMois.name.split(" ")[0] : "—"}
           sub={archerDuMois ? `${archerDuMois.n} séance${archerDuMois.n > 1 ? "s" : ""}` : undefined}
+          numeric={false}
         />
       </div>
 
@@ -345,11 +346,11 @@ export default function Dashboard() {
 
 // ── sous-composants ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub }) {
+function StatCard({ label, value, sub, numeric = true }) {
   return (
     <div style={s.statCard}>
       <div style={s.statLabel}>{label}</div>
-      <div style={s.statValue}>{value}</div>
+      <div className={numeric ? "num" : undefined} style={s.statValue}>{value}</div>
       {sub && <div style={s.statSub}>{sub}</div>}
     </div>
   );
@@ -464,11 +465,11 @@ const sModal = {
   overlay:      { position: "fixed", inset: 0, zIndex: 200, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" },
   card:         { backgroundColor: "var(--surface)", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "400px", boxShadow: "var(--shadow-modal)", display: "flex", flexDirection: "column", gap: "18px" },
   header:       { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  title:        { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
+  title:        { fontFamily: "var(--display)", fontSize: "16px", fontWeight: "600", color: "var(--text)" },
   close:        { background: "none", border: "none", color: "var(--text-dim)", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
   label:        { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
-  error:        { backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#ef4444" },
-  success:      { backgroundColor: "rgba(22,163,74,0.12)", border: "1px solid #16a34a", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "#16a34a", display: "flex", flexDirection: "column", gap: "12px" },
+  error:        { backgroundColor: "var(--bad-soft)", border: "1px solid var(--bad)", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "var(--bad)" },
+  success:      { backgroundColor: "var(--good-soft)", border: "1px solid var(--good)", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "var(--good)", display: "flex", flexDirection: "column", gap: "12px" },
   primaryBtn:   { backgroundColor: PRIMARY, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
   secondaryBtn: { background: "none", border: "1px solid var(--border-3)", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" },
 };
@@ -485,22 +486,22 @@ const s = {
   info:   { color: "var(--text-muted)", fontSize: "14px" },
   errMsg: {
     color: PRIMARY, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "rgba(255,0,122,0.1)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
+    backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
   },
 
   // réinitialisation mot de passe
   resetSection: {
     backgroundColor: "var(--surface)",
-    border: "1px solid #f97316",
+    border: "1px solid var(--warn)",
     borderRadius: "12px",
     padding: "16px 20px",
     display: "flex", flexDirection: "column", gap: "12px",
-    boxShadow: "0 2px 10px rgba(249,115,22,0.15)",
+    boxShadow: "var(--shadow-card)",
   },
   resetHeader: { display: "flex", alignItems: "center", gap: "10px" },
   resetTitle:  { fontSize: "13px", fontWeight: "700", color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em" },
   resetBadge:  {
-    backgroundColor: "#f97316", color: "#fff",
+    backgroundColor: "var(--warn)", color: "#fff",
     borderRadius: "10px", padding: "1px 7px",
     fontSize: "11px", fontWeight: "700",
   },
@@ -517,26 +518,13 @@ const s = {
     outline: "none", fontFamily: "inherit",
   },
   resetBtn: {
-    backgroundColor: "#f97316", color: "#fff", border: "none",
+    backgroundColor: "var(--warn)", color: "#fff", border: "none",
     borderRadius: "7px", padding: "7px 14px",
     fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
     whiteSpace: "nowrap",
   },
 
-  // bannière
-  banner: {
-    backgroundColor: "var(--blue-deep)",
-    borderRadius: "12px",
-    padding: "20px 28px",
-    boxShadow: "var(--shadow-card)",
-  },
-  bannerTitle: {
-    fontSize: "20px", fontWeight: "700", color: "var(--text)",
-    letterSpacing: "-0.01em",
-  },
-
   // stat cards
-  cards: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" },
   statCard: {
     backgroundColor: "var(--surface)", borderRadius: "12px",
     boxShadow: "var(--shadow-card)",
@@ -555,7 +543,7 @@ const s = {
 
   // sections
   section:      { display: "flex", flexDirection: "column", gap: "10px" },
-  sectionTitle: { fontSize: "14px", fontWeight: "700", color: "var(--text-2)", margin: 0 },
+  sectionTitle: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text-2)", margin: 0 },
   empty:        { color: "var(--text-dim)", fontSize: "14px", padding: "24px", textAlign: "center" },
 
   // dernière séance (sans fond)
@@ -582,7 +570,7 @@ const s = {
   progName:  { fontSize: "13px", fontWeight: "700", color: "var(--text)" },
   progPrev:  { fontSize: "11px", color: "var(--text-dim)" },
   progRow:   { display: "flex", alignItems: "baseline", gap: "8px" },
-  progCurr:  { fontSize: "26px", fontWeight: "800", color: "var(--text)", letterSpacing: "-0.02em" },
+  progCurr:  { fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums", fontSize: "26px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
   progDelta: { fontSize: "14px", fontWeight: "700" },
 
   // volume vs objectif

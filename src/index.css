@@ -34,9 +34,12 @@
   --blue:      #3b82f6;
   --blue-soft: rgba(59,130,246,0.14);
   --blue-line: rgba(59,130,246,0.4);
-  --good:  #3fa06f;
-  --warn:  #d99a2b;
-  --bad:   #e5484d;
+  --good:      #3fa06f;
+  --good-soft: rgba(63,160,111,0.14);
+  --warn:      #d99a2b;
+  --warn-soft: rgba(217,154,43,0.14);
+  --bad:       #e5484d;
+  --bad-soft:  rgba(229,72,77,0.14);
 
   --sans: 'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --display: 'Fraunces', Georgia, serif;
@@ -77,6 +80,9 @@
 
   --pink-soft: rgba(255,0,122,0.1);
   --blue-soft: rgba(59,130,246,0.1);
+  --good-soft: rgba(63,160,111,0.1);
+  --warn-soft: rgba(217,154,43,0.1);
+  --bad-soft:  rgba(229,72,77,0.1);
 
   color-scheme: light;
 }

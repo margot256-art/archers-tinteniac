@@ -1,6 +1,10 @@
 import { useRef } from "react";
 import { PINK } from "./exerciceStyles";
-import { RAYON_MAX, RAYON_X, ANNEAUX, positionDepuisClic, zoneDepuisRayon } from "./cibleBlason";
+import { RAYON_MAX, rayonX, anneauxBlason, positionDepuisClic, zoneDepuisRayon } from "./cibleBlason";
+
+// Un vrai trispot ne porte que les zones 10 à 6 (les flèches tombent toutes
+// près du centre vu la petite taille de chaque spot) — pas de zones 5 à 1.
+const NB_ANNEAUX = 5;
 
 // Un blason trispot : une petite cible par flèche de la volée (3 pour une
 // épreuve salle), au lieu d'un seul grand blason pour toutes les flèches.
@@ -15,7 +19,7 @@ function Spot({ index, code, impact, actif, rempli, onImpact, onSelectionner, di
     if (rempli) { onSelectionner?.(index); return; }
     if (!actif) return;
     const { x, y, rayon } = positionDepuisClic(svgRef.current, e.clientX, e.clientY);
-    onImpact?.(zoneDepuisRayon(rayon), { x, y });
+    onImpact?.(zoneDepuisRayon(rayon, NB_ANNEAUX), { x, y });
   };
 
   return (
@@ -29,8 +33,8 @@ function Spot({ index, code, impact, actif, rempli, onImpact, onSelectionner, di
       onClick={handleClick}
     >
       <g transform="translate(100,100)">
-        {ANNEAUX.map((a) => <circle key={a.valeur} r={a.r} fill={a.fill} stroke={a.stroke} strokeWidth="0.5" />)}
-        <circle r={RAYON_X} fill="none" stroke="#b8942a" strokeWidth="0.6" />
+        {anneauxBlason(NB_ANNEAUX).map((a) => <circle key={a.valeur} r={a.r} fill={a.fill} stroke={a.stroke} strokeWidth="0.5" />)}
+        <circle r={rayonX(NB_ANNEAUX)} fill="none" stroke="#b8942a" strokeWidth="0.6" />
         {rempli && impact && (
           <circle cx={impact.x * RAYON_MAX} cy={impact.y * RAYON_MAX} r="7" fill={PINK} stroke="#fff" strokeWidth="1.2" />
         )}

@@ -326,7 +326,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
             <CibleSaisie
               onImpact={saisirCode}
               disabled={saisieDisabled}
-              impactsRecents={impactEnCours.filter(Boolean)}
+              flechesRecentes={voleeEnCours.map((code, i) => (impactEnCours[i] ? { code, ...impactEnCours[i] } : null)).filter(Boolean)}
               impactsEstompes={impacts.flat().filter(Boolean)}
             />
           ) : modeSaisie === "trispot" ? (

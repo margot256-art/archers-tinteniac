@@ -4,7 +4,9 @@ import { RAYON_MAX, rayonX, anneauxBlason, positionDepuisClic, zoneDepuisRayon }
 const NB_ANNEAUX = 10; // blason complet : zones 10 à 1
 
 // `onImpact(code, position)` — position normalisée (x, y dans [-1,1], y positif = vers le bas).
-export default function CibleSaisie({ onImpact, impactsRecents = [], impactsEstompes = [], disabled }) {
+// `flechesRecentes` : [{ code, x, y }, ...] de la volée en cours — affichées avec leur valeur,
+// pour voir d'un coup d'œil le récap des flèches déjà tirées sur cette volée.
+export default function CibleSaisie({ onImpact, flechesRecentes = [], impactsEstompes = [], disabled }) {
   const svgRef = useRef(null);
 
   const handleClick = (e) => {
@@ -29,9 +31,14 @@ export default function CibleSaisie({ onImpact, impactsRecents = [], impactsEsto
           <circle key={`e${i}`} cx={p.x * RAYON_MAX} cy={p.y * RAYON_MAX} r="2.4"
             fill="rgba(255,0,122,0.3)" stroke="rgba(0,0,0,0.3)" strokeWidth="0.4" />
         ))}
-        {impactsRecents.map((p, i) => (
-          <circle key={`r${i}`} cx={p.x * RAYON_MAX} cy={p.y * RAYON_MAX} r="3"
-            fill="#FF007A" stroke="#fff" strokeWidth="0.6" />
+        {flechesRecentes.map((f, i) => (
+          <g key={`r${i}`}>
+            <circle cx={f.x * RAYON_MAX} cy={f.y * RAYON_MAX} r="7" fill="#FF007A" stroke="#fff" strokeWidth="1.2" />
+            <text x={f.x * RAYON_MAX} y={f.y * RAYON_MAX + 4.5} textAnchor="middle" fontSize="11" fontWeight="700"
+              fill="#fff" stroke="#000" strokeWidth="0.35" paintOrder="stroke" style={{ fontFamily: "inherit" }}>
+              {f.code}
+            </text>
+          </g>
         ))}
       </g>
     </svg>

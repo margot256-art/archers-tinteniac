@@ -3,7 +3,7 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { normFactor } from "../../../utils/seances";
-import { pointsZone } from "../../../utils/blason";
+import { pointsZone, couleurZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles } from "./exerciceStyles";
@@ -167,11 +167,15 @@ export default function ExercicePotentielMax({ seanceInfo, seanceId, existant, o
         <ZoneButtons onPress={ajouterFleche} disabled={voleeEnCours.length >= MAX_FLECHES} />
         {voleeEnCours.length > 0 && (
           <div style={s.recap}>
-            {voleeEnCours.map((code, i) => (
-              <span key={i} style={{ ...s.recapItem, ...(meilleur3(voleeEnCours).includes(code) ? {} : s.recapItemHorsJeu) }}>
-                {code}
-              </span>
-            ))}
+            {voleeEnCours.map((code, i) => {
+              const c = couleurZone(code);
+              const horsJeu = !meilleur3(voleeEnCours).includes(code);
+              return (
+                <span key={i} style={{ ...s.recapItem, backgroundColor: c.bg, color: c.text, ...(horsJeu ? s.recapItemHorsJeu : {}) }}>
+                  {code}
+                </span>
+              );
+            })}
           </div>
         )}
         <button style={s.validerBtn} onClick={validerVolee} disabled={voleeEnCours.length < MIN_FLECHES}>
@@ -205,5 +209,5 @@ function Field({ label, children }) {
 
 const s = {
   ...exerciceStyles,
-  recapItemHorsJeu: { color: "var(--text-dim)", backgroundColor: "var(--surface-sub)", textDecoration: "line-through" },
+  recapItemHorsJeu: { opacity: 0.4, textDecoration: "line-through" },
 };

@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
-import { pointsZone } from "../../../utils/blason";
+import { pointsZone, couleurZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles } from "./exerciceStyles";
@@ -181,11 +181,15 @@ export default function ExerciceZone({ seanceInfo, seanceId, existant, onTermine
         <ZoneButtons onPress={ajouterFleche} disabled={voleeEnCours.length >= fpv} />
         {voleeEnCours.length > 0 && (
           <div style={s.recap}>
-            {voleeEnCours.map((code, i) => (
-              <span key={i} style={{ ...s.recapItem, ...(dansLaZone(code, zoneActuelle) ? {} : s.recapItemHorsZone) }}>
-                {code}
-              </span>
-            ))}
+            {voleeEnCours.map((code, i) => {
+              const c = couleurZone(code);
+              const horsZone = !dansLaZone(code, zoneActuelle);
+              return (
+                <span key={i} style={{ ...s.recapItem, backgroundColor: c.bg, color: c.text, ...(horsZone ? s.recapItemHorsZone : {}) }}>
+                  {code}
+                </span>
+              );
+            })}
           </div>
         )}
         <button style={s.validerBtn} onClick={validerVolee} disabled={voleeEnCours.length !== fpv}>
@@ -220,5 +224,5 @@ function Field({ label, children }) {
 const s = {
   ...exerciceStyles,
   zoneActuelle: { fontSize: "13px", color: "var(--text-2)" },
-  recapItemHorsZone: { color: "var(--text-dim)", backgroundColor: "var(--surface-sub)" },
+  recapItemHorsZone: { opacity: 0.45 },
 };

@@ -3,7 +3,7 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { normFactor } from "../../../utils/seances";
-import { pointsZone } from "../../../utils/blason";
+import { pointsZone, couleurZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles, PINK } from "./exerciceStyles";
@@ -161,9 +161,10 @@ export default function ExerciceTest100({ seanceInfo, seanceId, existant, onTerm
         <ZoneButtons onPress={ajouterFleche} />
         {nbEnCours > 0 && (
           <div style={s.recap}>
-            {Object.entries(voleeEnCours).map(([code, n]) => (
-              <span key={code} style={s.recapItem}>{code} ×{n}</span>
-            ))}
+            {Object.entries(voleeEnCours).map(([code, n]) => {
+              const c = couleurZone(code);
+              return <span key={code} style={{ ...s.recapItem, backgroundColor: c.bg, color: c.text }}>{code} ×{n}</span>;
+            })}
           </div>
         )}
         <button style={s.validerBtn} onClick={validerVolee} disabled={nbEnCours === 0}>

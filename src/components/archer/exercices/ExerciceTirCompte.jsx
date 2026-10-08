@@ -8,6 +8,7 @@ import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { useChartColors } from "../../../hooks/useChartColors";
 import { normFactor } from "../../../utils/seances";
+import { couleurZone } from "../../../utils/blason";
 import { flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, dispersion } from "../../../utils/tirCompte";
 import ZoneButtons from "./ZoneButtons";
 import CibleSaisie from "./CibleSaisie";
@@ -288,14 +289,20 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
 
           {voleeEnCours.length > 0 && (
             <div style={s.recap}>
-              {voleeEnCours.map((code, i) => (
-                <button key={i} type="button"
-                  style={{ ...s.recapItem, ...(selection === i ? s.recapItemSelection : {}) }}
-                  onClick={() => setSelection(selection === i ? null : i)}
-                >
-                  {code}
-                </button>
-              ))}
+              {voleeEnCours.map((code, i) => {
+                const c = couleurZone(code);
+                return (
+                  <button key={i} type="button"
+                    style={{
+                      ...s.recapItem, backgroundColor: c.bg, color: c.text,
+                      ...(selection === i ? s.recapItemSelection : {}),
+                    }}
+                    onClick={() => setSelection(selection === i ? null : i)}
+                  >
+                    {code}
+                  </button>
+                );
+              })}
             </div>
           )}
           {selection !== null && <p style={s.aide}>Touchez la nouvelle valeur pour la flèche n°{selection + 1}.</p>}
@@ -413,20 +420,28 @@ function VoleeHistorique({ volee, ouverte, selection, onOuvrir, onFermer, onSele
     <div style={s.histoRow}>
       <button type="button" style={s.histoHead} onClick={ouverte ? onFermer : onOuvrir}>
         <span style={s.histoNum}>V{volee.index + 1}</span>
-        <span style={s.histoCodes}>{volee.codes.join(" · ")}</span>
+        <span style={s.histoCodes}>
+          {volee.codes.map((c, i) => {
+            const col = couleurZone(c);
+            return <span key={i} style={{ ...s.histoPastille, backgroundColor: col.bg, color: col.text }}>{c}</span>;
+          })}
+        </span>
         <span style={s.histoTotal}>{volee.total} pts</span>
       </button>
       {ouverte && (
         <div style={s.histoEdit}>
           <div style={s.recap}>
-            {volee.codes.map((c, i) => (
-              <button key={i} type="button"
-                style={{ ...s.recapItem, ...(selection === i ? s.recapItemSelection : {}) }}
-                onClick={() => onSelectionner(selection === i ? null : i)}
-              >
-                {c}
-              </button>
-            ))}
+            {volee.codes.map((c, i) => {
+              const col = couleurZone(c);
+              return (
+                <button key={i} type="button"
+                  style={{ ...s.recapItem, backgroundColor: col.bg, color: col.text, ...(selection === i ? s.recapItemSelection : {}) }}
+                  onClick={() => onSelectionner(selection === i ? null : i)}
+                >
+                  {c}
+                </button>
+              );
+            })}
           </div>
           <p style={s.aide}>{selection != null ? "Touchez la nouvelle valeur." : "Touchez une flèche à corriger."}</p>
           <ZoneButtons onPress={onRemplacer} disabled={selection === null} />
@@ -483,7 +498,11 @@ const s = {
     padding: "8px 12px", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
   },
   histoNum: { fontSize: "11px", fontWeight: "700", color: "var(--text-dim)", flexShrink: 0 },
-  histoCodes: { fontFamily: "var(--mono)", fontSize: "12px", color: "var(--text-2)", flex: "1 1 auto" },
+  histoCodes: { display: "flex", gap: "4px", flexWrap: "wrap", flex: "1 1 auto" },
+  histoPastille: {
+    fontFamily: "var(--mono)", fontSize: "11px", fontWeight: "700",
+    borderRadius: "5px", padding: "2px 6px", border: "1px solid rgba(0,0,0,0.25)",
+  },
   histoTotal: { fontFamily: "var(--mono)", fontSize: "13px", fontWeight: "700", color: "var(--text)" },
   histoEdit: {
     display: "flex", flexDirection: "column", gap: "10px",

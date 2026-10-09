@@ -44,7 +44,11 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
   const [type,     setType]     = useState(existant?.type ?? seanceInfo?.type ?? "Entraînement");
   const [lieu,     setLieu]     = useState(existant?.lieu ?? seanceInfo?.lieu ?? "");
 
-  const [flechesParVolee, setFlechesParVolee] = useState(6);
+  // Texte brut du champ, pour pouvoir le vider et retaper un nombre ; le nombre
+  // utilisé n'est valide que s'il est entre 1 et MAX_PAR_VOLEE.
+  const [saisieFpv, setSaisieFpv] = useState("6");
+  const flechesParVolee = Math.min(MAX_PAR_VOLEE, parseInt(saisieFpv) || 0);
+  const fpvValide = flechesParVolee >= 1;
   const [support,         setSupport]         = useState("blason");
   const [volees,           setVolees]          = useState(existant?.volees ?? []); // [{ support, fleches }]
   const [commentaire,     setCommentaire]     = useState(existant?.commentaire ?? "");
@@ -61,6 +65,7 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
   }, [volees]);
 
   const ajouterVolee = () => {
+    if (!fpvValide) return;
     setVolees((prev) => [...prev, { support, fleches: flechesParVolee }]);
   };
 
@@ -178,8 +183,12 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
         <Field label="Flèches / volée">
           <input
             type="number" min="1" max={MAX_PAR_VOLEE}
-            value={flechesParVolee}
-            onChange={(e) => setFlechesParVolee(Math.max(1, Math.min(MAX_PAR_VOLEE, parseInt(e.target.value) || 1)))}
+            inputMode="numeric"
+            value={saisieFpv}
+            onChange={(e) => {
+              const chiffres = e.target.value.replace(/\D/g, "");
+              setSaisieFpv(chiffres === "" ? "" : String(Math.min(MAX_PAR_VOLEE, parseInt(chiffres))));
+            }}
             style={s.input}
           />
         </Field>
@@ -204,7 +213,12 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
           style={{ ...s.corrigerBtn, ...(volees.length === 0 ? s.corrigerBtnOff : {}) }}
           onClick={() => ajusterDerniere(-1)} disabled={volees.length === 0}
         >−1</button>
-        <button style={s.voleeBtn} onClick={ajouterVolee}>+ Volée ({flechesParVolee} fl.)</button>
+        <button
+          style={{ ...s.voleeBtn, ...(fpvValide ? {} : { opacity: 0.5, cursor: "not-allowed" }) }}
+          onClick={ajouterVolee} disabled={!fpvValide}
+        >
+          {fpvValide ? `+ Volée (${flechesParVolee} fl.)` : "+ Volée"}
+        </button>
         <button
           style={{ ...s.corrigerBtn, ...(volees.length === 0 ? s.corrigerBtnOff : {}) }}
           onClick={() => ajusterDerniere(1)} disabled={volees.length === 0}

@@ -8,6 +8,7 @@ const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 // ── Imports lazy (chargement à la demande) ─────────────────────────────────
 const Accueil         = lazy(() => import("./archer/Accueil"));
 const SeanceTab       = lazy(() => import("./archer/SeanceTab"));
+const SaisieManuelle  = lazy(() => import("./archer/exercices/SaisieManuelle"));
 const Journal         = lazy(() => import("./archer/Journal"));
 const Progression     = lazy(() => import("./archer/Progression"));
 const MesRecords      = lazy(() => import("./archer/MesRecords"));
@@ -32,10 +33,11 @@ const COACH_TABS = [
   { id: "objectives",         label: "Objectifs" },
 ];
 
-function renderTab(id, { onAllerNewSession } = {}) {
+function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil } = {}) {
   switch (id) {
-    case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} />;
-    case "new-session":      return <SeanceTab />;
+    case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} onSaisieManuelle={onAllerSaisieManuelle} />;
+    case "new-session":      return <SeanceTab onQuitter={onAllerAccueil} />;
+    case "saisie-manuelle":  return <SaisieManuelle onTermine={onAllerAccueil} onAnnuler={onAllerAccueil} />;
     case "journal":          return <Journal />;
     case "progression":      return <Progression />;
     case "records":          return <MesRecords />;
@@ -75,7 +77,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
   };
 
   const subTabs = section === "coach" ? COACH_TABS : ARCHER_TABS;
-  const enSeance = activeTab === "new-session";
+  const enSeance = activeTab === "new-session" || activeTab === "saisie-manuelle";
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--app-bg)", display: "flex", flexDirection: "column" }}>
@@ -183,7 +185,11 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
 
       <main role="tabpanel" className="layout-main">
         <Suspense fallback={<div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Chargement…</div>}>
-          {renderTab(activeTab, { onAllerNewSession: () => setActiveTab("new-session") })}
+          {renderTab(activeTab, {
+            onAllerNewSession:     () => setActiveTab("new-session"),
+            onAllerSaisieManuelle: () => setActiveTab("saisie-manuelle"),
+            onAllerAccueil:        () => setActiveTab("accueil"),
+          })}
         </Suspense>
       </main>
     </div>

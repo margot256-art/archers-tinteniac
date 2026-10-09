@@ -13,7 +13,7 @@ const todayYM = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-export default function Accueil({ onReprendre, onNouvelleSeance }) {
+export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuelle }) {
   const { user } = useAuth();
   const { seances, loading, error } = useSeances();
   const rawObjectif = useObjectif();
@@ -102,7 +102,10 @@ export default function Accueil({ onReprendre, onNouvelleSeance }) {
           <p style={s.heroEyebrow}>Bonjour</p>
           <p style={s.heroTitre}>Prêt à tirer, {user?.prenom} ?</p>
           <p style={s.heroSous}>Vos séances, vos exercices et vos scores — même sans réseau.</p>
-          <button style={s.cta} onClick={onNouvelleSeance}>＋ Nouvelle séance</button>
+          <div style={s.ctaRow}>
+            <button style={s.cta} onClick={onNouvelleSeance}>▶ Séance en direct</button>
+            <button style={s.ctaSecondaire} onClick={onSaisieManuelle}>✎ Saisie manuelle</button>
+          </div>
         </div>
       )}
 
@@ -213,6 +216,13 @@ const s = {
   cta: {
     position: "relative", backgroundColor: PINK, color: "#fff", border: "none",
     borderRadius: "10px", padding: "12px 22px", fontSize: "14px", fontWeight: "700",
+    cursor: "pointer", fontFamily: "inherit",
+  },
+  ctaRow: { position: "relative", display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" },
+  ctaSecondaire: {
+    position: "relative", backgroundColor: "transparent", color: "var(--text)",
+    border: "1.5px solid var(--border-2)", borderRadius: "10px",
+    padding: "12px 22px", fontSize: "14px", fontWeight: "700",
     cursor: "pointer", fontFamily: "inherit",
   },
 

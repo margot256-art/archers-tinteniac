@@ -5,6 +5,7 @@ import { fmtDate } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
 import { lireSeanceEnCours, ecrireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
+import BoutonSupprimer from "./exercices/BoutonSupprimer";
 import { exerciceStyles, PINK } from "./exercices/exerciceStyles";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -15,7 +16,7 @@ const nouveauSeanceId = () =>
 
 export default function NouvelleSeanceMulti({ onQuitter }) {
   const { user }     = useAuth();
-  const { seances }  = useSeances();
+  const { seances, updateCommentaireSeance, supprimerSeance } = useSeances();
 
   const [sauvegarde] = useState(() => lireSeanceEnCours(user?.id));
 
@@ -26,6 +27,9 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
   const [distance, setDistance] = useState(sauvegarde?.distance ?? "18m");
   const [type,     setType]     = useState(sauvegarde?.type ?? "Entraînement");
   const [lieu,     setLieu]     = useState(sauvegarde?.lieu ?? "");
+  const [commentaireSeance, setCommentaireSeance] = useState(sauvegarde?.commentaireSeance ?? "");
+  const [enregistrement, setEnregistrement] = useState(false);
+  const [erreur,         setErreur]         = useState(null);
 
   const [enCours,    setEnCours]    = useState(null); // id de protocole en cours de saisie (nouvel exercice)
   const [editingDoc, setEditingDoc] = useState(null); // exercice déjà fait, en cours de modification
@@ -40,7 +44,39 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
     setPhase("en_cours");
   };
 
-  const terminerSeance = () => {
+  const majCommentaireSeance = (texte) => {
+    setCommentaireSeance(texte);
+    ecrireSeanceEnCours(user?.id, { seanceId, date, distance, type, lieu, commentaireSeance: texte });
+  };
+
+  const terminerSeance = async () => {
+    if (mesResultats.length > 0 && commentaireSeance.trim()) {
+      setEnregistrement(true);
+      setErreur(null);
+      try {
+        await updateCommentaireSeance(mesResultats.map((r) => r.id), commentaireSeance);
+      } catch (err) {
+        console.error("[NouvelleSeanceMulti] erreur commentaire :", err);
+        setErreur("Impossible d'enregistrer le commentaire de séance.");
+        setEnregistrement(false);
+        return;
+      }
+    }
+    effacerSeanceEnCours(user?.id);
+    onQuitter?.();
+  };
+
+  const supprimerLaSeance = async () => {
+    setEnregistrement(true);
+    setErreur(null);
+    try {
+      await supprimerSeance(mesResultats.map((r) => r.id));
+    } catch (err) {
+      console.error("[NouvelleSeanceMulti] erreur suppression :", err);
+      setErreur("Impossible de supprimer la séance. Réessayez.");
+      setEnregistrement(false);
+      return;
+    }
     effacerSeanceEnCours(user?.id);
     onQuitter?.();
   };
@@ -114,7 +150,7 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
     <div style={s.page}>
       <div style={s.header}>
         <h2 style={s.title}>Séance du {fmtDate(date)}</h2>
-        <button style={s.annulerBtn} onClick={terminerSeance}>Terminer la séance</button>
+        <button style={s.annulerBtn} onClick={terminerSeance} disabled={enregistrement}>Terminer la séance</button>
       </div>
       <p style={s.resume}>{distance} · {type}{lieu ? ` · ${lieu}` : ""}</p>
 
@@ -148,7 +184,22 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
       </div>
 
       {mesResultats.length > 0 && (
-        <button style={s.terminerBtn} onClick={terminerSeance}>✓ Terminer la séance</button>
+        <>
+          <Field label="Commentaire de séance (optionnel)">
+            <textarea
+              value={commentaireSeance}
+              onChange={(e) => majCommentaireSeance(e.target.value)}
+              style={s.textarea}
+              rows={3}
+              placeholder="Ressenti général, conditions, points travaillés…"
+            />
+          </Field>
+          {erreur && <p style={s.erreur}>{erreur}</p>}
+          <button style={s.terminerBtn} onClick={terminerSeance} disabled={enregistrement}>
+            {enregistrement ? "Enregistrement…" : "✓ Terminer la séance"}
+          </button>
+          <BoutonSupprimer label="la séance" onConfirm={supprimerLaSeance} disabled={enregistrement} />
+        </>
       )}
     </div>
   );
@@ -189,4 +240,7 @@ const s = {
 
   ajoutZone: { display: "flex", flexDirection: "column", gap: "8px" },
   ajoutLabel: { fontSize: "12px", color: "var(--text-dim)" },
+
+  textarea: { ...exerciceStyles.input, resize: "vertical", minHeight: "70px", lineHeight: 1.4 },
+  erreur: { fontSize: "13px", color: PINK, margin: 0 },
 };

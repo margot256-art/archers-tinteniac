@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, writeBatch } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 export function useAllSeances() {
@@ -32,5 +32,15 @@ export function useAllSeances() {
     }
   };
 
-  return { seances, loading, error, deleteSeance };
+  // Retour du coach sur une journée d'un archer : recopié sur chaque exercice de
+  // la journée, comme le commentaire de séance de l'archer.
+  const updateRetourCoach = async (ids, texte) => {
+    const batch = writeBatch(db);
+    for (const id of ids) {
+      batch.update(doc(db, "seances", id), { retourCoach: texte.trim() || null });
+    }
+    await batch.commit();
+  };
+
+  return { seances, loading, error, deleteSeance, updateRetourCoach };
 }

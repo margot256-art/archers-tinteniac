@@ -4,8 +4,60 @@ import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
-import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
+import { PROTOCOLE_PAR_ID, protocoleDe } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
+import DetailJour from "./DetailJour";
+
+const nomExercice = (s) => PROTOCOLE_PAR_ID[protocoleDe(s)]?.nom ?? s.protocole ?? "—";
+// Recherche insensible à la casse et aux accents.
+const sansAccents = (txt) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const uniques     = (vals) => [...new Set(vals.filter(Boolean))].join(" / ");
+const somme       = (docs, f) => docs.reduce((n, s) => n + f(s), 0);
+
+// Score cumulé, moyenne par flèche et score ramené sur 600 (salle) ou 720
+// (extérieur), calculés sur les seules flèches comptées avec un score. Pas de
+// score ramené si les tirs comptés mélangent plusieurs distances.
+const statsTir = (docs) => {
+  const { ts, tmoy, tscoreMoy } = buildMonthTotals(docs);
+  return { score: ts, moyenne: tmoy, ramene: tscoreMoy };
+};
+const fmtScore   = (st) => (st.score > 0 ? st.score : "");
+const fmtMoyenne = (st) => (st.moyenne != null ? st.moyenne.toFixed(2) : "");
+const fmtRamene  = (st) => (st.ramene != null ? st.ramene : "");
+
+// « Séance – … » puis « Exercice – … » pour chaque exercice commenté, un commentaire par ligne.
+const commentaireDuJour = (docs) => {
+  const seance = [...new Set(docs.map((d) => d.commentaireSeance).filter(Boolean))].map((c) => `Séance – ${c}`);
+  const exos   = docs.filter((d) => d.commentaire).map((d) => `${nomExercice(d)} – ${d.commentaire}`);
+  return [...seance, ...exos].join("\n");
+};
+
+// Entraînement : une ligne par archer, par jour et par distance, les exercices regroupés.
+// Compétition : une ligne par enregistrement, jamais regroupée.
+function regrouperParJour(docs) {
+  const map = new Map();
+  for (const s of docs) {
+    const cle = s.type === "Compétition" ? `comp|${s.id}` : `${s.date}|${s.archer}|${s.distance}|entr`;
+    if (!map.has(cle)) map.set(cle, []);
+    map.get(cle).push(s);
+  }
+  return [...map.entries()].map(([cle, ds]) => {
+    const tries = [...ds].sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
+    return {
+      id: cle, docs: tries,
+      date: tries[0].date, archer: tries[0].archer,
+      type:     uniques(tries.map((d) => d.type)),
+      lieu:     uniques(tries.map((d) => d.lieu)),
+      distance: uniques(tries.map((d) => d.distance)),
+      paille:   somme(tries, getPaille),
+      blason:   somme(tries, getBlason),
+      compte:   somme(tries, getCompte),
+      tir:      statsTir(tries),
+      commentaire: commentaireDuJour(tries),
+      retourCoach: tries.find((d) => d.retourCoach)?.retourCoach ?? "",
+    };
+  });
+}
 
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
@@ -13,11 +65,14 @@ const TYPES     = ["Tous", "Entraînement", "Compétition"];
 // ── Composant principal ───────────────────────────────────────────────────────
 
 export default function CoachJournal() {
-  const { seances, loading, error } = useAllSeances();
+  const { seances, loading, error, updateRetourCoach } = useAllSeances();
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
   const [filterArcher, setFilterArcher] = useState("Tous");
   const [filterType,   setFilterType]   = useState("Tous");
   const [filterDist,   setFilterDist]   = useState("Toutes");
+  const [avecComment,  setAvecComment]  = useState(false);
+  const [recherche,    setRecherche]    = useState("");
+  const [ouverte,      setOuverte]      = useState(null); // id de la ligne (jour + archer) ouverte en détail
 
   const saisons = useMemo(() => {
     const set = new Set(seances.filter(s => s.date).map(s => getSaison(s.date)));
@@ -44,9 +99,19 @@ export default function CoachJournal() {
     [saisonSeances, filterArcher, filterType, filterDist]
   );
 
+  const lignes = useMemo(() => {
+    const cherche = sansAccents(recherche.trim());
+    return regrouperParJour(filtered).filter((l) => {
+      if (avecComment && !l.commentaire) return false;
+      if (cherche && !sansAccents(`${l.commentaire}\n${l.retourCoach}`).includes(cherche)) return false;
+      return true;
+    });
+  }, [filtered, avecComment, recherche]);
+  const nbJoursSaison = useMemo(() => regrouperParJour(saisonSeances).length, [saisonSeances]);
+
   const groupedByMonth = useMemo(() => {
     const map = {};
-    for (const s of filtered) {
+    for (const s of lignes) {
       if (!s.date) continue;
       const month = s.date.slice(0, 7);
       if (!map[month]) map[month] = [];
@@ -56,32 +121,40 @@ export default function CoachJournal() {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([month, rows]) => ({
         month,
-        rows: rows.sort((a, b) => b.date.localeCompare(a.date)),
+        rows: rows.sort((a, b) =>
+          b.date.localeCompare(a.date)
+          || (a.archer ?? "").localeCompare(b.archer ?? "")
+          || (a.docs[0].createdAt?.seconds ?? 0) - (b.docs[0].createdAt?.seconds ?? 0)),
       }));
-  }, [filtered]);
+  }, [lignes]);
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
-  const COL_HEADS  = ["Date", "Archer", "Type", "Lieu", "Dist.", "Protocole", "Paille", "Blason", "Compté", "Résultat", "Commentaire"];
+  const COL_HEADS  = ["Date", "Archer", "Type", "Dist.", "Paille", "Blason", "Compté", "Score", "Moy.", "Score moy.", "Commentaire"];
   const NC         = 11;
-  const RIGHT_COLS = [6, 7, 8, 9];
+  const RIGHT_COLS = [4, 5, 6, 7, 8, 9];
+  const WRAP_COLS  = [0, 10];
 
   const exportTitle = filterArcher !== "Tous"
     ? `Journal — ${filterArcher} — Saison ${filterSaison}`
     : `Journal — Saison ${filterSaison}`;
 
-  const rowCells = (s) => {
-    const p    = getPaille(s);
-    const b    = getBlason(s);
-    const c    = getCompte(s);
-    const proto = PROTOCOLE_PAR_ID[protocoleDe(s)];
-    const ind   = indicateurExercice(protocoleDe(s), s);
+  const rowCells = (l) => [
+    [l.date, l.lieu].filter(Boolean).join("\n"), l.archer || "", l.type || "", l.distance || "",
+    l.paille, l.blason, l.compte,
+    fmtScore(l.tir), fmtMoyenne(l.tir), fmtRamene(l.tir),
+    [l.commentaire, l.retourCoach && `Coach – ${l.retourCoach}`].filter(Boolean).join("\n"),
+  ];
+
+  // Les totaux mensuels se calculent sur les exercices, pas sur les lignes regroupées.
+  const docsDe = (group) => group.flatMap((l) => l.docs);
+  const ligneTotal = (month, group) => {
+    const docs = docsDe(group);
+    const { tp, tb, tt } = buildMonthTotals(docs);
+    const st = statsTir(docs);
     return [
-      s.date || "", s.archer || "", s.type || "", s.lieu || "", s.distance || "",
-      proto?.nom ?? s.protocole ?? "—",
-      p, b, c,
-      ind?.texte ?? "—",
-      s.commentaire || "",
+      `Total — ${fmtYM(month)}`, tt ? `${tt} fl.` : "", "", "",
+      tp, tb, somme(docs, getCompte), fmtScore(st), fmtMoyenne(st), fmtRamene(st), "",
     ];
   };
 
@@ -110,11 +183,7 @@ export default function CoachJournal() {
         rowMeta.push({ type: "data", even: i % 2 === 0 });
       });
 
-      const { tp, tb, tc, tt } = buildMonthTotals(group);
-      aoa.push([
-        `Total — ${fmtYM(month)}`, "", "", "", "", "",
-        tp, tb, tc, tt ? `${tt} fl.` : "", "",
-      ]);
+      aoa.push(ligneTotal(month, group));
       rowMeta.push({ type: "total" });
       aoa.push(Array(NC).fill(""));
       rowMeta.push({ type: "empty" });
@@ -123,8 +192,8 @@ export default function CoachJournal() {
     const ws      = XLSX.utils.aoa_to_sheet(aoa);
     ws["!merges"] = merges;
     ws["!cols"]   = [
-      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 7 }, { wch: 16 },
-      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 12 }, { wch: 34 },
+      { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 7 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 7 }, { wch: 11 }, { wch: 48 },
     ];
 
     const ST = {
@@ -141,23 +210,23 @@ export default function CoachJournal() {
       header: (c) => ({
         font: { bold: true, sz: 9, color: { rgb: "000000" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFCCE5" } },
-        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center", wrapText: WRAP_COLS.includes(c) },
         border: { bottom: { style: "medium", color: { rgb: "FF007A" } } },
       }),
       dataEven: (c) => ({
         font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
-        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center", wrapText: WRAP_COLS.includes(c) },
       }),
       dataOdd: (c) => ({
         font: { sz: 9, color: { rgb: "202020" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FFF0F6" } },
-        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center", wrapText: WRAP_COLS.includes(c) },
       }),
       total: (c) => ({
         font: { bold: true, sz: 9, color: { rgb: "FFFFFF" }, name: "Calibri" },
         fill: { patternType: "solid", fgColor: { rgb: "FF007A" } },
-        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center" },
+        alignment: { horizontal: RIGHT_COLS.includes(c) ? "right" : "left", vertical: "center", wrapText: WRAP_COLS.includes(c) },
         border: {
           top:    { style: "medium", color: { rgb: "B30057" } },
           bottom: { style: "thin",   color: { rgb: "B30057" } },
@@ -193,7 +262,7 @@ export default function CoachJournal() {
     const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pw    = pdf.internal.pageSize.width;
     const ph    = pdf.internal.pageSize.height;
-    const COL_W = [20, 26, 22, 20, 10, 24, 12, 12, 12, 18, 0];
+    const COL_W = [26, 26, 20, 10, 12, 12, 12, 12, 11, 17, 0];
 
     const colStyles = COL_W.reduce((acc, w, i) => {
       acc[i] = w > 0 ? { cellWidth: w } : {};
@@ -222,11 +291,7 @@ export default function CoachJournal() {
 
       const body = group.map(rowCells);
 
-      const { tp, tb, tc, tt } = buildMonthTotals(group);
-      const totalRow = [
-        `Total — ${fmtYM(month)}`, "", "", "", "", "",
-        tp, tb, tc, tt ? `${tt} fl.` : "", "",
-      ];
+      const totalRow = ligneTotal(month, group);
 
       autoTable(pdf, {
         head: [
@@ -274,6 +339,19 @@ export default function CoachJournal() {
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;
 
+  // Cherchée dans toutes les séances de la saison (pas seulement les filtrées),
+  // pour que le détail reste ouvert même si un filtre change entre-temps.
+  const ligneOuverte = ouverte && regrouperParJour(saisonSeances).find((l) => l.id === ouverte);
+  if (ligneOuverte) {
+    return (
+      <DetailJour
+        ligne={ligneOuverte}
+        onRetour={() => setOuverte(null)}
+        onEnregistrerRetour={(texte) => updateRetourCoach(ligneOuverte.docs.map((d) => d.id), texte)}
+      />
+    );
+  }
+
   return (
     <div style={s.page}>
 
@@ -296,6 +374,14 @@ export default function CoachJournal() {
           <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
+          <label style={s.checkLabel}>
+            <input type="checkbox" checked={avecComment} onChange={(e) => setAvecComment(e.target.checked)} style={{ accentColor: PRIMARY }} />
+            Avec commentaire
+          </label>
+          <input
+            type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher dans les commentaires…" style={s.searchInput}
+          />
         </div>
         <div style={{ display: "flex", gap: "6px" }}>
           <button
@@ -321,13 +407,13 @@ export default function CoachJournal() {
               <th style={s.th}>Date</th>
               <th style={s.th}>Archer</th>
               <th style={s.th}>Type</th>
-              <th style={s.th}>Lieu</th>
               <th style={s.th}>Dist.</th>
-              <th style={s.th}>Protocole</th>
               <th style={s.thR}>Paille</th>
               <th style={s.thR}>Blason</th>
               <th style={s.thR}>Compté</th>
-              <th style={s.thR}>Résultat</th>
+              <th style={s.thR}>Score</th>
+              <th style={s.thR}>Moy.</th>
+              <th style={s.thR}>Score moy.</th>
               <th style={s.th}>Commentaire</th>
             </tr>
           </thead>
@@ -335,57 +421,59 @@ export default function CoachJournal() {
             {groupedByMonth.length === 0 ? (
               <tr><td colSpan={NC} style={s.empty}>Aucune séance trouvée.</td></tr>
             ) : groupedByMonth.map(({ month, rows }) => {
-              const subP   = rows.reduce((n, s) => n + getPaille(s), 0);
-              const subB   = rows.reduce((n, s) => n + getBlason(s), 0);
-              const subC   = rows.reduce((n, s) => n + getCompte(s), 0);
+              const subP   = somme(rows, (l) => l.paille);
+              const subB   = somme(rows, (l) => l.blason);
+              const subC   = somme(rows, (l) => l.compte);
               const subTot = subP + subB + subC;
+              const subTir = statsTir(rows.flatMap((l) => l.docs));
               return (
                 <Fragment key={month}>
-                  {rows.map(seance => {
-                    const p     = getPaille(seance);
-                    const b     = getBlason(seance);
-                    const c     = getCompte(seance);
-                    const proto = PROTOCOLE_PAR_ID[protocoleDe(seance)];
-                    const ind   = indicateurExercice(protocoleDe(seance), seance);
-                    return (
-                      <tr key={seance.id} style={s.tr}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
-                      >
-                        <td style={s.td}>{fmtDate(seance.date)}</td>
-                        <td style={{ ...s.td, fontWeight: "700" }}>{seance.archer || "—"}</td>
-                        <td style={s.td}>
-                          <span style={seance.type === "Compétition" ? s.typeComp : s.typeEntr}>
-                            {seance.type || "—"}
-                          </span>
-                        </td>
-                        <td style={{ ...s.td, color: "var(--text-dim)" }}>{seance.lieu || "—"}</td>
-                        <td style={s.td}>
-                          {seance.distance ? <span style={s.distBadge}>{seance.distance}</span> : "—"}
-                        </td>
-                        <td style={s.td}>
-                          <span style={s.protoBadge}>{proto?.nom ?? seance.protocole ?? "—"}</span>
-                        </td>
-                        <td style={s.tdR}>{p > 0 ? p : "—"}</td>
-                        <td style={s.tdR}>{b > 0 ? b : "—"}</td>
-                        <td style={s.tdR}>{c > 0 ? c : "—"}</td>
-                        <td style={{ ...s.tdR, fontWeight: ind ? "700" : "400", color: ind ? PRIMARY : "var(--text-dim)" }}>
-                          {ind?.texte ?? "—"}
-                        </td>
-                        <td style={{ ...s.td, color: "var(--text-dim)", minWidth: "160px", maxWidth: "320px", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: "1.4" }}>
-                          {seance.commentaire || "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {rows.map(ligne => (
+                    <tr key={ligne.id} style={s.tr} onClick={() => setOuverte(ligne.id)} title="Voir le détail"
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
+                    >
+                      <td style={s.td}>
+                        {fmtDate(ligne.date)}
+                        {ligne.lieu && <div style={s.lieu}>{ligne.lieu}</div>}
+                      </td>
+                      <td style={{ ...s.td, fontWeight: "700" }}>{ligne.archer || "—"}</td>
+                      <td style={s.td}>
+                        <span style={ligne.type === "Compétition" ? s.typeComp : s.typeEntr}>
+                          {ligne.type || "—"}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        {ligne.distance ? <span style={s.distBadge}>{ligne.distance}</span> : "—"}
+                      </td>
+                      <td style={s.tdR}>{ligne.paille > 0 ? ligne.paille : "—"}</td>
+                      <td style={s.tdR}>{ligne.blason > 0 ? ligne.blason : "—"}</td>
+                      <td style={s.tdR}>{ligne.compte > 0 ? ligne.compte : "—"}</td>
+                      <td style={s.tdR}>{fmtScore(ligne.tir) || "—"}</td>
+                      <td style={s.tdR}>{fmtMoyenne(ligne.tir) || "—"}</td>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: ligne.tir.ramene != null ? PRIMARY : "var(--text-dim)" }}>
+                        {fmtRamene(ligne.tir) || "—"}
+                      </td>
+                      <td style={{ ...s.td, color: "var(--text-dim)", minWidth: "160px", maxWidth: "420px", whiteSpace: "pre-line", wordBreak: "break-word", lineHeight: "1.4" }}>
+                        {ligne.commentaire || (ligne.retourCoach ? "" : "—")}
+                        {ligne.retourCoach && (
+                          <div style={s.retourCoach}>Coach – {ligne.retourCoach}</div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                   <tr key={`sub-${month}`} style={s.trSub}>
                     <td style={{ ...s.tdSub, textAlign: "left" }}>{fmtYM(month)}</td>
-                    <td style={{ ...s.tdSub, textAlign: "left" }}>{rows.length} séance{rows.length > 1 ? "s" : ""}</td>
-                    <td style={s.tdSub} /><td style={s.tdSub} /><td style={s.tdSub} /><td style={s.tdSub} />
+                    <td style={{ ...s.tdSub, textAlign: "left" }}>
+                      {rows.length} séance{rows.length > 1 ? "s" : ""}{subTot > 0 ? ` · ${subTot} fl.` : ""}
+                    </td>
+                    <td style={s.tdSub} /><td style={s.tdSub} />
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subP > 0 ? subP : "—"}</td>
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subB > 0 ? subB : "—"}</td>
                     <td style={{ ...s.tdSub, textAlign: "right" }}>{subC > 0 ? subC : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subTot > 0 ? `${subTot} fl.` : "—"}</td>
+                    <td style={{ ...s.tdSub, textAlign: "right" }}>{fmtScore(subTir) || "—"}</td>
+                    <td style={{ ...s.tdSub, textAlign: "right" }}>{fmtMoyenne(subTir) || "—"}</td>
+                    <td style={{ ...s.tdSub, textAlign: "right" }}>{fmtRamene(subTir) || "—"}</td>
                     <td style={s.tdSub} />
                   </tr>
                 </Fragment>
@@ -395,10 +483,10 @@ export default function CoachJournal() {
         </table>
       </div>
 
-      {filtered.length > 0 && (
+      {lignes.length > 0 && (
         <div style={s.count}>
-          {filtered.length} séance{filtered.length > 1 ? "s" : ""}
-          {filtered.length !== saisonSeances.length && ` (sur ${saisonSeances.length} cette saison)`}
+          {lignes.length} séance{lignes.length > 1 ? "s" : ""}
+          {lignes.length !== nbJoursSaison && ` (sur ${nbJoursSaison} cette saison)`}
         </div>
       )}
 
@@ -476,7 +564,18 @@ const s = {
     borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
-  tr:  { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s" },
+  tr:  { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s", cursor: "pointer" },
+  retourCoach: { marginTop: "4px", color: PRIMARY, fontWeight: "600" },
+  checkLabel: {
+    display: "flex", alignItems: "center", gap: "6px", cursor: "pointer",
+    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
+    textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
+  },
+  searchInput: {
+    padding: "8px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
+    fontSize: "13px", color: "var(--text-2)", outline: "none", minWidth: "220px",
+    fontFamily: "inherit", backgroundColor: "var(--input-bg)",
+  },
   td:  { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
   tdR: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums" },
 
@@ -488,14 +587,10 @@ const s = {
     backgroundColor: "var(--blue-soft)", color: BLUE,
     borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "600",
   },
+  lieu: { fontSize: "11px", fontStyle: "italic", color: "var(--text-dim)", marginTop: "2px" },
   distBadge: {
     backgroundColor: "var(--border)", borderRadius: "5px",
     padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-3)",
-  },
-  protoBadge: {
-    backgroundColor: "var(--input-bg)", borderRadius: "5px",
-    padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-muted)",
-    whiteSpace: "nowrap",
   },
 
   trSub: { backgroundColor: "var(--surface-raised)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" },

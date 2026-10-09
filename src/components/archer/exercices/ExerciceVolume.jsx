@@ -8,21 +8,21 @@ import { exerciceStyles, PINK } from "./exerciceStyles";
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
 const SUPPORTS = [
-  { id: "paille",         libelle: "Paille" },
-  { id: "visuel-simple",  libelle: "Visuel simple" },
-  { id: "visuel-evolue",  libelle: "Visuel évolué" },
-  { id: "cible",          libelle: "Cible" },
+  { id: "paille", libelle: "Paille" },
+  { id: "blason", libelle: "Blason" },
 ];
-const libelleSupport = (id) => SUPPORTS.find((s) => s.id === id)?.libelle ?? id;
+// Les anciennes volées (visuel simple / évolué, cible) comptaient déjà en vol. blason :
+// elles s'affichent donc comme « Blason ».
+const supportDe      = (v) => (v.support === "paille" ? "paille" : "blason");
+const libelleSupport = (v) => SUPPORTS.find((s) => s.id === supportDe(v)).libelle;
 
 const MAX_PAR_VOLEE = 24;
-const MAX_OBJECTIF  = 1000;
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 
 // Les volumes "sans score" du protocole Volume alimentent les mêmes compteurs que
 // le formulaire classique (vol. paille / vol. blason), pour rester compatibles avec
-// les stats, objectifs et le tableau de bord du coach. "Cible" n'est pas du tir
+// les stats, objectifs et le tableau de bord du coach. Le blason n'est pas du tir
 // compté : ça part donc dans vol. blason, pas dans vol. tir compté.
 function versVolumesClassiques(volees) {
   let volumePaille = 0;
@@ -45,8 +45,7 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
   const [lieu,     setLieu]     = useState(existant?.lieu ?? seanceInfo?.lieu ?? "");
 
   const [flechesParVolee, setFlechesParVolee] = useState(6);
-  const [support,         setSupport]         = useState("cible");
-  const [objectif,        setObjectif]        = useState(existant?.objectifVolume ? String(existant.objectifVolume) : "");
+  const [support,         setSupport]         = useState("blason");
   const [volees,           setVolees]          = useState(existant?.volees ?? []); // [{ support, fleches }]
   const [commentaire,     setCommentaire]     = useState(existant?.commentaire ?? "");
 
@@ -57,12 +56,9 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
 
   const parSupport = useMemo(() => {
     return SUPPORTS
-      .map((s) => ({ ...s, fleches: volees.filter((v) => v.support === s.id).reduce((n, v) => n + v.fleches, 0) }))
+      .map((s) => ({ ...s, fleches: volees.filter((v) => supportDe(v) === s.id).reduce((n, v) => n + v.fleches, 0) }))
       .filter((s) => s.fleches > 0);
   }, [volees]);
-
-  const objectifNum = parseInt(objectif) || 0;
-  const avancement  = objectifNum > 0 ? Math.min(100, Math.round((totalFleches / objectifNum) * 100)) : null;
 
   const ajouterVolee = () => {
     setVolees((prev) => [...prev, { support, fleches: flechesParVolee }]);
@@ -95,7 +91,6 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
       lieu:         lieu.trim() || null,
       protocole:    "volume",
       volees,
-      objectifVolume: objectifNum || null,
       volumePaille,
       volumeBlason,
       volumeCompte: 0,
@@ -169,11 +164,6 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
         <div style={s.compteurTotal}>{totalFleches}</div>
         <div style={s.compteurLabel}>flèche{totalFleches > 1 ? "s" : ""} tirée{totalFleches > 1 ? "s" : ""} · {volees.length} volée{volees.length > 1 ? "s" : ""}</div>
 
-        {avancement !== null && (
-          <div style={s.barTrack}>
-            <div style={{ ...s.barFill, width: `${avancement}%` }} />
-          </div>
-        )}
         {parSupport.length > 0 && (
           <div style={s.parSupport}>
             {parSupport.map((sp) => (
@@ -194,17 +184,17 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
           />
         </Field>
         <Field label="Support">
-          <select value={support} onChange={(e) => setSupport(e.target.value)} style={s.input}>
-            {SUPPORTS.map((sp) => <option key={sp.id} value={sp.id}>{sp.libelle}</option>)}
-          </select>
-        </Field>
-        <Field label="Objectif (optionnel)">
-          <input
-            type="number" min="1" max={MAX_OBJECTIF}
-            value={objectif}
-            onChange={(e) => setObjectif(e.target.value)}
-            style={s.input} placeholder="ex : 100"
-          />
+          <div style={s.supportBtns}>
+            {SUPPORTS.map((sp) => (
+              <button
+                key={sp.id} type="button"
+                style={{ ...s.supportBtn, ...(support === sp.id ? s.supportBtnActif : {}) }}
+                onClick={() => setSupport(sp.id)}
+              >
+                {sp.libelle}
+              </button>
+            ))}
+          </div>
         </Field>
       </div>
 
@@ -225,7 +215,7 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
         <div style={s.journal}>
           {[...volees].reverse().slice(0, 8).map((v, i) => (
             <span key={volees.length - 1 - i} style={s.journalItem}>
-              {v.fleches} fl. · {libelleSupport(v.support)}
+              {v.fleches} fl. · {libelleSupport(v)}
             </span>
           ))}
         </div>
@@ -258,8 +248,15 @@ function Field({ label, children }) {
 const s = {
   ...exerciceStyles,
   reglages: {},
-  barTrack: { width: "100%", maxWidth: "280px", height: "7px", borderRadius: "10px", backgroundColor: "var(--border)", overflow: "hidden" },
-  barFill:  { height: "100%", borderRadius: "10px", backgroundColor: PINK, transition: "width 0.3s ease" },
   parSupport: { display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center" },
   parSupportItem: { fontSize: "12px", color: "var(--text-dim)" },
+
+  supportBtns: { display: "flex", gap: "8px" },
+  supportBtn: {
+    flex: "1 1 0", padding: "10px 12px", borderRadius: "9px",
+    border: "1.5px solid var(--border-2)", backgroundColor: "var(--input-bg)",
+    fontSize: "14px", fontWeight: "700", color: "var(--text-muted)",
+    cursor: "pointer", fontFamily: "inherit",
+  },
+  supportBtnActif: { backgroundColor: PINK, borderColor: PINK, color: "#fff" },
 };

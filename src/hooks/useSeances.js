@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, deleteDoc, updateDoc, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, deleteDoc, updateDoc, doc, writeBatch } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "./useAuth";
 
@@ -53,5 +53,22 @@ export function useSeances() {
     await updateDoc(doc(db, "seances", id), fields);
   };
 
-  return { seances, loading, error, deleteSeance, updateSeance };
+  // Le commentaire de séance est recopié sur chaque exercice de la séance
+  // (une séance n'est qu'un regroupement de docs par seanceId).
+  const updateCommentaireSeance = async (ids, texte) => {
+    const batch = writeBatch(db);
+    for (const id of ids) {
+      batch.update(doc(db, "seances", id), { commentaireSeance: texte.trim() || null });
+    }
+    await batch.commit();
+  };
+
+  // Supprime une séance entière : tous ses exercices d'un coup.
+  const supprimerSeance = async (ids) => {
+    const batch = writeBatch(db);
+    for (const id of ids) batch.delete(doc(db, "seances", id));
+    await batch.commit();
+  };
+
+  return { seances, loading, error, deleteSeance, updateSeance, updateCommentaireSeance, supprimerSeance };
 }

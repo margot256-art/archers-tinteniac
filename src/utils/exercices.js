@@ -1,6 +1,6 @@
 import { getPaille, getBlason, getCompte, normFactor } from "./seances";
 
-export const PROTOCOLE_PAR_DEFAUT = "tir-compte";
+export const PROTOCOLE_PAR_DEFAUT = "manuel";
 
 // `actif: false` = pas encore proposé dans le sélecteur de nouvel exercice,
 // mais le protocole reste pleinement géré (affichage, édition) pour les
@@ -42,6 +42,14 @@ export const PROTOCOLES = [
     resume: "Pourcentage de flèches dans une zone visée (ex. le 7 et mieux).",
     actif: false,
   },
+  {
+    // Pas un exercice à proprement parler : séance notée après coup depuis l'Accueil,
+    // donc jamais proposée dans la liste des exercices d'une séance en direct.
+    id: "manuel",
+    nom: "Saisie manuelle",
+    resume: "Séance notée après coup : nombre de flèches et score.",
+    actif: false,
+  },
 ];
 
 export const PROTOCOLES_ACTIFS = PROTOCOLES.filter((p) => p.actif);
@@ -50,7 +58,8 @@ export const PROTOCOLE_PAR_ID = Object.fromEntries(PROTOCOLES.map((p) => [p.id, 
 export const protocoleExiste = (id) => id in PROTOCOLE_PAR_ID;
 
 // Protocole réel d'une séance — les séances créées avant l'ajout des exercices
-// n'ont pas de champ `protocole` : elles comptent comme du tir compté classique.
+// n'ont pas de champ `protocole` : elles venaient de l'ancien formulaire (volumes
+// paille/blason/compté + score), soit exactement une saisie manuelle.
 export const protocoleDe = (s) => s.protocole ?? PROTOCOLE_PAR_DEFAUT;
 
 /**
@@ -96,7 +105,29 @@ export function indicateurExercice(protocoleId, s) {
       const pct = Math.round((s.zoneDansZone / c) * 100);
       return { texte: `${pct} %`, detail: `${s.zoneDansZone}/${c} dans la zone${s.zoneCible ? ` ${s.zoneCible}` : ""}` };
     }
+    case "manuel": {
+      const c = getCompte(s);
+      if (c && s.score) {
+        return { texte: `${s.score} pts`, detail: `moy. ${(s.score / c).toFixed(2)} / flèche · ${c} fl. · ${s.distance ?? ""}`.trim() };
+      }
+      const total = getPaille(s) + getBlason(s) + c;
+      if (!total) return null;
+      return { texte: `${total} fl.`, detail: "flèches tirées" };
+    }
     default:
       return null;
   }
+}
+
+/** Résultat court d'un exercice, avec la moyenne par flèche à côté du score
+ *  quand il y en a un (« 320 pts (moy. 5.33) »), ou null. */
+export function resultatAvecMoyenne(s) {
+  const proto = protocoleDe(s);
+  const ind = indicateurExercice(proto, s);
+  if (!ind) return null;
+  const c = getCompte(s);
+  if ((proto === "tir-compte" || proto === "manuel") && c && s.score) {
+    return `${ind.texte} (moy. ${(s.score / c).toFixed(2)})`;
+  }
+  return ind.texte;
 }

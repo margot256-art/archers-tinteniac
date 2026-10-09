@@ -4,6 +4,7 @@ import ExerciceTest100 from "./ExerciceTest100";
 import ExerciceGroupements from "./ExerciceGroupements";
 import ExercicePotentielMax from "./ExercicePotentielMax";
 import ExerciceZone from "./ExerciceZone";
+import SaisieManuelle from "./SaisieManuelle";
 
 // Composant de saisie (création ET édition) par protocole, partagé entre
 // Exercices.jsx, NouvelleSeanceMulti.jsx et MesSeances.jsx.
@@ -14,4 +15,5 @@ export const COMPOSANTS_EXERCICE = {
   groupements:     ExerciceGroupements,
   "potentiel-max": ExercicePotentielMax,
   zone:            ExerciceZone,
+  manuel:          SaisieManuelle,
 };

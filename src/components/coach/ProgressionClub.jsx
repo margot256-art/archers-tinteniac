@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { useChartColors } from "../../hooks/useChartColors";
-import XLSX from "xlsx-js-style";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { chargerExport } from "../../utils/exportLibs";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -279,7 +277,8 @@ export default function ProgressionClub() {
   const RANK_COLS  = ["Rang", "Archer", "Séances", "Total fl.", "Moy./fl.", "Score moy.", "Régularité σ", "Meilleur score"];
   const RANK_RIGHT = [2, 3, 4, 5, 6, 7];
 
-  const exportXlsx = (title, cols, rightCols, rows, sheetName, fileName, colWidths) => {
+  const exportXlsx = async (title, cols, rightCols, rows, sheetName, fileName, colWidths) => {
+    const { XLSX } = await chargerExport();
     const nc     = cols.length;
     const aoa    = [[title, ...Array(nc - 1).fill("")], Array(nc).fill(""), [...cols], ...rows];
     const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nc - 1 } }];
@@ -310,7 +309,8 @@ export default function ProgressionClub() {
     XLSX.writeFile(wb, fileName);
   };
 
-  const exportPdf = (title, cols, rightCols, body, colWidths, fileName) => {
+  const exportPdf = async (title, cols, rightCols, body, colWidths, fileName) => {
+    const { jsPDF, autoTable } = await chargerExport();
     const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pw  = pdf.internal.pageSize.width;
     const ph  = pdf.internal.pageSize.height;

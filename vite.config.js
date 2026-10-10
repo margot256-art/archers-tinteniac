@@ -14,6 +14,17 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'TINTENIAC.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Export PDF / Excel (≈ 1,7 Mo, voir src/utils/exportLibs.js) : pas dans le
+        // téléchargement initial, mais gardé en cache dès le premier export.
+        globIgnores: [
+          '**/xlsx.min-*.js', '**/jspdf*.js', '**/html2canvas-*.js',
+          '**/purify.es-*.js', '**/index.es-*.js',
+        ],
+        runtimeCaching: [{
+          urlPattern: /\/assets\/(xlsx\.min|jspdf|html2canvas|purify\.es|index\.es)-.*\.js$/,
+          handler: 'CacheFirst',
+          options: { cacheName: 'export-pdf-excel', expiration: { maxEntries: 20 } },
+        }],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       manifest: {

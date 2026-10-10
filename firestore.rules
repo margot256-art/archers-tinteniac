@@ -41,9 +41,15 @@ service cloud.firestore {
 
     // password_resets — création ouverte (pas encore connecté), champs limités ;
     // lecture, mise à jour (traitement de la demande) et suppression réservées au coach.
+    // Pas de vérification que le compte existe : le nom tapé peut différer de
+    // l'identifiant par les accents (« Celine » / céline_bajard) ; la fonction
+    // admin-reset-password retrouve le compte. On limite seulement la taille.
     match /password_resets/{requestId} {
       allow create: if request.resource.data.keys().hasOnly(['prenom', 'nom', 'archerId', 'status', 'requestedAt'])
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && request.resource.data.prenom is string && request.resource.data.prenom.size() <= 60
+        && request.resource.data.nom is string && request.resource.data.nom.size() <= 60
+        && request.resource.data.archerId is string && request.resource.data.archerId.size() <= 130;
       allow read, update, delete: if isCoach();
     }
 

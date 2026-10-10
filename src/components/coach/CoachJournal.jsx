@@ -1,8 +1,6 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import XLSX from "xlsx-js-style";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { chargerExport } from "../../utils/exportLibs";
 import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
@@ -158,7 +156,8 @@ export default function CoachJournal() {
     ];
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    const { XLSX } = await chargerExport();
     const aoa     = [];
     const merges  = [];
     const rowMeta = [];
@@ -258,7 +257,8 @@ export default function CoachJournal() {
     XLSX.writeFile(wb, `journal-coach-${filterSaison.replace("/", "-")}.xlsx`);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    const { jsPDF, autoTable } = await chargerExport();
     const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pw    = pdf.internal.pageSize.width;
     const ph    = pdf.internal.pageSize.height;

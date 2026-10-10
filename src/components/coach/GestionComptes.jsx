@@ -29,6 +29,7 @@ export function DemandesMotDePasse() {
   const demandes = useDemandesMotDePasse();
   const [nouveaux, setNouveaux] = useState({});
   const [etat,     setEtat]     = useState({});
+  const [erreurs,  setErreurs]  = useState({});
 
   // Demande inutile (doublon, erreur de nom, déjà réglée autrement) : on la retire.
   const supprimer = async (req) => {
@@ -46,12 +47,13 @@ export function DemandesMotDePasse() {
     if (pwd.length < 6) return;
     setEtat((prev) => ({ ...prev, [req.id]: "loading" }));
     try {
-      await callAdminFunction("admin-reset-password", { uid: req.archerId, password: pwd });
+      await callAdminFunction("admin-reset-password", { uid: req.archerId, prenom: req.prenom, nom: req.nom, password: pwd });
       await updateDoc(doc(db, "password_resets", req.id), { status: "done" });
       setEtat((prev) => ({ ...prev, [req.id]: "done" }));
       setNouveaux((prev) => ({ ...prev, [req.id]: "" }));
-    } catch {
+    } catch (err) {
       setEtat((prev) => ({ ...prev, [req.id]: "error" }));
+      setErreurs((prev) => ({ ...prev, [req.id]: err.message }));
     }
   };
 
@@ -90,7 +92,7 @@ export function DemandesMotDePasse() {
             >✕</button>
           </div>
           {etat[req.id] === "error" && (
-            <span style={{ fontSize: "11px", color: "var(--bad)" }}>Erreur — archer introuvable ?</span>
+            <span style={{ fontSize: "11px", color: "var(--bad)" }}>{erreurs[req.id] || "Erreur — réessayez."}</span>
           )}
         </div>
       ))}

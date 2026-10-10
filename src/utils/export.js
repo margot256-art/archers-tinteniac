@@ -1,9 +1,7 @@
 // Export Excel/PDF générique pour les tableaux "titre + colonnes + lignes + total",
 // factorisé depuis StatsMensuelles.jsx / MesSeances.jsx / SeancesArchers.jsx /
 // StatsCoach.jsx / Classement.jsx qui réimplémentaient chacun les mêmes styles.
-import XLSX from "xlsx-js-style";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { chargerExport } from "./exportLibs";
 
 const ROSE = "FF007A";
 const ROSE_FONCE = "B30057";
@@ -19,7 +17,8 @@ const ROSE_CLAIR = "FFCCE5";
  * @param {number[]} [opts.colonnesNumeriques] - indices alignés à droite
  * @param {Array<{wch:number}>} [opts.largeurs]
  */
-export function exporterExcel({ titre, colonnes, lignes, ligneTotal, fichier, colonnesNumeriques = [], largeurs }) {
+export async function exporterExcel({ titre, colonnes, lignes, ligneTotal, fichier, colonnesNumeriques = [], largeurs }) {
+  const { XLSX } = await chargerExport();
   const NC = colonnes.length;
   const aoa = [];
   const rowMeta = [];
@@ -103,7 +102,8 @@ export function exporterExcel({ titre, colonnes, lignes, ligneTotal, fichier, co
  * @param {object} opts - mêmes champs que exporterExcel, plus :
  * @param {number[]} [opts.largeursColonnes] - largeur mm par colonne (0 = flexible)
  */
-export function exporterPDF({ titre, colonnes, lignes, ligneTotal, fichier, colonnesNumeriques = [], largeursColonnes }) {
+export async function exporterPDF({ titre, colonnes, lignes, ligneTotal, fichier, colonnesNumeriques = [], largeursColonnes }) {
+  const { jsPDF, autoTable } = await chargerExport();
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pw = pdf.internal.pageSize.width;
   const ph = pdf.internal.pageSize.height;

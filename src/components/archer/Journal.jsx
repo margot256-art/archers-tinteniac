@@ -482,7 +482,7 @@ function dateLongue(iso, avecAnnee = false) {
 
 // Barre de répartition des flèches du mois (paille / blason / compté) avec légende.
 // Couleurs propres, distinctes du rose / bleu qui marquent entraînement / compétition.
-const COULEUR_SUPPORT = { paille: "#c9a227", blason: "#06b6d4", compte: "#94a3b8" };
+const COULEUR_SUPPORT = { paille: "#c9a227", blason: "#e9d27a", compte: "#8f6f10" }; // nuancier du jaune paille
 function Repartition({ paille, blason, compte }) {
   const total = paille + blason + compte;
   if (!total) return null;

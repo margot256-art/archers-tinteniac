@@ -34,8 +34,8 @@
   --blue:      #3b82f6;
   --blue-soft: rgba(59,130,246,0.14);
   --blue-line: rgba(59,130,246,0.4);
-  --good:      #3fa06f;
-  --good-soft: rgba(63,160,111,0.14);
+  --good:      #FF007A; /* « positif » en rose, comme le reste de l'appli (pas de vert) */
+  --good-soft: rgba(255,0,122,0.14);
   --warn:      #d99a2b;
   --warn-soft: rgba(217,154,43,0.14);
   --bad:       #e5484d;
@@ -80,7 +80,7 @@
 
   --pink-soft: rgba(255,0,122,0.1);
   --blue-soft: rgba(59,130,246,0.1);
-  --good-soft: rgba(63,160,111,0.1);
+  --good-soft: rgba(255,0,122,0.1);
   --warn-soft: rgba(217,154,43,0.1);
   --bad-soft:  rgba(229,72,77,0.1);
 

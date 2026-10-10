@@ -316,7 +316,7 @@ const sModal = {
   label: { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
   input: { padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px", fontSize: "14px", color: "var(--text)", backgroundColor: "var(--input-bg)", outline: "none", fontFamily: "inherit" },
   errorMsg: { backgroundColor: "var(--pink-soft)", border: `1px solid ${PINK}`, borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: PINK },
-  successMsg: { backgroundColor: "rgba(63,160,111,0.14)", border: "1px solid var(--good)", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "var(--good)", display: "flex", flexDirection: "column", gap: "12px", alignItems: "flex-start" },
+  successMsg: { backgroundColor: "var(--good-soft)", border: "1px solid var(--good)", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "var(--good)", display: "flex", flexDirection: "column", gap: "12px", alignItems: "flex-start" },
   doneBtn: { background: "none", border: "1px solid var(--good)", borderRadius: "6px", padding: "6px 14px", fontSize: "13px", color: "var(--good)", cursor: "pointer", fontFamily: "inherit" },
   cancelBtn: { background: "none", border: "1px solid var(--border-3)", borderRadius: "7px", padding: "8px 16px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" },
   submitBtn: { backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },

@@ -55,8 +55,8 @@ const GRAPH_TYPES     = ["Entr. + Comp.", "Entraînement", "Compétition"];
 const MONTHS_FR       = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","Oct","Nov","Déc"];
 
 const AVATAR_COLORS = [
-  "#6366f1", "#8b5cf6", "#ec4899", "#f97316", "#10b981",
-  "#3b82f6", "#f59e0b", "#14b8a6", "#84cc16", "#ef4444",
+  "#6366f1", "#8b5cf6", "#ec4899", "#f97316", "#db2777",
+  "#3b82f6", "#f59e0b", "#fb7185", "#be185d", "#ef4444",
 ];
 const ARCHER_COLORS = [
   "#6366f1", "#22d3ee", "#a3e635", "#fb923c", "#e879f9",

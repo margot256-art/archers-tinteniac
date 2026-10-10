@@ -146,7 +146,7 @@ const styles = {
     lineHeight: "1.5",
   },
   resetSuccess: {
-    backgroundColor: "rgba(63,160,111,0.14)",
+    backgroundColor: "var(--good-soft)",
     border: "1px solid var(--good)",
     borderRadius: "8px",
     padding: "12px 14px",

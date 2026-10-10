@@ -7,6 +7,9 @@
 
 [functions]
   directory = "netlify/functions"
+  # firebase-admin (et ses dépendances Google, optionnelles et réservées à Node 22+)
+  # est copié tel quel avec les fonctions au lieu d'être regroupé dans leur code.
+  external_node_modules = ["firebase-admin"]
 
 # index.html jamais mis en cache → le navigateur voit toujours la dernière version
 [[headers]]

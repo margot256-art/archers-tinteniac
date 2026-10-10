@@ -482,7 +482,7 @@ function dateLongue(iso, avecAnnee = false) {
 
 // Barre de répartition des flèches du mois (paille / blason / compté) avec légende.
 // Couleurs propres, distinctes du rose / bleu qui marquent entraînement / compétition.
-const COULEUR_SUPPORT = { paille: "#8b5cf6", blason: "#c4b5fd", compte: "#5b21b6" }; // nuancier de violet
+const COULEUR_SUPPORT = { paille: "#a78bfa", blason: "#ddd6fe", compte: "#6d28d9" }; // nuancier de violet, luminosités bien écartées
 function Repartition({ paille, blason, compte }) {
   const total = paille + blason + compte;
   if (!total) return null;
@@ -588,7 +588,7 @@ const s = {
   moisScore: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "12px", color: "var(--text-muted)" },
 
   repartition: { display: "flex", flexDirection: "column", gap: "6px" },
-  repartitionBarre: { display: "flex", height: "6px", borderRadius: "6px", overflow: "hidden", backgroundColor: "var(--input-bg)" },
+  repartitionBarre: { display: "flex", height: "7px", borderRadius: "7px", overflow: "hidden", backgroundColor: "var(--input-bg)" },
   repartitionLegende: { display: "flex", gap: "12px", flexWrap: "wrap", fontSize: "11px", color: "var(--text-muted)" },
   legendeItem: { display: "inline-flex", alignItems: "center", gap: "5px" },
   legendePoint: { width: "8px", height: "8px", borderRadius: "50%", display: "inline-block" },

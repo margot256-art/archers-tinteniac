@@ -36,3 +36,6 @@ serviceAccount.json
 
 # Local Netlify folder
 .netlify
+
+# Sauvegardes de la base (données personnelles des archers), jamais dans le dépôt
+sauvegardes/

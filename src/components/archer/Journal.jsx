@@ -3,7 +3,7 @@ import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
-import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtDate, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { CarteExercice } from "../coach/DetailJour";
 
@@ -94,7 +94,7 @@ export default function Journal({ seanceInitiale = null }) {
         return {
           ym, liste,
           totaux: {
-            seances: liste.length, total: tp + tb + compte,
+            seances: liste.length, total: tp + tb + compte, paille: tp, blason: tb, compte,
             types: [parType("Entraînement"), parType("Compétition")].filter((x) => x.total > 0),
           },
         };
@@ -178,13 +178,15 @@ export default function Journal({ seanceInitiale = null }) {
         ) : (
           <div style={s.detailHead}>
             <div style={s.detailTitreLigne}>
-              <h2 style={s.detailDate}>{fmtDate(session.date)}</h2>
+              <h2 style={s.detailDate}>{dateLongue(session.date, true)}</h2>
               <button style={s.lienBtn} onClick={() => setEditionInfos(true)}>✎ Modifier les infos</button>
             </div>
             <p style={s.detailMeta}>
               {session.distance} · {session.type}{session.lieu ? ` · ${session.lieu}` : ""}
             </p>
-            <div style={s.chiffres}>
+            {/* Totaux de la séance : utiles seulement s'il y a plusieurs exercices
+                (sinon la carte de l'exercice, juste en dessous, dit déjà tout). */}
+            {session.docs.length > 1 && <div style={s.chiffres}>
               {session.chiffres.paille > 0 && <Chiffre label="Paille" valeur={session.chiffres.paille} />}
               {session.chiffres.blason > 0 && <Chiffre label="Blason" valeur={session.chiffres.blason} />}
               {session.chiffres.compte > 0 && <Chiffre label="Compté" valeur={session.chiffres.compte} />}
@@ -192,7 +194,7 @@ export default function Journal({ seanceInitiale = null }) {
               {session.chiffres.score > 0 && <Chiffre label="Score" valeur={session.chiffres.score} />}
               {session.chiffres.moyenne != null && <Chiffre label="Moy." valeur={session.chiffres.moyenne.toFixed(2)} />}
               {session.chiffres.scoreMoy != null && <Chiffre label="Score moy." valeur={session.chiffres.scoreMoy} couleur={couleurType(session.type)} />}
-            </div>
+            </div>}
           </div>
         )}
 
@@ -287,7 +289,7 @@ export default function Journal({ seanceInitiale = null }) {
               return (
                 <button key={sess.cle} style={{ ...s.sessionCard, borderLeft: `4px solid ${couleur}` }} onClick={() => setOuverte(sess.cle)}>
                   <div style={s.sessionHead}>
-                    <span style={s.sessionDate}>{fmtDate(sess.date)}</span>
+                    <span style={s.sessionDate}>{dateLongue(sess.date)}</span>
                     <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>{sess.type}</span>
                   </div>
                   <div style={s.sessionMeta}>{sess.distance}{sess.lieu ? ` · ${sess.lieu}` : ""}</div>
@@ -324,71 +326,81 @@ export default function Journal({ seanceInitiale = null }) {
           <div style={s.moisHead}>
             <div style={s.moisTitreLigne}>
               <span style={s.moisTitre}>{fmtYM(ym)}</span>
-              <span style={s.moisNb}>{m.seances} séance{m.seances > 1 ? "s" : ""}</span>
+              <span style={s.moisNb}>
+                {m.seances} séance{m.seances > 1 ? "s" : ""} · <strong style={s.moisFort}>{m.total}</strong> flèches
+              </span>
             </div>
-            <div style={s.chiffres}>
-              <Chiffre label="Total mois" valeur={`${m.total} fl.`} />
-              {m.types.map((sc) => (
-                <span key={sc.type} style={s.moisScores}>
-                  <span style={{ ...s.typeBadge, color: couleurType(sc.type), backgroundColor: fondType(sc.type) }}>{sc.type}</span>
-                  {sc.paille > 0 && <Chiffre label="Paille" valeur={sc.paille} />}
-                  {sc.blason > 0 && <Chiffre label="Blason" valeur={sc.blason} />}
-                  {sc.compte > 0 && <Chiffre label="Compté" valeur={sc.compte} />}
-                  <Chiffre label="Total" valeur={`${sc.total} fl.`} />
-                  {sc.moyenne != null && <Chiffre label="Moy." valeur={sc.moyenne.toFixed(2)} />}
-                  {sc.scoreMoy != null && <Chiffre label="Score moy." valeur={sc.scoreMoy} couleur={couleurType(sc.type)} />}
-                </span>
-              ))}
-            </div>
+            <Repartition paille={m.paille} blason={m.blason} compte={m.compte} />
+            {m.types.filter((sc) => sc.moyenne != null).map((sc) => (
+              <div key={sc.type} style={s.moisScore}>
+                <span style={{ ...s.typeBadge, color: couleurType(sc.type), backgroundColor: fondType(sc.type) }}>{sc.type}</span>
+                <span>moy. <strong style={s.moisFort}>{sc.moyenne.toFixed(2)}</strong> / flèche</span>
+                {sc.scoreMoy != null && <span>· score moy. <strong style={{ ...s.moisFort, color: couleurType(sc.type) }}>{sc.scoreMoy}</strong></span>}
+              </div>
+            ))}
           </div>
 
-        <div style={s.liste}>
-          {liste.map((sess) => {
-            const couleur = couleurType(sess.type);
-            const c = sess.chiffres;
-            return (
-              <button key={sess.cle} style={{ ...s.sessionCard, borderLeft: `4px solid ${couleur}` }} onClick={() => setOuverte(sess.cle)}>
-                <div style={s.sessionHead}>
-                  <span style={s.sessionDate}>{fmtDate(sess.date)}</span>
-                  <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>{sess.type}</span>
-                </div>
-                <div style={s.sessionMeta}>{sess.distance}{sess.lieu ? ` · ${sess.lieu}` : ""}</div>
+          <div style={s.liste}>
+            {liste.map((sess) => {
+              const couleur = couleurType(sess.type);
+              const c = sess.chiffres;
+              const j = jourDate(sess.date);
+              return (
+                <button key={sess.cle} style={s.carte} onClick={() => setOuverte(sess.cle)}>
+                  <span style={{ ...s.tuile, color: couleur, backgroundColor: fondType(sess.type) }}>
+                    <span style={s.tuileJour}>{j.semaine}</span>
+                    <span style={s.tuileNum}>{j.num}</span>
+                  </span>
 
-                <div style={s.sessionExercices}>
-                  {sess.docs.map((d) => {
-                    const res = resultatAvecMoyenne(d);
-                    return (
-                      <div key={d.id} style={s.exoLigne}>
-                        <span style={s.exoNom}>{nomExercice(d)}</span>
-                        {res && <span style={{ ...s.exoResultat, color: couleur }}>{res}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
+                  <span style={s.carteCorps}>
+                    <span style={s.carteTete}>
+                      <span style={s.carteTitre}>{sess.distance}{sess.lieu ? ` · ${sess.lieu}` : ""}</span>
+                      {estCompet(sess.type) && (
+                        <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>Compétition</span>
+                      )}
+                    </span>
 
-                <div style={s.chiffres}>
-                  {c.paille > 0 && <Chiffre label="Paille" valeur={c.paille} />}
-                  {c.blason > 0 && <Chiffre label="Blason" valeur={c.blason} />}
-                  {c.compte > 0 && <Chiffre label="Compté" valeur={c.compte} />}
-                  <Chiffre label="Total" valeur={`${c.total} fl.`} />
-                  {c.score > 0 && <Chiffre label="Score" valeur={c.score} />}
-                  {c.moyenne != null && <Chiffre label="Moy." valeur={c.moyenne.toFixed(2)} />}
-                  {c.scoreMoy != null && <Chiffre label="Score moy." valeur={c.scoreMoy} couleur={couleur} />}
-                </div>
+                    <span style={s.exos}>
+                      {sess.docs.map((d) => {
+                        const res = resultatAvecMoyenne(d);
+                        return (
+                          <span key={d.id} style={s.exo}>
+                            {nomExercice(d)}
+                            {res && <strong style={{ ...s.exoRes, color: couleur }}>{res}</strong>}
+                          </span>
+                        );
+                      })}
+                    </span>
 
-                {sess.commentaireSeance && (
-                  <div style={s.sessionCommentaire}>« {sess.commentaireSeance} »</div>
-                )}
-                {sess.retourCoach && (
-                  <div style={s.sessionRetourTexte}>
-                    <span style={s.sessionRetour}>Retour du coach</span>
-                    {sess.retourNonLu && <span style={s.nouveauBadge}>Nouveau</span>} {sess.retourCoach}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    <span style={s.stats}>
+                      {/* Déjà affiché par l'exercice (« 207 fl. ») quand il est seul : pas de doublon. */}
+                      {!(sess.docs.length === 1 && resultatAvecMoyenne(sess.docs[0])?.endsWith("fl.")) && (
+                        <span><strong style={s.statFort}>{c.total}</strong> flèches</span>
+                      )}
+                      {[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
+                        .filter(([, n]) => n > 0 && n < c.total)
+                        .map(([l, n]) => <span key={l}>{l} {n}</span>)}
+                      {c.scoreMoy != null && sess.docs.length > 1 && (
+                        <span>score moy. <strong style={{ ...s.statFort, color: couleur }}>{c.scoreMoy}</strong></span>
+                      )}
+                    </span>
+
+                    {sess.commentaireSeance && <span style={s.citation}>{sess.commentaireSeance}</span>}
+                    {sess.retourCoach && (
+                      <span style={s.retour}>
+                        <span style={s.retourTitre}>
+                          Retour du coach{sess.retourNonLu && <span style={s.nouveauBadge}>Nouveau</span>}
+                        </span>
+                        <span style={s.retourTexteListe}>{sess.retourCoach}</span>
+                      </span>
+                    )}
+                  </span>
+
+                  <span style={s.chevron} aria-hidden="true">›</span>
+                </button>
+              );
+            })}
+          </div>
         </section>
       ))}
     </div>
@@ -449,6 +461,45 @@ function InfosSeance({ initial, onEnregistrer, onAnnuler }) {
         <button style={s.enregistrerBtn} onClick={enregistrer} disabled={envoi}>
           {envoi ? "Enregistrement…" : "Enregistrer"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// « sam. » / « 10 » pour la pastille de date des cartes.
+function jourDate(iso) {
+  const d = new Date(`${iso}T12:00:00`);
+  return { semaine: d.toLocaleDateString("fr-FR", { weekday: "short" }), num: d.getDate() };
+}
+
+// « Samedi 10 octobre » (avec l'année si demandé).
+function dateLongue(iso, avecAnnee = false) {
+  const texte = new Date(`${iso}T12:00:00`).toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", ...(avecAnnee ? { year: "numeric" } : {}),
+  });
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
+// Barre de répartition des flèches du mois (paille / blason / compté) avec légende.
+function Repartition({ paille, blason, compte }) {
+  const total = paille + blason + compte;
+  if (!total) return null;
+  const parts = [
+    { label: "Paille", n: paille, couleur: "var(--text-dim)" },
+    { label: "Blason", n: blason, couleur: BLUE },
+    { label: "Compté", n: compte, couleur: PINK },
+  ].filter((x) => x.n > 0);
+  return (
+    <div style={s.repartition}>
+      <div style={s.repartitionBarre}>
+        {parts.map((x) => <span key={x.label} style={{ width: `${(x.n / total) * 100}%`, backgroundColor: x.couleur }} />)}
+      </div>
+      <div style={s.repartitionLegende}>
+        {parts.map((x) => (
+          <span key={x.label} style={s.legendeItem}>
+            <span style={{ ...s.legendePoint, backgroundColor: x.couleur }} />{x.label} {x.n}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -516,7 +567,7 @@ const s = {
     backgroundColor: "var(--surface-raised)", border: "1px solid var(--border)",
   },
   basculeBtn: {
-    background: "none", border: "none", borderRadius: "8px", padding: "6px 12px",
+    backgroundColor: "transparent", border: "none", borderRadius: "8px", padding: "6px 12px",
     fontSize: "13px", fontWeight: "600", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit",
   },
   basculeBtnActif: { backgroundColor: "var(--surface)", color: "var(--text)", boxShadow: "var(--shadow-card)" },
@@ -530,13 +581,60 @@ const s = {
     textTransform: "uppercase", letterSpacing: "0.06em",
   },
   histoTexte: { fontSize: "14px", color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-line" },
-  moisSection: { display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" },
+  moisSection: { display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" },
+  moisFort: { fontFamily: "var(--mono)", fontWeight: "700", color: "var(--text)" },
+  moisScore: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "12px", color: "var(--text-muted)" },
+
+  repartition: { display: "flex", flexDirection: "column", gap: "6px" },
+  repartitionBarre: { display: "flex", height: "6px", borderRadius: "6px", overflow: "hidden", backgroundColor: "var(--input-bg)" },
+  repartitionLegende: { display: "flex", gap: "12px", flexWrap: "wrap", fontSize: "11px", color: "var(--text-muted)" },
+  legendeItem: { display: "inline-flex", alignItems: "center", gap: "5px" },
+  legendePoint: { width: "8px", height: "8px", borderRadius: "50%", display: "inline-block" },
+
+  carte: {
+    display: "flex", alignItems: "flex-start", gap: "14px", width: "100%",
+    backgroundColor: "var(--surface)", borderRadius: "14px", border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-card)", padding: "14px 14px 14px 12px",
+    textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "inherit",
+  },
+  tuile: {
+    flex: "0 0 auto", width: "52px", borderRadius: "12px", padding: "7px 0 6px",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: "1px",
+  },
+  tuileJour: { fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em" },
+  tuileNum: { fontFamily: "var(--display)", fontSize: "22px", fontWeight: "600", lineHeight: 1.05 },
+  carteCorps: { flex: "1 1 auto", minWidth: 0, display: "flex", flexDirection: "column", gap: "7px" },
+  carteTete: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" },
+  carteTitre: { fontSize: "14px", fontWeight: "700", color: "var(--text)" },
+  exos: { display: "flex", flexWrap: "wrap", gap: "6px" },
+  exo: {
+    display: "inline-flex", alignItems: "baseline", gap: "6px", fontSize: "12px", fontWeight: "600",
+    color: "var(--text-2)", backgroundColor: "var(--surface-raised)", border: "1px solid var(--border)",
+    borderRadius: "8px", padding: "4px 9px",
+  },
+  exoRes: { fontFamily: "var(--mono)", fontSize: "12px", fontWeight: "700" },
+  stats: { display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: "12px", color: "var(--text-muted)" },
+  statFort: { fontFamily: "var(--mono)", fontWeight: "700", color: "var(--text)" },
+  citation: {
+    fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", lineHeight: 1.45,
+    borderLeft: "2px solid var(--border-3)", paddingLeft: "9px",
+    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+  },
+  retour: {
+    display: "flex", flexDirection: "column", gap: "3px", backgroundColor: "var(--pink-soft)",
+    borderRadius: "9px", padding: "8px 10px",
+  },
+  retourTitre: { fontSize: "10px", fontWeight: "700", color: PINK, textTransform: "uppercase", letterSpacing: "0.07em" },
+  retourTexteListe: {
+    fontSize: "12px", color: "var(--text-2)", lineHeight: 1.45,
+    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+  },
+  chevron: { flex: "0 0 auto", alignSelf: "center", fontSize: "22px", color: "var(--text-dim)", lineHeight: 1 },
   moisHead: {
-    backgroundColor: "var(--surface-raised)", borderRadius: "12px", border: "1px solid var(--border)",
-    padding: "12px 16px", display: "flex", flexDirection: "column", gap: "6px",
+    display: "flex", flexDirection: "column", gap: "8px", padding: "4px 2px 2px",
   },
   moisTitreLigne: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px", flexWrap: "wrap" },
-  moisTitre: { fontFamily: "var(--display)", fontSize: "16px", fontWeight: "600", color: "var(--text)", textTransform: "capitalize" },
+  moisTitre: { fontFamily: "var(--display)", fontSize: "19px", fontWeight: "600", color: "var(--text)", textTransform: "capitalize" },
   moisNb: { fontSize: "12px", fontWeight: "600", color: "var(--text-muted)" },
   moisScores: {
     display: "flex", alignItems: "center", gap: "6px 16px",

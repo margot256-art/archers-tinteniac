@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
 import { epreuveStandard, resumeTir } from "../../utils/tirCompte";
-import { PRIMARY as PINK, BLUE, getCompte, getPaille, getBlason, normFactor, buildMonthTotals, fmtDate, fmtYM, getSaison, CURRENT_SAISON, todayISO } from "../../utils/seances";
-import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne } from "../../utils/exercices";
+import { PRIMARY as PINK, BLUE, getCompte, getPaille, getBlason, normFactor, buildMonthTotals, fmtDate, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
+import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 
 const estCompet = (type) => type === "Compétition";
 const couleurType = (type) => (estCompet(type) ? BLUE : PINK);
@@ -19,10 +19,10 @@ import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
 import BoutonSupprimer from "./exercices/BoutonSupprimer";
 import FilterSelect from "../shared/FilterSelect";
 
-export default function Journal() {
+export default function Journal({ seanceInitiale = null }) {
   const { user } = useAuth();
   const { seances, loading, error, updateCommentaireSeance, modifierSeance, supprimerSeance } = useSeances();
-  const [ouverte,    setOuverte]    = useState(null); // clé de séance ouverte, ou null
+  const [ouverte,    setOuverte]    = useState(seanceInitiale); // clé de séance ouverte, ou null
   const [editingDoc, setEditingDoc] = useState(null); // doc en cours d'édition, ou null
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [erreurSuppression,  setErreurSuppression]  = useState(null);
@@ -43,22 +43,18 @@ export default function Journal() {
       .map(([cle, docs]) => {
         const tries = [...docs].sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
         const premier = tries[0];
-        // Les anciennes saisies manuelles portaient le commentaire de séance en
-        // commentaire d'exercice : on l'affiche comme commentaire de séance.
-        const commentaireSeance = tries.find((d) => d.commentaireSeance)?.commentaireSeance
-          ?? tries.find((d) => estManuel(d) && d.commentaire?.trim())?.commentaire.trim()
-          ?? "";
+        const commentaireSeance = tries.map(commentaireSeanceDe).find(Boolean) ?? "";
         const retourCoach = tries.find((d) => d.retourCoach)?.retourCoach ?? "";
         const commentairesExercices = tries
-          .filter((d) => !estManuel(d) && d.commentaire?.trim())
-          .map((d) => ({ id: d.id, nom: nomExercice(d), texte: d.commentaire.trim() }));
+          .filter((d) => commentaireExerciceDe(d))
+          .map((d) => ({ id: d.id, nom: nomExercice(d), texte: commentaireExerciceDe(d) }));
         const { tp, tb, ts, tmoy, tscoreMoy } = buildMonthTotals(tries);
         const compte = tries.reduce((n, d) => n + getCompte(d), 0);
         const chiffres = {
           paille: tp, blason: tb, compte, total: tp + tb + compte,
           score: ts, moyenne: tmoy, scoreMoy: tscoreMoy,
         };
-        return { cle, seanceId: premier.seanceId ?? null, docs: tries, date: premier.date, distance: premier.distance, type: premier.type, lieu: premier.lieu, commentaireSeance, retourCoach, commentairesExercices, chiffres };
+        return { cle, seanceId: premier.seanceId ?? null, docs: tries, date: premier.date, distance: premier.distance, type: premier.type, lieu: premier.lieu, commentaireSeance, retourCoach, retourNonLu: tries.some(retourNonLu), commentairesExercices, chiffres };
       })
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [seances]);
@@ -110,6 +106,13 @@ export default function Journal() {
   const avecCommentaires = sessions.filter((x) =>
     (filterSaison === "Toutes" || getSaison(x.date) === filterSaison)
     && (x.commentaireSeance || x.retourCoach || x.commentairesExercices.length > 0));
+
+  // Ouvrir une séance qui a un retour du coach non lu le marque comme lu
+  // (la pastille de l'onglet Journal et l'encart de l'accueil disparaissent).
+  useEffect(() => {
+    const ids = sessions.find((x) => x.cle === ouverte)?.docs.filter(retourNonLu).map((d) => d.id) ?? [];
+    if (ids.length) modifierSeance(ids, { retourCoachLu: true });
+  }, [ouverte, sessions, modifierSeance]);
 
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;
@@ -390,7 +393,8 @@ export default function Journal() {
                 )}
                 {sess.retourCoach && (
                   <div style={s.sessionRetourTexte}>
-                    <span style={s.sessionRetour}>Retour du coach</span> {sess.retourCoach}
+                    <span style={s.sessionRetour}>Retour du coach</span>
+                    {sess.retourNonLu && <span style={s.nouveauBadge}>Nouveau</span>} {sess.retourCoach}
                   </div>
                 )}
               </button>
@@ -620,6 +624,10 @@ const s = {
   sessionRetour: {
     alignSelf: "flex-start", fontSize: "11px", fontWeight: "700", color: PINK,
     backgroundColor: "var(--pink-soft)", borderRadius: "5px", padding: "2px 8px",
+  },
+  nouveauBadge: {
+    marginLeft: "6px", fontSize: "10px", fontWeight: "700", color: "#fff",
+    backgroundColor: "var(--bad)", borderRadius: "10px", padding: "1px 7px",
   },
   retourCoachBox: {
     backgroundColor: "var(--pink-soft)", border: `1px solid ${PINK}`, borderRadius: "12px",

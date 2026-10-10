@@ -18,6 +18,21 @@ export const getSaison = (iso) => {
 export const cleSeance = (s) => s.seanceId ?? s.id;
 export const nbSeances = (docs) => new Set(docs.map(cleSeance)).size;
 
+// Retour du coach pas encore lu par l'archer. Seuls les retours écrits depuis la
+// notification portent `retourCoachLu: false` ; les plus anciens comptent comme lus.
+export const retourNonLu = (s) => !!s.retourCoach && s.retourCoachLu === false;
+
+/** Séances (une entrée par séance, la plus récente d'abord) qui ont un retour du coach non lu. */
+export function retoursNonLus(docs) {
+  const map = new Map();
+  for (const d of docs) {
+    if (retourNonLu(d) && !map.has(cleSeance(d))) {
+      map.set(cleSeance(d), { cle: cleSeance(d), date: d.date, distance: d.distance, type: d.type, texte: d.retourCoach });
+    }
+  }
+  return [...map.values()].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+}
+
 // Date du jour (AAAA-MM-JJ) à l'heure locale. Surtout pas toISOString(), qui
 // donne l'heure UTC : entre minuit et 2 h en France, ce serait encore la veille.
 export const todayISO = () => {

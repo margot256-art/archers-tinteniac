@@ -3,7 +3,7 @@
 // épreuve complète : les 2 séries tirées, soit 60 / 72 flèches comptées.
 // Une série complète (30 / 36 flèches) peut donner un « série record », noté
 // sur 300 / 360. En dessous d'une série, aucun record.
-import { getCompte, normFactor } from "./seances";
+import { getCompte, normFactor, getSaison } from "./seances";
 import { epreuveStandard, resumeTir } from "./tirCompte";
 import { protocoleDe } from "./exercices";
 
@@ -34,4 +34,18 @@ export function scoreSerie(s) {
   const c = getCompte(s);
   if (c < flechesSerie(s.distance) || c >= flechesEpreuve(s.distance)) return null;
   return Math.round((s.score / c) * flechesSerie(s.distance));
+}
+
+/** Niveau actuel face à un objectif : moyenne des 3 meilleures épreuves complètes
+ *  (2 séries, sur 600 / 720) d'une distance et d'un type, sur une saison
+ *  (« Toutes » = sans filtre). null s'il n'y a encore aucune épreuve complète. */
+export function niveauEpreuves(seances, { distance, type, saison }) {
+  const scores = seances
+    .filter((s) => s.distance === distance && s.type === type && s.date
+      && (saison === "Toutes" || getSaison(s.date) === saison))
+    .map(scoreEpreuve)
+    .filter((v) => v != null)
+    .sort((a, b) => b - a)
+    .slice(0, 3);
+  return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
 }

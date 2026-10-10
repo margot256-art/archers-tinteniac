@@ -4,7 +4,7 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { db } from "../../../lib/firebase";
+import { db, sansAttendreLeServeur } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { useChartColors } from "../../../hooks/useChartColors";
 import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
@@ -222,9 +222,9 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
     };
     try {
       if (enEdition) {
-        await updateDoc(doc(db, "seances", existant.id), payload);
+        sansAttendreLeServeur(updateDoc(doc(db, "seances", existant.id), payload), "ExerciceTirCompte");
       } else {
-        await addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() });
+        sansAttendreLeServeur(addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() }), "ExerciceTirCompte");
       }
       quitter(onTermine);
     } catch (err) {
@@ -237,7 +237,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
   const handleSupprimer = async () => {
     setSaving(true);
     try {
-      await deleteDoc(doc(db, "seances", existant.id));
+      sansAttendreLeServeur(deleteDoc(doc(db, "seances", existant.id)), "ExerciceTirCompte");
       quitter(onTermine);
     } catch (err) {
       console.error("[ExerciceTirCompte] erreur suppression :", err);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
+import { db, sansAttendreLeServeur } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
 import { getPaille, getBlason, getCompte, todayISO } from "../../../utils/seances";
@@ -90,9 +90,9 @@ export default function SaisieManuelle({ existant, seanceInfo, onTermine, onAnnu
     };
     try {
       if (enEdition) {
-        await updateDoc(doc(db, "seances", existant.id), payload);
+        sansAttendreLeServeur(updateDoc(doc(db, "seances", existant.id), payload), "SaisieManuelle");
       } else {
-        await addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() });
+        sansAttendreLeServeur(addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() }), "SaisieManuelle");
       }
       quitter(onTermine);
     } catch (e) {
@@ -105,7 +105,7 @@ export default function SaisieManuelle({ existant, seanceInfo, onTermine, onAnnu
   const handleSupprimer = async () => {
     setSaving(true);
     try {
-      await deleteDoc(doc(db, "seances", existant.id));
+      sansAttendreLeServeur(deleteDoc(doc(db, "seances", existant.id)), "SaisieManuelle");
       quitter(onTermine);
     } catch (e) {
       console.error("[SaisieManuelle] erreur suppression :", e);

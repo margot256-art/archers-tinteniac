@@ -33,11 +33,15 @@ export function useAllSeances() {
   };
 
   // Retour du coach sur une journée d'un archer : recopié sur chaque exercice de
-  // la journée, comme le commentaire de séance de l'archer.
+  // la journée, comme le commentaire de séance de l'archer. Il est marqué non lu
+  // (`retourCoachLu: false`) pour que l'archer en soit averti dans l'appli.
   const updateRetourCoach = async (ids, texte) => {
     const batch = writeBatch(db);
     for (const id of ids) {
-      batch.update(doc(db, "seances", id), { retourCoach: texte.trim() || null });
+      batch.update(doc(db, "seances", id), {
+        retourCoach:   texte.trim() || null,
+        retourCoachLu: texte.trim() ? false : null,
+      });
     }
     await batch.commit();
   };

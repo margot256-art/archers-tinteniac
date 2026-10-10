@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PRIMARY, getPaille, getBlason, getCompte, fmtDate } from "../../utils/seances";
-import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne } from "../../utils/exercices";
+import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
 import { epreuveStandard, flechesParVolee, resumeTir, dispersion } from "../../utils/tirCompte";
 import BlasonImpacts from "../archer/exercices/BlasonImpacts";
@@ -11,7 +11,7 @@ const nomExercice = (s) => PROTOCOLE_PAR_ID[protocoleDe(s)]?.nom ?? s.protocole 
 // (feuille de score et blason pour le Tir compté), les commentaires de
 // l'archer, et le retour du coach.
 export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
-  const commentairesSeance = [...new Set(ligne.docs.map((d) => d.commentaireSeance).filter(Boolean))];
+  const commentairesSeance = [...new Set(ligne.docs.map(commentaireSeanceDe).filter(Boolean))];
   const retourInitial = ligne.docs.find((d) => d.retourCoach)?.retourCoach ?? "";
 
   return (
@@ -61,14 +61,20 @@ function CarteExercice({ doc: d }) {
 
       {proto === "tir-compte" && d.volees?.length > 0 && <DetailTirCompte doc={d} />}
 
+      {proto === "volume" && total > 0 && (
+        <p style={s.detail}>
+          Paille {getPaille(d)} fl. · Blason {getBlason(d)} fl.
+          {d.volees?.length > 0 && ` · ${d.volees.length} volée${d.volees.length > 1 ? "s" : ""}`}
+        </p>
+      )}
       {proto === "volume" && d.volees?.length > 0 && (
         <p style={s.detail}>
-          Volées : {d.volees.map((v) => `${v.fleches}`).join(" · ")}
+          Volées : {d.volees.map((v) => `${v.fleches}${v.support === "paille" ? " (paille)" : ""}`).join(" · ")}
         </p>
       )}
 
-      {d.commentaire && (
-        <p style={s.commentaire}>« {d.commentaire} »</p>
+      {commentaireExerciceDe(d) && (
+        <p style={s.commentaire}>« {commentaireExerciceDe(d)} »</p>
       )}
     </div>
   );

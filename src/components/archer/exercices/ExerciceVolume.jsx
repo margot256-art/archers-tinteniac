@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
+import { db, sansAttendreLeServeur } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
 import BoutonSupprimer from "./BoutonSupprimer";
@@ -131,9 +131,9 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
     };
     try {
       if (enEdition) {
-        await updateDoc(doc(db, "seances", existant.id), payload);
+        sansAttendreLeServeur(updateDoc(doc(db, "seances", existant.id), payload), "ExerciceVolume");
       } else {
-        await addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() });
+        sansAttendreLeServeur(addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() }), "ExerciceVolume");
       }
       quitter(onTermine);
     } catch (err) {
@@ -146,7 +146,7 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
   const handleSupprimer = async () => {
     setSaving(true);
     try {
-      await deleteDoc(doc(db, "seances", existant.id));
+      sansAttendreLeServeur(deleteDoc(doc(db, "seances", existant.id)), "ExerciceVolume");
       quitter(onTermine);
     } catch (err) {
       console.error("[ExerciceVolume] erreur suppression :", err);

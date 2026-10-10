@@ -1,4 +1,4 @@
-import { getPaille, getBlason, getCompte, normFactor } from "./seances";
+import { getPaille, getBlason, getCompte } from "./seances";
 
 export const PROTOCOLE_PAR_DEFAUT = "manuel";
 
@@ -19,30 +19,6 @@ export const PROTOCOLES = [
     actif: true,
   },
   {
-    id: "test100",
-    nom: "Test 100",
-    resume: "Une centaine de flèches comptées : score moyen et équivalence sur un tir de compétition (60 ou 72 flèches).",
-    actif: false,
-  },
-  {
-    id: "groupements",
-    nom: "Régularité groupements",
-    resume: "Taille du groupement, en centimètres — plus c'est petit, plus c'est régulier.",
-    actif: false,
-  },
-  {
-    id: "potentiel-max",
-    nom: "Potentiel Max",
-    resume: "Seules les 3 meilleures flèches de chaque volée comptent : le meilleur score en un minimum de flèches.",
-    actif: false,
-  },
-  {
-    id: "zone",
-    nom: "Zone",
-    resume: "Pourcentage de flèches dans une zone visée (ex. le 7 et mieux).",
-    actif: false,
-  },
-  {
     // Pas un exercice à proprement parler : séance notée après coup depuis l'Accueil,
     // donc jamais proposée dans la liste des exercices d'une séance en direct.
     id: "manuel",
@@ -59,8 +35,17 @@ export const protocoleExiste = (id) => id in PROTOCOLE_PAR_ID;
 
 // Protocole réel d'une séance — les séances créées avant l'ajout des exercices
 // n'ont pas de champ `protocole` : elles venaient de l'ancien formulaire (volumes
-// paille/blason/compté + score), soit exactement une saisie manuelle.
-export const protocoleDe = (s) => s.protocole ?? PROTOCOLE_PAR_DEFAUT;
+// paille/blason/compté + score), soit exactement une saisie manuelle. Un protocole
+// abandonné (Test 100, Groupements, Potentiel Max, Zone) est traité de même :
+// volumes et score restent lisibles et modifiables par la saisie manuelle.
+export const protocoleDe = (s) => (protocoleExiste(s.protocole) ? s.protocole : PROTOCOLE_PAR_DEFAUT);
+
+// Une saisie manuelle est une séance entière : son commentaire est un commentaire
+// de séance. Les anciennes saisies l'avaient en commentaire d'exercice (`commentaire`).
+export const commentaireSeanceDe = (s) =>
+  s.commentaireSeance || (protocoleDe(s) === "manuel" ? s.commentaire?.trim() : "") || "";
+export const commentaireExerciceDe = (s) =>
+  (protocoleDe(s) === "manuel" ? "" : s.commentaire?.trim() ?? "");
 
 /**
  * Résultat affichable d'une séance pour un protocole donné, ou null si la séance
@@ -79,31 +64,6 @@ export function indicateurExercice(protocoleId, s) {
       const total = getPaille(s) + getBlason(s) + getCompte(s);
       if (!total) return null;
       return { texte: `${total} fl.`, detail: "flèches tirées" };
-    }
-    case "test100": {
-      const c = getCompte(s);
-      if (!c || !s.score) return null;
-      const moy  = s.score / c;
-      const base = normFactor(s.distance);
-      return { texte: moy.toFixed(2), detail: `${s.score} pts en ${c} fl. · ≈ ${Math.round(moy * base)} sur ${base}` };
-    }
-    case "groupements": {
-      if (s.groupementCm == null) return null;
-      return { texte: `${s.groupementCm} cm`, detail: "taille du groupement" };
-    }
-    case "potentiel-max": {
-      const nbVolees = s.volees?.length ?? 0;
-      if (!nbVolees || s.score == null) return null;
-      const comptees = nbVolees * 3;
-      const moy  = s.score / comptees;
-      const base = normFactor(s.distance);
-      return { texte: `${Math.round(moy * base)}`, detail: `projection sur ${base} fl. · ${s.score} pts, ${comptees} fl. comptées` };
-    }
-    case "zone": {
-      const c = getCompte(s);
-      if (!c || s.zoneDansZone == null) return null;
-      const pct = Math.round((s.zoneDansZone / c) * 100);
-      return { texte: `${pct} %`, detail: `${s.zoneDansZone}/${c} dans la zone${s.zoneCible ? ` ${s.zoneCible}` : ""}` };
     }
     case "manuel": {
       const c = getCompte(s);

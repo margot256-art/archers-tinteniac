@@ -4,7 +4,7 @@ import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
 import { PRIMARY, BLUE, getSaison, CURRENT_SAISON, fmtYM, normFactor } from "../../../utils/seances";
 import { filtrerSeances, agregerParMoisDistance, trierParMoisPuisDistance, DIST_ORDER } from "../../../utils/statsCalc";
-import { scoreEpreuve } from "../../../utils/records";
+import { niveauEpreuves } from "../../../utils/records";
 import { exporterExcel, exporterPDF } from "../../../utils/export";
 import FilterSelect from "../../shared/FilterSelect";
 
@@ -44,14 +44,7 @@ export default function Totaux() {
         // Niveau actuel : moyenne des 3 meilleures épreuves complètes (2 séries)
         // de la saison choisie, comme pour les records.
         const parType = (type) => {
-          const scores = seances
-            .filter((s) => s.distance === dist && s.type === type && s.date
-              && (filterSaison === "Toutes" || getSaison(s.date) === filterSaison))
-            .map(scoreEpreuve)
-            .filter((v) => v != null)
-            .sort((a, b) => b - a)
-            .slice(0, 3);
-          const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+          const avg = niveauEpreuves(seances, { distance: dist, type, saison: filterSaison });
           return {
             current: avg,
             delta: avg != null ? avg - objScore : null,

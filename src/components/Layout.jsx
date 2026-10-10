@@ -1,7 +1,9 @@
-import { useState, useEffect, lazy, Suspense, memo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense, memo } from "react";
 import { doc, getDoc, updateDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { PRIMARY as PINK } from "../utils/seances";
+import { PRIMARY as PINK, retoursNonLus } from "../utils/seances";
+import { useSeances } from "../hooks/useSeances";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
@@ -34,12 +36,12 @@ const COACH_TABS = [
   { id: "objectives",         label: "Objectifs" },
 ];
 
-function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil } = {}) {
+function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil, onOuvrirSeance, seanceAOuvrir } = {}) {
   switch (id) {
-    case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} onSaisieManuelle={onAllerSaisieManuelle} />;
+    case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} onSaisieManuelle={onAllerSaisieManuelle} onOuvrirSeance={onOuvrirSeance} />;
     case "new-session":      return <SeanceTab onQuitter={onAllerAccueil} />;
     case "saisie-manuelle":  return <SaisieManuelle onTermine={onAllerAccueil} onAnnuler={onAllerAccueil} />;
-    case "journal":          return <Journal />;
+    case "journal":          return <Journal seanceInitiale={seanceAOuvrir} />;
     case "progression":      return <Progression />;
     case "records":          return <MesRecords />;
     case "dashboard":        return <Dashboard />;
@@ -64,6 +66,13 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
   const [activeTab,     setActiveTab]     = useState("accueil");
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [pendingResets, setPendingResets] = useState(0);
+  const online = useOnlineStatus();
+  // Séance à ouvrir directement dans le Journal (depuis un retour du coach à l'accueil).
+  const [seanceAOuvrir, setSeanceAOuvrir] = useState(null);
+
+  // Retours du coach non lus : pastille sur l'onglet Journal.
+  const { seances } = useSeances();
+  const nbRetoursNonLus = useMemo(() => retoursNonLus(seances).length, [seances]);
 
   useEffect(() => {
     if (!isCoach) return;
@@ -82,6 +91,15 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--app-bg)", display: "flex", flexDirection: "column" }}>
+
+      {!online && (
+        <div style={{
+          backgroundColor: "var(--warn)", color: "#fff", fontSize: "12px", fontWeight: "600",
+          textAlign: "center", padding: "6px 12px",
+        }}>
+          Hors ligne — vos séances sont enregistrées sur le téléphone et seront envoyées au retour du réseau
+        </div>
+      )}
 
       <header style={{ backgroundColor: "var(--surface)", position: "sticky", top: 0, zIndex: 100, boxShadow: "var(--shadow-nav)", borderBottom: "1px solid var(--border)" }}>
 
@@ -171,8 +189,8 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
                 <TabBtn
                   key={tab.id} label={tab.label}
                   active={activeTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  badge={tab.id === "dashboard" && pendingResets > 0 ? pendingResets : 0}
+                  onClick={() => { setSeanceAOuvrir(null); setActiveTab(tab.id); }}
+                  badge={tab.id === "dashboard" ? pendingResets : tab.id === "journal" ? nbRetoursNonLus : 0}
                 />
               ))}
             </div>
@@ -190,6 +208,8 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
             onAllerNewSession:     () => setActiveTab("new-session"),
             onAllerSaisieManuelle: () => setActiveTab("saisie-manuelle"),
             onAllerAccueil:        () => setActiveTab("accueil"),
+            onOuvrirSeance:        (cle) => { setSeanceAOuvrir(cle); setActiveTab("journal"); },
+            seanceAOuvrir,
           })}
         </Suspense>
       </main>

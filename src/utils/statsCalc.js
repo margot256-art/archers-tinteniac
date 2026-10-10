@@ -5,7 +5,7 @@
 import { getPaille, getBlason, getCompte, normFactor, getSaison } from "./seances";
 
 // Un tir compté : flèches comptées avec un score renseigné. Les protocoles
-// sans score (Volume, Régularité groupements) en sont naturellement exclus
+// sans score (Volume) en sont naturellement exclus
 // puisqu'ils sont enregistrés avec score=0 — pas besoin de filtrer sur
 // `protocole` explicitement pour les agrégats de score.
 export const estTirCompte = (s) => getCompte(s) > 0 && (s.score ?? 0) > 0;

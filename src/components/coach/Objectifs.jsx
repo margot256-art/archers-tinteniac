@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { PRIMARY, CURRENT_SAISON } from "../../utils/seances";
+import { niveauEpreuves } from "../../utils/records";
 
 const DIST_LIST = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
@@ -53,7 +54,7 @@ function useObjectifsManager() {
 
 // ── carte par archer ──────────────────────────────────────────────────────────
 
-function ArcherCard({ archer, objectif, onSave }) {
+function ArcherCard({ archer, objectif, seances, saison, onSave }) {
   const [distances, setDistances] = useState(
     Object.fromEntries(DIST_LIST.map((d) => [d, String(objectif?.distances?.[d] ?? "")]))
   );
@@ -79,6 +80,19 @@ function ArcherCard({ archer, objectif, onSave }) {
   };
 
   const hasDef = DIST_LIST.some((d) => distances[d]) || volEntr;
+
+  // Niveau actuel de l'archer pour chaque distance qui a un score cible : même
+  // calcul que dans sa Progression (3 meilleures épreuves complètes de la saison).
+  const niveaux = DIST_LIST
+    .filter((d) => parseInt(distances[d], 10) > 0)
+    .map((d) => {
+      const cible = parseInt(distances[d], 10);
+      const niveau = (type) => {
+        const v = niveauEpreuves(seances, { distance: d, type, saison });
+        return v == null ? null : { v, ecart: v - cible };
+      };
+      return { d, cible, comp: niveau("Compétition"), entr: niveau("Entraînement") };
+    });
 
   return (
     <div style={s.card}>
@@ -108,6 +122,20 @@ function ArcherCard({ archer, objectif, onSave }) {
         </div>
       </div>
 
+      {niveaux.length > 0 && (
+        <div style={s.section}>
+          <div style={s.sectionLabel}>Niveau actuel · 3 meilleures épreuves complètes</div>
+          {niveaux.map(({ d, cible, comp, entr }) => (
+            <div key={d} style={s.niveauRow}>
+              <span style={s.distLabel}>{d}</span>
+              <span style={s.niveauCible}>obj. {cible}</span>
+              <Niveau label="Comp." n={comp} />
+              <Niveau label="Entr." n={entr} />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={s.section}>
         <div style={s.sectionLabel}>Volume mensuel entraînement (flèches)</div>
         <input
@@ -136,6 +164,22 @@ function ArcherCard({ archer, objectif, onSave }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function Niveau({ label, n }) {
+  return (
+    <span style={s.niveau}>
+      <span style={s.niveauLabel}>{label}</span>
+      {n ? (
+        <>
+          <span style={s.niveauValeur}>{n.v}</span>
+          <span style={{ ...s.niveauEcart, color: n.ecart >= 0 ? "var(--good)" : "var(--bad)" }}>
+            {n.ecart >= 0 ? `+${n.ecart}` : n.ecart}
+          </span>
+        </>
+      ) : <span style={s.niveauVide}>—</span>}
+    </span>
   );
 }
 
@@ -208,6 +252,8 @@ export default function Objectifs() {
                 key={a.name + saison}
                 archer={a}
                 objectif={getObjForSaison(raw, saison)}
+                seances={seances.filter((x) => x.archer === a.name || (a.id && x.archerId === a.id))}
+                saison={saison}
                 onSave={(distances, volEntr) => {
                   const safeId = a.id ?? a.name.trim().toLowerCase().replace(/\s+/g, "_");
                   return saveObjectif(safeId, a.name, saison, distances, volEntr);
@@ -288,6 +334,14 @@ const s = {
     fontSize: "12px", fontWeight: "600", color: "var(--text-dim)",
     width: "30px", flexShrink: 0,
   },
+
+  niveauRow:    { display: "flex", alignItems: "baseline", gap: "6px 12px", flexWrap: "wrap" },
+  niveauCible:  { fontSize: "12px", color: "var(--text-muted)", minWidth: "54px" },
+  niveau:       { display: "inline-flex", alignItems: "baseline", gap: "4px" },
+  niveauLabel:  { fontSize: "10px", fontWeight: "700", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
+  niveauValeur: { fontSize: "13px", fontWeight: "700", color: "var(--text)" },
+  niveauEcart:  { fontSize: "11px", fontWeight: "700" },
+  niveauVide:   { fontSize: "13px", color: "var(--text-3)" },
 
   input: {
     padding: "6px 8px", border: "1.5px solid var(--border-2)", borderRadius: "6px",

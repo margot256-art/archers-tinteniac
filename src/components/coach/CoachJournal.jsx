@@ -4,7 +4,7 @@ import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
-import { PROTOCOLE_PAR_ID, protocoleDe } from "../../utils/exercices";
+import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
 import DetailJour from "./DetailJour";
 
@@ -27,8 +27,8 @@ const fmtRamene  = (st) => (st.ramene != null ? st.ramene : "");
 
 // « Séance – … » puis « Exercice – … » pour chaque exercice commenté, un commentaire par ligne.
 const commentaireDuJour = (docs) => {
-  const seance = [...new Set(docs.map((d) => d.commentaireSeance).filter(Boolean))].map((c) => `Séance – ${c}`);
-  const exos   = docs.filter((d) => d.commentaire).map((d) => `${nomExercice(d)} – ${d.commentaire}`);
+  const seance = [...new Set(docs.map(commentaireSeanceDe).filter(Boolean))].map((c) => `Séance – ${c}`);
+  const exos   = docs.filter(commentaireExerciceDe).map((d) => `${nomExercice(d)} – ${commentaireExerciceDe(d)}`);
   return [...seance, ...exos].join("\n");
 };
 

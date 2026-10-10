@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON, cleSeance, nbSeances } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON, cleSeance, nbSeances, retoursNonLus, fmtDate } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 import { lireBrouillon } from "../../utils/brouillonExercice";
 import FilterSelect from "../shared/FilterSelect";
@@ -14,7 +14,7 @@ const todayYM = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuelle }) {
+export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuelle, onOuvrirSeance }) {
   const { user } = useAuth();
   const { seances, loading, error } = useSeances();
   const rawObjectif = useObjectif();
@@ -85,6 +85,8 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
     }));
   }, [seances, filterSaison]);
 
+  const retours = retoursNonLus(seances);
+
   if (loading) return <div style={s.info}>Chargement…</div>;
   if (error)   return <div style={s.errMsg}>{error}</div>;
 
@@ -109,6 +111,23 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
             <button style={s.ctaSecondaire} onClick={onSaisieManuelle}>{manuelleEnCours ? "✎ Reprendre la saisie manuelle" : "✎ Saisie manuelle"}</button>
           </div>
         </div>
+      )}
+
+      {retours.length > 0 && (
+        <section style={s.section}>
+          <p style={s.sectionLabel}>
+            💬 {retours.length > 1 ? `${retours.length} nouveaux retours` : "Nouveau retour"} du coach
+          </p>
+          {retours.map((r) => (
+            <button key={r.cle} style={s.retourCarte} onClick={() => onOuvrirSeance?.(r.cle)}>
+              <span style={s.retourTete}>
+                <span style={s.retourDate}>{fmtDate(r.date)} · {r.distance} · {r.type}</span>
+                <span style={s.retourLire}>Lire →</span>
+              </span>
+              <span style={s.retourTexte}>{r.texte}</span>
+            </button>
+          ))}
+        </section>
       )}
 
       {volEntr > 0 && (
@@ -191,6 +210,19 @@ function DistStat({ valeur, label, accent, color = PINK }) {
 
 const s = {
   page: { display: "flex", flexDirection: "column", gap: "26px" },
+
+  retourCarte: {
+    display: "flex", flexDirection: "column", gap: "6px", textAlign: "left",
+    backgroundColor: "var(--pink-soft)", border: `1px solid ${PINK}`, borderRadius: "12px",
+    padding: "14px 16px", cursor: "pointer", fontFamily: "inherit",
+  },
+  retourTete:  { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px", flexWrap: "wrap" },
+  retourDate:  { fontSize: "12px", fontWeight: "700", color: PINK },
+  retourLire:  { fontSize: "12px", fontWeight: "700", color: PINK, whiteSpace: "nowrap" },
+  retourTexte: {
+    fontSize: "14px", color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-line",
+    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+  },
 
   hero: {
     position: "relative", overflow: "hidden",

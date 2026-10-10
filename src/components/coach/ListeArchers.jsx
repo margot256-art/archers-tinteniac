@@ -2,15 +2,18 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
+import { useAllSeances } from "../../hooks/useAllSeances";
 import { callAdminFunction } from "../../utils/adminApi";
 import { PRIMARY as PINK } from "../../utils/seances";
 import { NouvelArcherModal, DemandesMotDePasse } from "./GestionComptes";
 
 // Onglet Archers, réservé aux coachs : création d'un archer, demandes de nouveau
 // mot de passe, et liste des comptes (collection `users`) où l'on nomme un archer
-// coach ou lui retire le droit (fonction Netlify admin-coachs).
+// coach ou lui retire le droit (fonction Netlify admin-coachs), et où l'on supprime
+// le compte d'un archer (admin-delete-archer — ses séances sont conservées).
 export default function ListeArchers() {
   const { user } = useAuth();
+  const { seances } = useAllSeances();
   const [comptes,  setComptes]  = useState(null);  // [{ id, prenom, nom }] ou null pendant le chargement
   const [coachs,   setCoachs]   = useState(null);  // Set d'uid, ou null tant que pas chargé
   const [erreur,   setErreur]   = useState("");
@@ -46,6 +49,33 @@ export default function ListeArchers() {
       `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, "fr", { sensitivity: "base" })),
     [comptes]
   );
+
+  // Nombre de séances par archer, pour prévenir avant une suppression de compte.
+  const nbSeancesPar = useMemo(() => {
+    const n = {};
+    for (const x of seances) if (x.archerId) n[x.archerId] = (n[x.archerId] ?? 0) + 1;
+    return n;
+  }, [seances]);
+
+  const supprimerCompte = async (compte) => {
+    const nom = `${compte.prenom} ${compte.nom}`;
+    const nb  = nbSeancesPar[compte.id] ?? 0;
+    const question = `Supprimer le compte de ${nom} ?\n\n`
+      + "Cette personne ne pourra plus se connecter. Son compte, ses objectifs et ses demandes de mot de passe seront supprimés définitivement.\n\n"
+      + (nb > 0
+        ? `Ses ${nb} séance(s) seront conservées dans l'historique du club.`
+        : "Cette personne n'a aucune séance enregistrée.");
+    if (!window.confirm(question)) return;
+    setEnCours(compte.id);
+    setErreur("");
+    try {
+      await callAdminFunction("admin-delete-archer", { uid: compte.id });
+    } catch (err) {
+      setErreur(err.message || "Erreur lors de la suppression.");
+    } finally {
+      setEnCours(null);
+    }
+  };
 
   const changerDroit = async (compte, coach) => {
     const nom = `${compte.prenom} ${compte.nom}`;
@@ -113,6 +143,15 @@ export default function ListeArchers() {
                   {enCours === c.id ? "…" : estCoach ? "Retirer le droit coach" : "Nommer coach"}
                 </button>
               )}
+              {coachs && !estMoi && !estCoach && (
+                <button
+                  style={s.btnSupprimer}
+                  disabled={enCours !== null}
+                  onClick={() => supprimerCompte(c)}
+                  title="Supprimer le compte"
+                  aria-label={`Supprimer le compte de ${c.prenom} ${c.nom}`}
+                >Supprimer</button>
+              )}
             </div>
           );
         })}
@@ -149,6 +188,10 @@ const s = {
   btnAjouter: {
     backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "8px",
     padding: "8px 18px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
+  },
+  btnSupprimer: {
+    background: "none", color: "var(--bad)", border: "1px solid var(--bad)", borderRadius: "7px",
+    padding: "7px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   btnNommer: {
     backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "7px",

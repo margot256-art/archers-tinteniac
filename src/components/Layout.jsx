@@ -168,7 +168,7 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
             }}>
               <SectionBtn label="Archer" active={section === "archer"} onClick={() => switchSection("archer")} />
               {isCoach && <SectionBtn label="Coach" active={section === "coach"} onClick={() => switchSection("coach")} />}
-              {isCoach && <SectionBtn label="Archers" active={section === "archers"} onClick={() => switchSection("archers")} />}
+              {isCoach && <SectionBtn label="Archers" active={section === "archers"} onClick={() => switchSection("archers")} badge={pendingResets} />}
               <a
                 href="https://www.archers-de-la-bretagne-romantique.fr/en-savoir-plus/mandat-et-inscription-130102"
                 target="_blank" rel="noopener noreferrer"
@@ -194,7 +194,7 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
                   key={tab.id} label={tab.label}
                   active={activeTab === tab.id}
                   onClick={() => { setSeanceAOuvrir(null); setActiveTab(tab.id); }}
-                  badge={tab.id === "dashboard" ? pendingResets : tab.id === "journal" ? nbRetoursNonLus : 0}
+                  badge={tab.id === "liste-archers" ? pendingResets : tab.id === "journal" ? nbRetoursNonLus : 0}
                 />
               ))}
             </div>
@@ -322,7 +322,7 @@ const sModal = {
   submitBtn: { backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
 };
 
-const SectionBtn = memo(function SectionBtn({ label, active, onClick }) {
+const SectionBtn = memo(function SectionBtn({ label, active, onClick, badge }) {
   return (
     <button role="tab" aria-selected={active} onClick={onClick}
       style={{
@@ -331,9 +331,15 @@ const SectionBtn = memo(function SectionBtn({ label, active, onClick }) {
         color: active ? "var(--text)" : "var(--text-dim)",
         padding: "11px 14px 9px", fontSize: "13px", fontWeight: active ? "700" : "500",
         cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", letterSpacing: "0.02em",
+        display: "inline-flex", alignItems: "center", gap: "6px",
       }}
     >
       {label}
+      {badge > 0 && (
+        <span style={{ backgroundColor: "var(--bad)", color: "#fff", fontSize: "10px", fontWeight: "700", borderRadius: "10px", padding: "1px 5px", lineHeight: "1.4", minWidth: "16px", textAlign: "center" }}>
+          {badge}
+        </span>
+      )}
     </button>
   );
 });

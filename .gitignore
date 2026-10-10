@@ -33,3 +33,6 @@ dist-ssr
 # Clés de compte de service Firebase : donnent tous les droits sur la base, jamais dans le dépôt
 serviceAccount.json
 *firebase-adminsdk*.json
+
+# Local Netlify folder
+.netlify

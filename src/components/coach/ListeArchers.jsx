@@ -4,15 +4,18 @@ import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { callAdminFunction } from "../../utils/adminApi";
 import { PRIMARY as PINK } from "../../utils/seances";
+import { NouvelArcherModal, DemandesMotDePasse } from "./GestionComptes";
 
-// Liste des comptes de l'appli (collection `users`), réservée aux coachs : on y
-// nomme un archer coach ou on lui retire le droit (fonction Netlify admin-coachs).
+// Onglet Archers, réservé aux coachs : création d'un archer, demandes de nouveau
+// mot de passe, et liste des comptes (collection `users`) où l'on nomme un archer
+// coach ou lui retire le droit (fonction Netlify admin-coachs).
 export default function ListeArchers() {
   const { user } = useAuth();
   const [comptes,  setComptes]  = useState(null);  // [{ id, prenom, nom }] ou null pendant le chargement
   const [coachs,   setCoachs]   = useState(null);  // Set d'uid, ou null tant que pas chargé
   const [erreur,   setErreur]   = useState("");
   const [enCours,  setEnCours]  = useState(null);  // uid en cours de modification
+  const [ajout,    setAjout]    = useState(false); // fenêtre « Nouvel archer » ouverte
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -71,12 +74,17 @@ export default function ListeArchers() {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <h2 style={s.titre}>Liste des archers</h2>
+        <button style={s.btnAjouter} onClick={() => setAjout(true)}>+ Ajouter un archer</button>
         <span style={s.sousTitre}>
           {tries.length} compte{tries.length > 1 ? "s" : ""}
           {coachs && ` · ${coachs.size} coach${coachs.size > 1 ? "s" : ""}`}
         </span>
       </div>
+      {ajout && <NouvelArcherModal onClose={() => setAjout(false)} />}
+
+      <DemandesMotDePasse />
+
+      <h2 style={s.titre}>Liste des archers</h2>
 
       <p style={s.aide}>
         Un coach voit la partie coach et les séances de tous les archers. Le changement est pris en
@@ -137,6 +145,10 @@ const s = {
   badgeCoach: {
     fontSize: "10px", fontWeight: "700", color: PINK, border: `1px solid ${PINK}`, borderRadius: "4px",
     padding: "1px 6px", textTransform: "uppercase", letterSpacing: "0.08em",
+  },
+  btnAjouter: {
+    backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "8px",
+    padding: "8px 18px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   btnNommer: {
     backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "7px",

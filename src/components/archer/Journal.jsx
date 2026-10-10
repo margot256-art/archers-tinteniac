@@ -3,9 +3,9 @@ import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
-import { epreuveStandard, resumeTir, reussite, SEUIL_REUSSITE_DEFAUT } from "../../utils/tirCompte";
-import { PRIMARY as PINK, BLUE, getCompte, getPaille, getBlason, normFactor, buildMonthTotals, fmtDate, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
-import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
+import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtDate, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
+import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
+import { CarteExercice } from "../coach/DetailJour";
 
 const estCompet = (type) => type === "Compétition";
 const couleurType = (type) => (estCompet(type) ? BLUE : PINK);
@@ -184,6 +184,15 @@ export default function Journal({ seanceInitiale = null }) {
             <p style={s.detailMeta}>
               {session.distance} · {session.type}{session.lieu ? ` · ${session.lieu}` : ""}
             </p>
+            <div style={s.chiffres}>
+              {session.chiffres.paille > 0 && <Chiffre label="Paille" valeur={session.chiffres.paille} />}
+              {session.chiffres.blason > 0 && <Chiffre label="Blason" valeur={session.chiffres.blason} />}
+              {session.chiffres.compte > 0 && <Chiffre label="Compté" valeur={session.chiffres.compte} />}
+              <Chiffre label="Total" valeur={`${session.chiffres.total} fl.`} />
+              {session.chiffres.score > 0 && <Chiffre label="Score" valeur={session.chiffres.score} />}
+              {session.chiffres.moyenne != null && <Chiffre label="Moy." valeur={session.chiffres.moyenne.toFixed(2)} />}
+              {session.chiffres.scoreMoy != null && <Chiffre label="Score moy." valeur={session.chiffres.scoreMoy} couleur={couleurType(session.type)} />}
+            </div>
           </div>
         )}
 
@@ -194,30 +203,9 @@ export default function Journal({ seanceInitiale = null }) {
           </div>
         )}
 
-        <div style={s.exerciceListe}>
-          {session.docs.map((d) => {
-            const proto = PROTOCOLE_PAR_ID[protocoleDe(d)];
-            const ind   = indicateurExercice(protocoleDe(d), d);
-            const details = detailsExercice(d);
-            return (
-              <button key={d.id} style={s.exerciceRow} onClick={() => setEditingDoc(d)}>
-                <span style={s.exerciceLigne}>
-                  <span style={s.exerciceNom}>{proto?.nom ?? d.protocole}</span>
-                  <span style={s.exerciceResultat}>{ind?.texte ?? "—"}</span>
-                  <span style={s.exerciceModifier}>Modifier →</span>
-                </span>
-                {details && (
-                  <span style={s.exerciceDetails}>
-                    {details.chiffres.map((c) => <Chiffre key={c.label} label={c.label} valeur={c.valeur} />)}
-                    {details.series && (
-                      <span style={s.exerciceSeries}>{details.series}</span>
-                    )}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {session.docs.map((d) => (
+          <CarteExercice key={d.id} doc={d} onModifier={() => setEditingDoc(d)} />
+        ))}
 
         {ajout === "choix" ? (
           <div style={s.ajoutBox}>
@@ -466,49 +454,6 @@ function InfosSeance({ initial, onEnregistrer, onAnnuler }) {
   );
 }
 
-// Infos principales affichées sous un exercice dans le détail de la séance
-// (Volume et Tir compté uniquement), ou null.
-function detailsExercice(d) {
-  const proto = protocoleDe(d);
-  if (proto === "volume") {
-    const paille = getPaille(d);
-    const blason = getBlason(d);
-    const nbVolees = d.volees?.length ?? 0;
-    const chiffres = [
-      { label: "Paille", valeur: `${paille} fl.` },
-      { label: "Blason", valeur: `${blason} fl.` },
-    ];
-    if (nbVolees) chiffres.push({ label: "Volées", valeur: nbVolees });
-    return { chiffres };
-  }
-  if (proto === "tir-compte") {
-    const volees = (d.volees ?? []).map((v) => v.codes).filter(Array.isArray);
-    if (!volees.length) return null;
-    const reglages = d.format === "libre"
-      ? { flechesParVolee: volees[0].length, voleesParSerie: null, nbSeries: null }
-      : { ...epreuveStandard(d.distance), nbSeries: d.nbSeries };
-    const r = resumeTir(volees, reglages);
-    const base = normFactor(d.distance);
-    const chiffres = [
-      { label: "Score", valeur: `${r.total}/${r.maxPossible}` },
-      { label: "Moy.", valeur: r.moyenne != null ? r.moyenne.toFixed(2) : "—" },
-      { label: "Flèches", valeur: r.fleches },
-      { label: "Volées", valeur: volees.length },
-      { label: "10+X", valeur: r.dixPlusX },
-      { label: "X", valeur: r.x },
-      { label: "Manqués", valeur: r.manques },
-    ];
-    if (r.moyenne != null) chiffres.push({ label: `Proj. ${base} fl.`, valeur: Math.round(r.moyenne * base) });
-    const seuil = d.zoneReussite ?? SEUIL_REUSSITE_DEFAUT;
-    const zone  = reussite(volees, seuil);
-    if (zone.pct != null) chiffres.push({ label: `Zone ${seuil === "X" ? "X" : `${seuil}+`}`, valeur: `${zone.pct} %` });
-    const series = r.series?.filter((se) => se.volees.length > 0)
-      .map((se) => `Série ${se.numero} : ${se.total}/${se.max}`).join(" · ");
-    return { chiffres, series: series || null };
-  }
-  return null;
-}
-
 function Chiffre({ label, valeur, couleur }) {
   return (
     <span style={s.chiffre}>
@@ -692,21 +637,6 @@ const s = {
   detailDate: { fontFamily: "var(--display)", fontSize: "20px", fontWeight: "600", color: "var(--text)", margin: 0 },
   detailMeta: { fontSize: "13px", color: "var(--text-muted)", margin: 0 },
 
-  exerciceListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
-  exerciceRow: {
-    display: "flex", flexDirection: "column", gap: "8px",
-    backgroundColor: "var(--surface)", border: "none", cursor: "pointer", fontFamily: "inherit",
-    padding: "14px 16px", textAlign: "left",
-  },
-  exerciceLigne: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" },
-  exerciceDetails: {
-    display: "flex", flexWrap: "wrap", gap: "6px 16px",
-    borderTop: "1px solid var(--border)", paddingTop: "8px",
-  },
-  exerciceSeries: { flexBasis: "100%", fontSize: "12px", color: "var(--text-muted)" },
-  exerciceNom:      { fontSize: "14px", fontWeight: "700", color: "var(--text)", flex: "1 1 auto" },
-  exerciceResultat: { fontFamily: "var(--mono)", fontSize: "15px", fontWeight: "700", color: PINK },
-  exerciceModifier: { fontSize: "11px", color: "var(--text-dim)", whiteSpace: "nowrap" },
 
   empty: {
     backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",

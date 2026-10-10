@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PRIMARY, getPaille, getBlason, getCompte, fmtDate } from "../../utils/seances";
+import { PRIMARY, getPaille, getBlason, getCompte, fmtDate, normFactor } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
 import { epreuveStandard, flechesParVolee, resumeTir, dispersion, reussite, SEUIL_REUSSITE_DEFAUT, libelleSeuil } from "../../utils/tirCompte";
@@ -39,7 +39,9 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
   );
 }
 
-function CarteExercice({ doc: d }) {
+// Détail complet d'un exercice (feuille de marque et blason pour le tir compté),
+// partagé avec le Journal de l'archer, qui y ajoute un bouton « Modifier ».
+export function CarteExercice({ doc: d, onModifier }) {
   const proto    = protocoleDe(d);
   const resultat = resultatAvecMoyenne(d);
   const detail   = indicateurExercice(proto, d)?.detail;
@@ -49,7 +51,10 @@ function CarteExercice({ doc: d }) {
     <div style={s.carte}>
       <div style={s.carteHead}>
         <span style={s.carteNom}>{nomExercice(d)}</span>
-        {resultat && <span style={s.carteResultat}>{resultat}</span>}
+        <span style={s.carteDroite}>
+          {resultat && <span style={s.carteResultat}>{resultat}</span>}
+          {onModifier && <button style={s.modifierBtn} onClick={onModifier}>✎ Modifier</button>}
+        </span>
       </div>
       {detail && <p style={s.detail}>{detail}</p>}
       {proto === "manuel" && total > 0 && (
@@ -102,6 +107,7 @@ function DetailTirCompte({ doc: d }) {
     <div style={s.tirCompte}>
       <p style={s.stats}>
         {resume.x} X · {resume.dixPlusX} 10+X · {resume.manques} manqué{resume.manques > 1 ? "s" : ""}
+        {resume.moyenne != null && ` · ≈ ${Math.round(resume.moyenne * normFactor(d.distance))} sur ${normFactor(d.distance) * 10}`}
       </p>
       {zone.pct != null && (
         <p style={s.stats}>
@@ -215,6 +221,11 @@ const s = {
   carteHead: { display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "4px 12px" },
   carteNom: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
   carteResultat: { fontFamily: "var(--mono)", fontSize: "15px", fontWeight: "700", color: PRIMARY },
+  carteDroite: { display: "inline-flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" },
+  modifierBtn: {
+    background: "none", border: "1px solid var(--border-3)", borderRadius: "7px", color: "var(--text-muted)",
+    padding: "4px 10px", fontSize: "12px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
+  },
   texte:  { fontSize: "14px", color: "var(--text-2)", margin: 0, lineHeight: 1.5, whiteSpace: "pre-line" },
   detail: { fontSize: "12px", color: "var(--text-dim)", margin: 0 },
   commentaire: { fontSize: "13px", color: "var(--text-2)", fontStyle: "italic", margin: 0, lineHeight: 1.5 },

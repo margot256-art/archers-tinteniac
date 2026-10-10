@@ -34,7 +34,8 @@
   --blue:      #3b82f6;
   --blue-soft: rgba(59,130,246,0.14);
   --blue-line: rgba(59,130,246,0.4);
-  --good:      #FF007A; /* « positif » en rose, comme le reste de l'appli (pas de vert) */
+  --good:      #FF007A; /* « positif » en rose, comme le reste de l'appli */
+  --ok:        #3fa06f; /* vert réservé aux jauges d'objectif / de volume et aux écarts positifs */
   --good-soft: rgba(255,0,122,0.14);
   --warn:      #d99a2b;
   --warn-soft: rgba(217,154,43,0.14);

@@ -221,9 +221,9 @@ export default function Totaux() {
 function ObjGauge({ label, color, row }) {
   const { current, delta, pct } = row;
   const hasData = current != null;
-  const barColor = !hasData ? "var(--border)" : pct >= 100 ? "var(--good)" : pct >= 80 ? color : pct >= 60 ? "var(--warn)" : "var(--bad)";
+  const barColor = !hasData ? "var(--border)" : pct >= 100 ? "var(--ok)" : pct >= 80 ? color : pct >= 60 ? "var(--warn)" : "var(--bad)";
   const deltaStr = delta == null ? null : delta >= 0 ? `+${delta}` : `${delta}`;
-  const deltaCol = delta == null ? "var(--text-dim)" : delta >= 0 ? "var(--good)" : "var(--bad)";
+  const deltaCol = delta == null ? "var(--text-dim)" : delta >= 0 ? "var(--ok)" : "var(--bad)";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
       <span style={{ fontSize: "10px", fontWeight: "700", color, width: "32px", flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>

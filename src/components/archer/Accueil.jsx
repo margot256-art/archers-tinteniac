@@ -74,7 +74,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
   );
 
   const pctVolume = volEntr > 0 ? Math.min(100, Math.round((volumeMois / volEntr) * 100)) : 0;
-  const gaugeColor = pctVolume >= 100 ? PINK : pctVolume >= 80 ? "var(--good)" : pctVolume >= 50 ? "var(--warn)" : "var(--bad)";
+  const gaugeColor = pctVolume >= 100 ? PINK : pctVolume >= 80 ? "var(--ok)" : pctVolume >= 50 ? "var(--warn)" : "var(--bad)";
 
   const { nbSeancesSaison, flechesSaison } = useMemo(() => {
     const src = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);

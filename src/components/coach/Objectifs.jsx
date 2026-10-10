@@ -174,7 +174,7 @@ function Niveau({ label, n }) {
       {n ? (
         <>
           <span style={s.niveauValeur}>{n.v}</span>
-          <span style={{ ...s.niveauEcart, color: n.ecart >= 0 ? "var(--good)" : "var(--bad)" }}>
+          <span style={{ ...s.niveauEcart, color: n.ecart >= 0 ? "var(--ok)" : "var(--bad)" }}>
             {n.ecart >= 0 ? `+${n.ecart}` : n.ecart}
           </span>
         </>

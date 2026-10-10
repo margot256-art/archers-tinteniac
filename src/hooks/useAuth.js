@@ -8,7 +8,7 @@ import {
   updatePassword,
   EmailAuthProvider,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { slug } from "../utils/slug";
 
@@ -42,7 +42,15 @@ const publier = (nouvel) => { etat = nouvel; abonnes.forEach((f) => f()); };
 const sAbonner = (f) => { abonnes.add(f); return () => abonnes.delete(f); };
 const lireEtat = () => etat;
 
+// Le rôle (coach ou non) vient du jeton Firebase Auth ; le nom vient de la fiche
+// `users/{uid}`, suivie en continu : si elle n'a pas pu être lue (réseau faible),
+// elle arrive dès que la connexion revient. Un échec de l'un n'efface pas l'autre.
+let arreterFiche = null;
+
 onAuthStateChanged(auth, async (fbUser) => {
+  arreterFiche?.();
+  arreterFiche = null;
+
   if (!fbUser) {
     effacerProfil();
     publier({ user: null, isCoach: false, initializing: false });
@@ -50,31 +58,34 @@ onAuthStateChanged(auth, async (fbUser) => {
   }
 
   const enCache = lireProfil(fbUser.uid);
-  if (enCache) publier({ user: enCache, isCoach: enCache.role === "coach", initializing: false });
+  let profil = enCache ?? { id: fbUser.uid, prenom: "", nom: "", role: "archer" };
+  const mettreAJour = (champs) => {
+    profil = { ...profil, ...champs };
+    ecrireProfil(profil);
+    publier({ user: profil, isCoach: profil.role === "coach", initializing: false });
+  };
+
+  // Connu sur cet appareil : affiché tout de suite, sans attendre le réseau.
+  if (enCache) publier({ user: profil, isCoach: profil.role === "coach", initializing: false });
 
   try {
-    const [tokenResult, snap] = await Promise.all([
-      getIdTokenResult(fbUser),
-      getDoc(doc(db, "users", fbUser.uid)),
-    ]);
-    const coach = tokenResult.claims.coach === true;
-    const data  = snap.exists() ? snap.data() : {};
-    const profil = {
-      id:     fbUser.uid,
-      prenom: data.prenom ?? "",
-      nom:    data.nom ?? "",
-      role:   coach ? "coach" : "archer",
-    };
-    ecrireProfil(profil);
-    publier({ user: profil, isCoach: coach, initializing: false });
+    const tokenResult = await getIdTokenResult(fbUser);
+    profil = { ...profil, role: tokenResult.claims.coach === true ? "coach" : "archer" };
   } catch (err) {
-    // Hors ligne sans profil en cache : on garde la personne connectée avec son
-    // identifiant (ses séances restent accessibles), le nom reviendra avec le réseau.
-    console.error("[useAuth] erreur chargement profil :", err);
-    if (!enCache) {
-      publier({ user: { id: fbUser.uid, prenom: "", nom: "", role: "archer" }, isCoach: false, initializing: false });
-    }
+    // Hors ligne avec un jeton expiré : on garde le rôle connu sur l'appareil.
+    console.error("[useAuth] lecture du rôle impossible :", err);
   }
+  publier({ user: profil, isCoach: profil.role === "coach", initializing: false });
+  if (profil.prenom || profil.nom) ecrireProfil(profil);
+
+  arreterFiche = onSnapshot(
+    doc(db, "users", fbUser.uid),
+    (snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      mettreAJour({ prenom: data.prenom ?? "", nom: data.nom ?? "" });
+    },
+    (err) => console.error("[useAuth] lecture de la fiche impossible :", err)
+  );
 });
 
 async function login(prenom, nom, password) {

@@ -194,11 +194,11 @@ const s = {
     padding: "7px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   btnNommer: {
-    backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "7px",
-    padding: "7px 12px", fontSize: "12px", fontWeight: "700", cursor: "pointer", fontFamily: "inherit",
+    backgroundColor: "transparent", color: "var(--text-2)", border: "1px solid var(--border-3)", borderRadius: "7px",
+    padding: "7px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
   btnRetirer: {
-    background: "none", color: "var(--text-muted)", border: "1px solid var(--border-3)", borderRadius: "7px",
+    backgroundColor: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-3)", borderRadius: "7px",
     padding: "7px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
   },
 };

@@ -18,6 +18,11 @@ export const getSaison = (iso) => {
 export const cleSeance = (s) => s.seanceId ?? s.id;
 export const nbSeances = (docs) => new Set(docs.map(cleSeance)).size;
 
+// Couleur d'une jauge de volume mensuel selon l'avancement (Accueil de l'archer et
+// tableau de bord coach) : rose = objectif atteint, vert ≥ 80 %, orange ≥ 50 %, rouge en dessous.
+export const couleurJaugeVolume = (pct) =>
+  pct >= 100 ? PRIMARY : pct >= 80 ? "var(--ok)" : pct >= 50 ? "var(--warn)" : "var(--bad)";
+
 // Retour du coach pas encore lu par l'archer. Seuls les retours écrits depuis la
 // notification portent `retourCoachLu: false` ; les plus anciens comptent comme lus.
 export const retourNonLu = (s) => !!s.retourCoach && s.retourCoachLu === false;
@@ -51,6 +56,28 @@ export const fmtDate = (iso) => {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+};
+
+// Midi local : évite tout décalage de jour lié au fuseau horaire.
+const enDate = (iso) => new Date(`${iso}T12:00:00`);
+
+/** « Samedi 10 octobre » (« Samedi 10 octobre 2026 » avec l'année). */
+export const fmtDateLongue = (iso, avecAnnee = false) => {
+  if (!iso) return "—";
+  const texte = enDate(iso).toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", ...(avecAnnee ? { year: "numeric" } : {}),
+  });
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+};
+
+/** « 10 oct. 2026 » : date compacte pour les tableaux et les listes. */
+export const fmtDateCourte = (iso) =>
+  iso ? enDate(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+/** { semaine: "sam.", num: 10 } pour une pastille de date. */
+export const jourDate = (iso) => {
+  const d = enDate(iso);
+  return { semaine: d.toLocaleDateString("fr-FR", { weekday: "short" }), num: d.getDate() };
 };
 
 export const MOIS = [

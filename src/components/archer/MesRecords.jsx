@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSeances } from "../../hooks/useSeances";
-import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
+import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte } from "../../utils/seances";
 import { scoreEpreuve, scoreSerie, maxEpreuve, maxSerie } from "../../utils/records";
 
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -47,7 +47,7 @@ function RecordSection({ type, color, bgColor, best, max, history, serie, maxS }
             <span style={s.scoreCtx}>/{max} ({pct}%)</span>
           </div>
           <div style={s.meta}>
-            {fmtDate(best.date)}{best.lieu ? ` · ${best.lieu}` : ""}
+            {fmtDateCourte(best.date)}{best.lieu ? ` · ${best.lieu}` : ""}
           </div>
           <div style={s.barTrack}>
             <div style={{ ...s.barFill, width: `${pct}%`, backgroundColor: color }} />
@@ -61,7 +61,7 @@ function RecordSection({ type, color, bgColor, best, max, history, serie, maxS }
         <div style={s.serieRecord}>
           <span style={{ ...s.serieLabel, color }}>Série record</span>
           <span style={s.serieScore}>{serie.score}<span style={s.serieMax}>/{maxS}</span></span>
-          <span style={s.serieDate}>{fmtDate(serie.date)}{serie.lieu ? ` · ${serie.lieu}` : ""}</span>
+          <span style={s.serieDate}>{fmtDateCourte(serie.date)}{serie.lieu ? ` · ${serie.lieu}` : ""}</span>
         </div>
       )}
 
@@ -72,7 +72,7 @@ function RecordSection({ type, color, bgColor, best, max, history, serie, maxS }
               <span style={{ ...s.historyScore, color: i === 0 ? color : "var(--text-2)" }}>
                 {h.score}
               </span>
-              <span style={s.historyDate}>{fmtDate(h.date)}{h.lieu ? ` · ${h.lieu}` : ""}</span>
+              <span style={s.historyDate}>{fmtDateCourte(h.date)}{h.lieu ? ` · ${h.lieu}` : ""}</span>
               {h.delta != null && (
                 <span style={{ ...s.historyDelta, color }}>+{h.delta}</span>
               )}

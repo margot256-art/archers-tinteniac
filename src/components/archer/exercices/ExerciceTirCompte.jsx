@@ -325,7 +325,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
           {maxAffiche != null && <span style={s.compteurMax}>/{maxAffiche}</span>}
         </div>
         <div style={s.compteurLabel}>
-          {resume.fleches} fl.{resume.moyenne != null && ` · moy. ${resume.moyenne.toFixed(2)} · ≈ ${projection} sur ${base}`} · {volees.length} volée{volees.length > 1 ? "s" : ""}
+          {resume.fleches} fl.{resume.moyenne != null && ` · moy. ${resume.moyenne.toFixed(2)} · ≈ ${projection} sur ${base * 10}`} · {volees.length} volée{volees.length > 1 ? "s" : ""}
         </div>
       </div>
 
@@ -560,7 +560,7 @@ const s = {
     borderRadius: "9px", padding: "3px",
   },
   segBtn: {
-    background: "none", border: "none", borderRadius: "7px",
+    backgroundColor: "transparent", border: "none", borderRadius: "7px",
     padding: "7px 12px", fontSize: "12px", fontWeight: "600",
     color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit",
   },

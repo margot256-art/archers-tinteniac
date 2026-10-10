@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { pointsZone } from "./blason";
 import { slug } from "./slug";
-import { getSaison, nbSeances, retoursNonLus } from "./seances";
+import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume } from "./seances";
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
 import { resumeTir, epreuveStandard, positionEpreuve, reussite } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
@@ -34,6 +34,21 @@ describe("getSaison", () => {
     expect(getSaison("2026-08-31")).toBe("2025/2026");
     expect(getSaison("2026-09-01")).toBe("2026/2027");
     expect(getSaison("2027-01-15")).toBe("2026/2027");
+  });
+});
+
+describe("dates et jauges", () => {
+  it("dates en toutes lettres", () => {
+    expect(fmtDateLongue("2026-10-10")).toBe("Samedi 10 octobre");
+    expect(fmtDateLongue("2026-10-10", true)).toBe("Samedi 10 octobre 2026");
+    expect(fmtDateCourte("2026-10-10")).toBe("10 oct. 2026");
+    expect(jourDate("2026-10-10")).toEqual({ semaine: "sam.", num: 10 });
+  });
+  it("couleur de la jauge de volume selon l'avancement", () => {
+    expect(couleurJaugeVolume(100)).toBe("#FF007A");
+    expect(couleurJaugeVolume(85)).toBe("var(--ok)");
+    expect(couleurJaugeVolume(60)).toBe("var(--warn)");
+    expect(couleurJaugeVolume(29)).toBe("var(--bad)");
   });
 });
 

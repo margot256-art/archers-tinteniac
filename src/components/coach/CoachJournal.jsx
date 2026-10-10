@@ -1,7 +1,7 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { chargerExport } from "../../utils/exportLibs";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDate, fmtYM, buildMonthTotals } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
 import DetailJour from "./DetailJour";
@@ -435,7 +435,7 @@ export default function CoachJournal() {
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                     >
                       <td style={s.td}>
-                        {fmtDate(ligne.date)}
+                        {fmtDateCourte(ligne.date)}
                         {ligne.lieu && <div style={s.lieu}>{ligne.lieu}</div>}
                       </td>
                       <td style={{ ...s.td, fontWeight: "700" }}>{ligne.archer || "—"}</td>

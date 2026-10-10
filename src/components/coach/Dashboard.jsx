@@ -2,9 +2,9 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { PRIMARY, fmtDate, CURRENT_SAISON, cleSeance, nbSeances } from "../../utils/seances";
+import { PRIMARY, fmtDateCourte, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume } from "../../utils/seances";
 
-const GREEN   = "var(--good)";
+const GREEN   = "var(--ok)";   // vert : activité récente, progression positive
 const RED     = "var(--bad)";
 const ORANGE  = "var(--warn)";
 
@@ -191,7 +191,7 @@ export default function Dashboard() {
                 >
                   <span style={s.lastName}>{a.name}</span>
                   <span style={{ ...s.lastRight, color: col }}>
-                    {label} ({fmtDate(a.lastDate)})
+                    {label} · {fmtDateCourte(a.lastDate)}
                   </span>
                 </div>
               );
@@ -207,7 +207,7 @@ export default function Dashboard() {
         ) : (
           <div style={s.progGrid}>
             {progression.map(p => {
-              const dCol   = p.delta == null ? "var(--text-dim)" : p.delta > 0 ? PRIMARY : RED;
+              const dCol   = p.delta == null ? "var(--text-dim)" : p.delta > 0 ? GREEN : RED;
               const dStr   = p.delta != null
                 ? `${p.delta > 0 ? "+ " : "− "}${Math.abs(p.delta).toFixed(2)}`
                 : null;
@@ -255,7 +255,7 @@ export default function Dashboard() {
                 </div>
                 {a.hasObj && (
                   <div style={s.barTrack}>
-                    <div style={{ ...s.barFill, width: `${a.barPct}%` }} />
+                    <div style={{ ...s.barFill, width: `${a.barPct}%`, backgroundColor: couleurJaugeVolume(a.rawPct) }} />
                   </div>
                 )}
               </div>

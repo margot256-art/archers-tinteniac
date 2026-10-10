@@ -3,7 +3,7 @@ import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
-import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu, fmtDateLongue, jourDate } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { CarteExercice } from "../coach/DetailJour";
 
@@ -178,7 +178,7 @@ export default function Journal({ seanceInitiale = null }) {
         ) : (
           <div style={s.detailHead}>
             <div style={s.detailTitreLigne}>
-              <h2 style={s.detailDate}>{dateLongue(session.date, true)}</h2>
+              <h2 style={s.detailDate}>{fmtDateLongue(session.date, true)}</h2>
               <button style={s.lienBtn} onClick={() => setEditionInfos(true)}>✎ Modifier les infos</button>
             </div>
             <p style={s.detailMeta}>
@@ -289,7 +289,7 @@ export default function Journal({ seanceInitiale = null }) {
               return (
                 <button key={sess.cle} style={{ ...s.sessionCard, borderLeft: `4px solid ${couleur}` }} onClick={() => setOuverte(sess.cle)}>
                   <div style={s.sessionHead}>
-                    <span style={s.sessionDate}>{dateLongue(sess.date)}</span>
+                    <span style={s.sessionDate}>{fmtDateLongue(sess.date)}</span>
                     <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>{sess.type}</span>
                   </div>
                   <div style={s.sessionMeta}>{sess.distance}{sess.lieu ? ` · ${sess.lieu}` : ""}</div>
@@ -464,20 +464,6 @@ function InfosSeance({ initial, onEnregistrer, onAnnuler }) {
       </div>
     </div>
   );
-}
-
-// « sam. » / « 10 » pour la pastille de date des cartes.
-function jourDate(iso) {
-  const d = new Date(`${iso}T12:00:00`);
-  return { semaine: d.toLocaleDateString("fr-FR", { weekday: "short" }), num: d.getDate() };
-}
-
-// « Samedi 10 octobre » (avec l'année si demandé).
-function dateLongue(iso, avecAnnee = false) {
-  const texte = new Date(`${iso}T12:00:00`).toLocaleDateString("fr-FR", {
-    weekday: "long", day: "numeric", month: "long", ...(avecAnnee ? { year: "numeric" } : {}),
-  });
-  return texte.charAt(0).toUpperCase() + texte.slice(1);
 }
 
 // Barre de répartition des flèches du mois (paille / blason / compté) avec légende.

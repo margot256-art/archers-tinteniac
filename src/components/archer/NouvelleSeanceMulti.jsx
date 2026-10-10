@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
-import { fmtDate, todayISO } from "../../utils/seances";
+import { fmtDateLongue, todayISO } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
 import { lireSeanceEnCours, ecrireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { brouillonsDeSeance, effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
@@ -166,7 +166,7 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <h2 style={s.title}>Séance du {fmtDate(date)}</h2>
+        <h2 style={s.title}>{fmtDateLongue(date)}</h2>
         <button style={s.annulerBtn} onClick={terminerSeance} disabled={enregistrement}>Terminer la séance</button>
       </div>
       <p style={s.resume}>{distance} · {type}{lieu ? ` · ${lieu}` : ""}</p>

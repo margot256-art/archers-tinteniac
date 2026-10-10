@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON, cleSeance, nbSeances, retoursNonLus, fmtDate } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON, cleSeance, nbSeances, retoursNonLus, fmtDateLongue, couleurJaugeVolume } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 import { lireBrouillon } from "../../utils/brouillonExercice";
 import FilterSelect from "../shared/FilterSelect";
@@ -74,7 +74,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
   );
 
   const pctVolume = volEntr > 0 ? Math.min(100, Math.round((volumeMois / volEntr) * 100)) : 0;
-  const gaugeColor = pctVolume >= 100 ? PINK : pctVolume >= 80 ? "var(--ok)" : pctVolume >= 50 ? "var(--warn)" : "var(--bad)";
+  const gaugeColor = couleurJaugeVolume(pctVolume);
 
   const { nbSeancesSaison, flechesSaison } = useMemo(() => {
     const src = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
@@ -156,7 +156,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
           {retours.map((r) => (
             <button key={r.cle} style={s.retourCarte} onClick={() => onOuvrirSeance?.(r.cle)}>
               <span style={s.retourTete}>
-                <span style={s.retourDate}>{fmtDate(r.date)} · {r.distance} · {r.type}</span>
+                <span style={s.retourDate}>{fmtDateLongue(r.date)} · {r.distance} · {r.type}</span>
                 <span style={s.retourLire}>Lire →</span>
               </span>
               <span style={s.retourTexte}>{r.texte}</span>

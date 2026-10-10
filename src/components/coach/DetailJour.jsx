@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PRIMARY, getPaille, getBlason, getCompte, fmtDate, normFactor } from "../../utils/seances";
+import { PRIMARY, getPaille, getBlason, getCompte, fmtDateLongue, normFactor } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
 import { epreuveStandard, flechesParVolee, resumeTir, dispersion, reussite, SEUIL_REUSSITE_DEFAUT, libelleSeuil } from "../../utils/tirCompte";
@@ -21,7 +21,7 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
       <div style={s.head}>
         <h2 style={s.titre}>{ligne.archer}</h2>
         <p style={s.meta}>
-          {fmtDate(ligne.date)} · {ligne.distance} · {ligne.type}{ligne.lieu ? ` · ${ligne.lieu}` : ""}
+          {fmtDateLongue(ligne.date, true)} · {ligne.distance} · {ligne.type}{ligne.lieu ? ` · ${ligne.lieu}` : ""}
         </p>
       </div>
 

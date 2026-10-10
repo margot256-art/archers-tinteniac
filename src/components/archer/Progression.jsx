@@ -37,7 +37,7 @@ const s = {
     backgroundColor: "var(--surface-raised)", borderRadius: "10px", padding: "4px",
   },
   toggleBtn: {
-    background: "none", border: "none", borderRadius: "7px",
+    backgroundColor: "transparent", border: "none", borderRadius: "7px",
     padding: "8px 18px", fontSize: "13px", fontWeight: "600",
     color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit",
   },

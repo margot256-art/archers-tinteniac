@@ -12,62 +12,31 @@ export function useSeances() {
   useEffect(() => {
     if (!user) return;
 
-    const fullName = `${user.prenom} ${user.nom}`;
-    const archerId = user.id ?? `${user.prenom.toLowerCase()}_${user.nom.toLowerCase()}`;
-
-    // Les séances sont rattachées à l'archer par son identifiant (`archerId`), qui ne
-    // change pas si le nom est corrigé et distingue deux homonymes. Les plus anciennes
-    // n'en ont pas : on les retrouve encore par le nom complet, en écartant celles
-    // qui portent l'identifiant d'un autre archer.
-    const parId  = new Map();
-    const parNom = new Map();
-    const recus  = { id: false, nom: false };
-
-    const publier = () => {
-      if (!recus.id || !recus.nom) return;
-      const data = [...new Map([...parNom, ...parId]).values()]
-        .sort((a, b) => (a.date < b.date ? 1 : -1));
-      setSeances(data);
-      setLoading(false);
-    };
-
-    const lire = (d) => {
-      const raw = d.data();
-      return { id: d.id, ...raw, distance: raw.distance === "18 ans" ? "18m" : raw.distance };
-    };
-
-    const surErreur = (err) => {
-      console.error("[useSeances] erreur :", err);
-      setError("Impossible de charger les séances.");
-      setLoading(false);
-    };
-
-    const unsubId = onSnapshot(
-      query(collection(db, "seances"), where("archerId", "==", archerId)),
+    // Les séances sont rattachées à l'archer par son identifiant (`archerId` = uid
+    // Firebase Auth), qui ne change pas si le nom est corrigé et distingue deux
+    // homonymes. Toutes les séances en ont un (anciennes rattachées le 2026-10-10 par
+    // scripts/rattacher-archerid.mjs) ; les règles Firestore refusent d'ailleurs toute
+    // autre requête à un archer.
+    const unsub = onSnapshot(
+      query(collection(db, "seances"), where("archerId", "==", user.id)),
       (snapshot) => {
-        parId.clear();
-        for (const d of snapshot.docs) parId.set(d.id, lire(d));
-        recus.id = true;
-        publier();
+        const data = snapshot.docs
+          .map((d) => {
+            const raw = d.data();
+            return { id: d.id, ...raw, distance: raw.distance === "18 ans" ? "18m" : raw.distance };
+          })
+          .sort((a, b) => (a.date < b.date ? 1 : -1));
+        setSeances(data);
+        setLoading(false);
       },
-      surErreur
+      (err) => {
+        console.error("[useSeances] erreur :", err);
+        setError("Impossible de charger les séances.");
+        setLoading(false);
+      }
     );
 
-    const unsubNom = onSnapshot(
-      query(collection(db, "seances"), where("archer", "==", fullName)),
-      (snapshot) => {
-        parNom.clear();
-        for (const d of snapshot.docs) {
-          const s = lire(d);
-          if (!s.archerId || s.archerId === archerId) parNom.set(d.id, s);
-        }
-        recus.nom = true;
-        publier();
-      },
-      surErreur
-    );
-
-    return () => { unsubId(); unsubNom(); };
+    return () => unsub();
   }, [user]);
 
   // Les écritures ne bloquent pas l'écran en attendant le serveur (voir sansAttendreLeServeur).

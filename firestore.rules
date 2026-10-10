@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isCoach() {
+      return isSignedIn() && request.auth.token.coach == true;
+    }
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // users/{uid} — uid Firebase Auth == ancien ID de document (prenom_nom).
+    // Pas de champ "mdp" ici : les mots de passe vivent uniquement dans Firebase Auth.
+    match /users/{userId} {
+      allow read, write: if isSelf(userId) || isCoach();
+    }
+
+    // seances/{id} — un.e archer.e lit/écrit ses propres séances (archerId == uid),
+    // sans pouvoir les attribuer à quelqu'un d'autre. Le coach a tous les droits
+    // (retour du coach `retourCoach` / `retourCoachLu`, suppression…) ; l'archer
+    // passe lui-même `retourCoachLu` à true en ouvrant la séance.
+    match /seances/{seanceId} {
+      allow read, delete: if isCoach() ||
+        (isSignedIn() && resource.data.archerId == request.auth.uid);
+      allow update: if isCoach() ||
+        (isSignedIn() && resource.data.archerId == request.auth.uid
+                      && request.resource.data.archerId == request.auth.uid);
+      allow create: if isCoach() ||
+        (isSignedIn() && request.resource.data.archerId == request.auth.uid);
+    }
+
+    // objectifs/{archerId} — ID du document == uid de l'archer concerné.
+    match /objectifs/{archerId} {
+      allow read: if isCoach() || isSelf(archerId);
+      allow write: if isCoach();
+    }
+
+    // password_resets — création ouverte (pas encore connecté), champs limités ;
+    // lecture et mise à jour (traitement de la demande) réservées au coach.
+    match /password_resets/{requestId} {
+      allow create: if request.resource.data.keys().hasOnly(['prenom', 'nom', 'archerId', 'status', 'requestedAt'])
+        && request.resource.data.status == 'pending';
+      allow read, update: if isCoach();
+    }
+
+    // Tout le reste est refusé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

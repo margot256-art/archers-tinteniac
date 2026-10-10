@@ -4,7 +4,7 @@ import LoginScreen from "./components/auth/LoginScreen";
 import Layout from "./components/Layout";
 
 function App() {
-  const { user, isCoach, login, logout } = useAuth();
+  const { user, isCoach, initializing, login, logout, changePassword } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
   useEffect(() => {
@@ -18,11 +18,24 @@ function App() {
 
   const toggleTheme = useCallback(() => setTheme(t => t === "dark" ? "light" : "dark"), []);
 
+  if (initializing) {
+    return null;
+  }
+
   if (!user) {
     return <LoginScreen login={login} onLogin={() => {}} theme={theme} toggleTheme={toggleTheme} />;
   }
 
-  return <Layout user={user} isCoach={isCoach} onLogout={logout} theme={theme} toggleTheme={toggleTheme} />;
+  return (
+    <Layout
+      user={user}
+      isCoach={isCoach}
+      onLogout={logout}
+      changePassword={changePassword}
+      theme={theme}
+      toggleTheme={toggleTheme}
+    />
+  );
 }
 
 export default App;

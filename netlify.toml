@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[functions]
+  directory = "netlify/functions"
+
 # index.html jamais mis en cache → le navigateur voit toujours la dernière version
 [[headers]]
   for = "/index.html"

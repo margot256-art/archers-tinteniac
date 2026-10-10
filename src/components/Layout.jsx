@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo, lazy, Suspense, memo } from "react";
-import { doc, getDoc, updateDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { PRIMARY as PINK, retoursNonLus } from "../utils/seances";
 import { useSeances } from "../hooks/useSeances";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
-
-const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 // ── Imports lazy (chargement à la demande) ─────────────────────────────────
 const Accueil         = lazy(() => import("./archer/Accueil"));
@@ -61,7 +59,7 @@ const sDefault = {
 
 // ── Layout principal ─────────────────────────────────────────────────────
 
-export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) {
+export default function Layout({ user, isCoach, onLogout, changePassword, theme, toggleTheme }) {
   const [section,       setSection]       = useState("archer");
   const [activeTab,     setActiveTab]     = useState("accueil");
   const [showChangePwd, setShowChangePwd] = useState(false);
@@ -127,9 +125,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
             <IconBtn onClick={toggleTheme} title={theme === "dark" ? "Mode clair" : "Mode sombre"}>
               {theme === "dark" ? <SunIcon /> : <MoonIcon />}
             </IconBtn>
-            {!isCoach && (
-              <IconBtn onClick={() => setShowChangePwd(true)} title="Changer le mot de passe">🔑</IconBtn>
-            )}
+            <IconBtn onClick={() => setShowChangePwd(true)} title="Changer le mot de passe">🔑</IconBtn>
             <button
               onClick={onLogout}
               style={{
@@ -199,7 +195,7 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
       </header>
 
       {showChangePwd && (
-        <ChangePasswordModal user={user} onClose={() => setShowChangePwd(false)} />
+        <ChangePasswordModal changePassword={changePassword} onClose={() => setShowChangePwd(false)} />
       )}
 
       <main role="tabpanel" className="layout-main">
@@ -239,13 +235,13 @@ const IconBtn = memo(function IconBtn({ onClick, title, children }) {
   );
 });
 
-function ChangePasswordModal({ user, onClose }) {
-  const [current, setCurrent] = useState("");
-  const [next,    setNext]    = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error,   setError]   = useState("");
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+function ChangePasswordModal({ changePassword, onClose }) {
+  const [current,  setCurrent]  = useState("");
+  const [next,     setNext]     = useState("");
+  const [confirm,  setConfirm]  = useState("");
+  const [error,    setError]    = useState("");
+  const [success,  setSuccess]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -254,19 +250,12 @@ function ChangePasswordModal({ user, onClose }) {
     if (next !== confirm)              { setError("Les nouveaux mots de passe ne correspondent pas."); return; }
     if (next.length < 6)               { setError("Le nouveau mot de passe doit faire au moins 6 caractères."); return; }
     setLoading(true);
-    try {
-      const snap = await getDoc(doc(db, "users", user.id));
-      if (!snap.exists() || snap.data().mdp !== toBase64(current)) {
-        setError("Mot de passe actuel incorrect.");
-        setLoading(false);
-        return;
-      }
-      await updateDoc(doc(db, "users", user.id), { mdp: toBase64(next) });
+    const result = await changePassword(current, next);
+    setLoading(false);
+    if (result.success) {
       setSuccess(true);
-    } catch {
-      setError("Erreur lors de la mise à jour. Réessayez.");
-    } finally {
-      setLoading(false);
+    } else {
+      setError(result.error);
     }
   };
 

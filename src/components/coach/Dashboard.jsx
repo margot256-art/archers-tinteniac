@@ -1,11 +1,22 @@
 import { useEffect, useState, useMemo } from "react";
-import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { collection, onSnapshot, doc, updateDoc, getDoc, query, where } from "firebase/firestore";
+import { db, auth } from "../../lib/firebase";
 
-const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
-const normAp   = (s)   => s.replace(/['`´ʼ'ʹ]/g, "'");
-const toDocId  = (prenom, nom) =>
+const normAp  = (s) => s.replace(/['`´ʼ'ʹ]/g, "'");
+const toDocId = (prenom, nom) =>
   normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`).replace(/\s+/g, "_");
+
+async function callAdminFunction(name, payload) {
+  const token = await auth.currentUser.getIdToken();
+  const res = await fetch(`/.netlify/functions/${name}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || "Erreur serveur.");
+  return body;
+}
 
 function useResetRequests() {
   const [requests, setRequests] = useState([]);
@@ -88,10 +99,10 @@ export default function Dashboard() {
 
   const handlePasswordReset = async (req) => {
     const pwd = (newPasswords[req.id] || "").trim();
-    if (!pwd) return;
+    if (!pwd || pwd.length < 6) return;
     setResetStatus(prev => ({ ...prev, [req.id]: "loading" }));
     try {
-      await updateDoc(doc(db, "users", req.archerId), { mdp: toBase64(pwd) });
+      await callAdminFunction("admin-reset-password", { uid: req.archerId, password: pwd });
       await updateDoc(doc(db, "password_resets", req.id), { status: "done" });
       setResetStatus(prev => ({ ...prev, [req.id]: "done" }));
       setNewPasswords(prev => ({ ...prev, [req.id]: "" }));
@@ -217,7 +228,7 @@ export default function Dashboard() {
               <div style={s.resetActions}>
                 <input
                   type="text"
-                  placeholder="Nouveau mot de passe"
+                  placeholder="Nouveau mot de passe (6 car. min)"
                   value={newPasswords[req.id] || ""}
                   onChange={e => setNewPasswords(prev => ({ ...prev, [req.id]: e.target.value }))}
                   style={s.resetInput}
@@ -225,7 +236,7 @@ export default function Dashboard() {
                 <button
                   style={{ ...s.resetBtn, ...(resetStatus[req.id] === "loading" ? { opacity: 0.6 } : {}) }}
                   onClick={() => handlePasswordReset(req)}
-                  disabled={resetStatus[req.id] === "loading" || !(newPasswords[req.id] || "").trim()}
+                  disabled={resetStatus[req.id] === "loading" || (newPasswords[req.id] || "").trim().length < 6}
                 >
                   {resetStatus[req.id] === "done" ? "✓" : resetStatus[req.id] === "loading" ? "…" : "Valider"}
                 </button>
@@ -379,25 +390,20 @@ function NewArcherModal({ onClose }) {
     e.preventDefault();
     setError("");
     if (!prenom.trim() || !nom.trim()) { setError("Prénom et nom obligatoires."); return; }
-    if (!pwd || pwd.length < 4)        { setError("Mot de passe trop court (4 caractères min)."); return; }
+    if (!pwd || pwd.length < 6)        { setError("Mot de passe trop court (6 caractères min)."); return; }
     setLoading(true);
     try {
       const id   = toDocId(prenom, nom);
-      const ref  = doc(db, "users", id);
-      const snap = await getDoc(ref);
+      const snap = await getDoc(doc(db, "users", id));
       if (snap.exists()) {
         setError(`Un archer "${prenom.trim()} ${nom.trim()}" existe déjà.`);
         setLoading(false);
         return;
       }
-      await setDoc(ref, {
-        prenom: prenom.trim(),
-        nom:    nom.trim(),
-        mdp:    toBase64(pwd),
-      });
+      await callAdminFunction("admin-create-archer", { prenom: prenom.trim(), nom: nom.trim(), password: pwd });
       setSuccess(true);
-    } catch {
-      setError("Erreur lors de la création. Réessayez.");
+    } catch (err) {
+      setError(err.message || "Erreur lors de la création. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -442,7 +448,7 @@ function NewArcherModal({ onClose }) {
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              <label htmlFor="na-pwd" style={sModal.label}>Mot de passe</label>
+              <label htmlFor="na-pwd" style={sModal.label}>Mot de passe (6 car. min)</label>
               <input id="na-pwd" type="text" value={pwd} onChange={e => { setPwd(e.target.value); setError(""); }}
                 style={inputStyle} placeholder="Mot de passe initial" />
             </div>

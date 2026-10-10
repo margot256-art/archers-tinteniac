@@ -1,145 +1,130 @@
-import { useState } from "react";
-import { doc, getDoc, getDocs, collection } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { useSyncExternalStore } from "react";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  getIdTokenResult,
+  reauthenticateWithCredential,
+  updatePassword,
+  EmailAuthProvider,
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
+import { slug } from "../utils/slug";
 
-const COACH_PASSWORD = "ArchersTinté2026";
-const USER_KEY  = "at_user";
-const COACH_KEY = "at_coach";
+const DOMAIN = "@archers-tinteniac.fr";
 
-const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+// Profil de la personne connectée, gardé sur l'appareil : l'appli s'ouvre tout de
+// suite, et reste utilisable sans réseau (au pas de tir) même si le profil ne peut
+// pas être relu depuis Firestore.
+const CLE_PROFIL = "archers-tinteniac.profil";
 
-// Toutes les variantes d'apostrophe → apostrophe typographique '
-const normAp = (s) => s.replace(/['`´ʼ'ʹ]/g, "'");
-
-// Construit l'ID Firestore : minuscules + espaces→_ + apostrophe normalisée
-const toDocId = (prenom, nom) =>
-  normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`).replace(/\s+/g, "_");
-
-// Normalise le prénom/nom affiché (conserve la casse, normalise l'apostrophe)
-const normName = (s) => normAp(s.trim());
-
-// Supprime les accents pour la comparaison insensible aux accents
-const stripAccents = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
-
-function clearStorage() {
-  try { localStorage.removeItem(USER_KEY);  } catch {}
-  try { localStorage.removeItem(COACH_KEY); } catch {}
+function lireProfil(uid) {
+  try {
+    const p = JSON.parse(localStorage.getItem(CLE_PROFIL));
+    return p?.id === uid ? p : null;
+  } catch { return null; }
+}
+function ecrireProfil(profil) {
+  try { localStorage.setItem(CLE_PROFIL, JSON.stringify(profil)); } catch { /* stockage indisponible */ }
+}
+function effacerProfil() {
+  try { localStorage.removeItem(CLE_PROFIL); } catch { /* stockage indisponible */ }
 }
 
-function loadStoredUser() {
+// Anciennes clés de l'authentification maison (avant Firebase Authentication).
+try { localStorage.removeItem("at_user"); localStorage.removeItem("at_coach"); } catch { /* stockage indisponible */ }
+
+// ── État partagé par toute l'appli : une seule écoute de Firebase Auth ────────
+let etat = { user: null, isCoach: false, initializing: true };
+const abonnes = new Set();
+const publier = (nouvel) => { etat = nouvel; abonnes.forEach((f) => f()); };
+const sAbonner = (f) => { abonnes.add(f); return () => abonnes.delete(f); };
+const lireEtat = () => etat;
+
+onAuthStateChanged(auth, async (fbUser) => {
+  if (!fbUser) {
+    effacerProfil();
+    publier({ user: null, isCoach: false, initializing: false });
+    return;
+  }
+
+  const enCache = lireProfil(fbUser.uid);
+  if (enCache) publier({ user: enCache, isCoach: enCache.role === "coach", initializing: false });
+
   try {
-    const raw       = localStorage.getItem(USER_KEY);
-    const coachFlag = localStorage.getItem(COACH_KEY);
-    if (!raw) return null;
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && parsed.prenom && parsed.nom) {
-        const prenom = normName(parsed.prenom);
-        const nom    = normName(parsed.nom);
-        return {
-          prenom,
-          nom,
-          id:   parsed.id ?? toDocId(prenom, nom),
-          role: parsed.role ?? (coachFlag === "true" ? "coach" : "archer"),
-        };
-      }
-    } catch {
-      // not JSON — plain string
+    const [tokenResult, snap] = await Promise.all([
+      getIdTokenResult(fbUser),
+      getDoc(doc(db, "users", fbUser.uid)),
+    ]);
+    const coach = tokenResult.claims.coach === true;
+    const data  = snap.exists() ? snap.data() : {};
+    const profil = {
+      id:     fbUser.uid,
+      prenom: data.prenom ?? "",
+      nom:    data.nom ?? "",
+      role:   coach ? "coach" : "archer",
+    };
+    ecrireProfil(profil);
+    publier({ user: profil, isCoach: coach, initializing: false });
+  } catch (err) {
+    // Hors ligne sans profil en cache : on garde la personne connectée avec son
+    // identifiant (ses séances restent accessibles), le nom reviendra avec le réseau.
+    console.error("[useAuth] erreur chargement profil :", err);
+    if (!enCache) {
+      publier({ user: { id: fbUser.uid, prenom: "", nom: "", role: "archer" }, isCoach: false, initializing: false });
     }
+  }
+});
 
-    // Plain string : "Florence Le Manac'h"
-    const parts  = raw.trim().split(/\s+/);
-    const prenom = normName(parts[0] ?? "");
-    const nom    = normName(parts.slice(1).join(" "));
+async function login(prenom, nom, password) {
+  const email = `${slug(prenom, nom)}${DOMAIN}`;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    return { success: true };
+  } catch (err) {
+    if (
+      err.code === "auth/invalid-credential" ||
+      err.code === "auth/user-not-found" ||
+      err.code === "auth/wrong-password" ||
+      err.code === "auth/invalid-email"
+    ) {
+      return { success: false, error: "Prénom, nom ou mot de passe incorrect." };
+    }
+    if (err.code === "auth/network-request-failed") {
+      return { success: false, error: "Pas de réseau : la première connexion demande Internet." };
+    }
+    if (err.code === "auth/too-many-requests") {
+      return { success: false, error: "Trop d'essais. Patientez quelques minutes avant de réessayer." };
+    }
+    console.error("[useAuth] erreur connexion :", err);
+    return { success: false, error: "Erreur de connexion. Réessayez." };
+  }
+}
 
-    if (!prenom || !nom) { clearStorage(); return null; }
+const logout = () => signOut(auth);
 
-    return { prenom, nom, id: toDocId(prenom, nom), role: coachFlag === "true" ? "coach" : "archer" };
-  } catch {
-    clearStorage();
-    return null;
+async function changePassword(currentPassword, newPassword) {
+  const fbUser = auth.currentUser;
+  if (!fbUser) return { success: false, error: "Non connecté." };
+  try {
+    const credential = EmailAuthProvider.credential(fbUser.email, currentPassword);
+    await reauthenticateWithCredential(fbUser, credential);
+    await updatePassword(fbUser, newPassword);
+    return { success: true };
+  } catch (err) {
+    if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+      return { success: false, error: "Mot de passe actuel incorrect." };
+    }
+    if (err.code === "auth/weak-password") {
+      return { success: false, error: "Le nouveau mot de passe doit faire au moins 6 caractères." };
+    }
+    console.error("[useAuth] erreur changement mot de passe :", err);
+    return { success: false, error: "Erreur lors de la mise à jour. Réessayez." };
   }
 }
 
 export function useAuth() {
-  const [user,    setUser]    = useState(loadStoredUser);
-  const [isCoach, setIsCoach] = useState(() => {
-    try { return localStorage.getItem(COACH_KEY) === "true"; } catch { return false; }
-  });
-
-  const login = async (prenom, nom, password) => {
-    // Normaliser dès l'entrée — tout le reste de l'app hérite des valeurs propres
-    const p = normName(prenom);
-    const n = normName(nom);
-
-    if (password === COACH_PASSWORD) {
-      const coachUser = { prenom: p, nom: n, role: "coach", id: toDocId(p, n) };
-      try { localStorage.setItem(COACH_KEY, "true"); localStorage.setItem(USER_KEY, `${p} ${n}`); } catch {}
-      setIsCoach(true);
-      setUser(coachUser);
-      return { success: true, role: "coach" };
-    }
-
-    let docId = toDocId(p, n);
-
-    try {
-      let snapshot = await getDoc(doc(db, "users", docId));
-
-      // Fallback insensible aux accents : si le docId exact n'existe pas,
-      // on cherche un utilisateur dont le nom sans accents correspond
-      if (!snapshot.exists()) {
-        const searchKey = stripAccents(docId);
-        const allUsers  = await getDocs(collection(db, "users"));
-        const match     = allUsers.docs.find(d => stripAccents(d.id) === searchKey);
-        if (match) {
-          snapshot = match;
-          docId    = match.id;
-        }
-      }
-
-      if (!snapshot.exists()) {
-        return { success: false, error: "Utilisateur introuvable." };
-      }
-
-      const data    = snapshot.data();
-      const encoded = toBase64(password);
-
-      if (data.mdp !== encoded) {
-        return { success: false, error: "Mot de passe incorrect." };
-      }
-
-      // Use the canonical name stored in Firestore, not what the user typed
-      let canonPrenom, canonNom;
-      if (data.prenom) {
-        canonPrenom = normName(data.prenom);
-        canonNom    = normName(data.nom);
-      } else if (data.nom) {
-        // Old format: full name stored in `nom`
-        const parts = data.nom.trim().split(/\s+/);
-        canonPrenom = normName(parts[0] ?? p);
-        canonNom    = normName(parts.slice(1).join(" ") || n);
-      } else {
-        canonPrenom = p;
-        canonNom    = n;
-      }
-
-      const userData = { prenom: canonPrenom, nom: canonNom, role: "archer", id: docId };
-      try { localStorage.setItem(USER_KEY, JSON.stringify(userData)); localStorage.removeItem(COACH_KEY); } catch {}
-      setUser(userData);
-      setIsCoach(false);
-      return { success: true, role: "archer" };
-    } catch (err) {
-      console.error("[useAuth] erreur Firestore :", err);
-      return { success: false, error: "Erreur de connexion. Réessayez." };
-    }
-  };
-
-  const logout = () => {
-    clearStorage();
-    setUser(null);
-    setIsCoach(false);
-  };
-
-  return { user, isCoach, login, logout };
+  const { user, isCoach, initializing } = useSyncExternalStore(sAbonner, lireEtat);
+  return { user, isCoach, initializing, login, logout, changePassword };
 }

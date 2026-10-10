@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { collection, onSnapshot, doc, updateDoc, getDoc, query, where } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDoc, query, where } from "firebase/firestore";
 import { db, auth } from "../../lib/firebase";
 
 const normAp  = (s) => s.replace(/['`´ʼ'ʹ]/g, "'");
@@ -96,6 +96,17 @@ export default function Dashboard() {
   const [newPasswords,   setNewPasswords]   = useState({});
   const [resetStatus,    setResetStatus]    = useState({});
   const [showNewArcher,  setShowNewArcher]  = useState(false);
+
+  // Demande inutile (doublon, erreur de nom, déjà réglée autrement) : on la retire.
+  const handleSupprimerDemande = async (req) => {
+    if (!window.confirm(`Supprimer la demande de ${req.prenom} ${req.nom} ?`)) return;
+    try {
+      await deleteDoc(doc(db, "password_resets", req.id));
+    } catch (err) {
+      console.error("[Dashboard] suppression demande :", err);
+      setResetStatus(prev => ({ ...prev, [req.id]: "error" }));
+    }
+  };
 
   const handlePasswordReset = async (req) => {
     const pwd = (newPasswords[req.id] || "").trim();
@@ -240,6 +251,13 @@ export default function Dashboard() {
                 >
                   {resetStatus[req.id] === "done" ? "✓" : resetStatus[req.id] === "loading" ? "…" : "Valider"}
                 </button>
+                <button
+                  style={s.resetSupprimer}
+                  onClick={() => handleSupprimerDemande(req)}
+                  disabled={resetStatus[req.id] === "loading"}
+                  title="Supprimer la demande"
+                  aria-label={`Supprimer la demande de ${req.prenom} ${req.nom}`}
+                >✕</button>
               </div>
               {resetStatus[req.id] === "error" && (
                 <span style={{ fontSize: "11px", color: "var(--bad)" }}>Erreur — archer introuvable ?</span>
@@ -517,6 +535,10 @@ const s = {
   },
   resetName:    { fontSize: "14px", color: "var(--text)", fontWeight: "600", flex: "1 1 120px" },
   resetActions: { display: "flex", gap: "8px", flex: "2 1 240px" },
+  resetSupprimer: {
+    background: "none", border: "1px solid var(--border-3)", borderRadius: "7px",
+    color: "var(--text-muted)", padding: "0 10px", fontSize: "13px", cursor: "pointer", fontFamily: "inherit",
+  },
   resetInput: {
     flex: 1, padding: "7px 10px",
     border: "1.5px solid var(--border-2)", borderRadius: "7px",

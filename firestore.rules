@@ -40,11 +40,11 @@ service cloud.firestore {
     }
 
     // password_resets — création ouverte (pas encore connecté), champs limités ;
-    // lecture et mise à jour (traitement de la demande) réservées au coach.
+    // lecture, mise à jour (traitement de la demande) et suppression réservées au coach.
     match /password_resets/{requestId} {
       allow create: if request.resource.data.keys().hasOnly(['prenom', 'nom', 'archerId', 'status', 'requestedAt'])
         && request.resource.data.status == 'pending';
-      allow read, update: if isCoach();
+      allow read, update, delete: if isCoach();
     }
 
     // Tout le reste est refusé par défaut.

@@ -69,7 +69,10 @@ onAuthStateChanged(auth, async (fbUser) => {
   if (enCache) publier({ user: profil, isCoach: profil.role === "coach", initializing: false });
 
   try {
-    const tokenResult = await getIdTokenResult(fbUser);
+    // Jeton rafraîchi à chaque ouverture : un droit coach donné ou retiré depuis
+    // la liste des archers est pris en compte sans se reconnecter. Sans réseau,
+    // le jeton déjà connu suffit.
+    const tokenResult = await getIdTokenResult(fbUser, true).catch(() => getIdTokenResult(fbUser));
     profil = { ...profil, role: tokenResult.claims.coach === true ? "coach" : "archer" };
   } catch (err) {
     // Hors ligne avec un jeton expiré : on garde le rôle connu sur l'appareil.

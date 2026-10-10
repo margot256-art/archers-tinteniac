@@ -17,6 +17,7 @@ const Dashboard       = lazy(() => import("./coach/Dashboard"));
 const CoachJournal    = lazy(() => import("./coach/CoachJournal"));
 const ProgressionClub = lazy(() => import("./coach/ProgressionClub"));
 const Objectifs       = lazy(() => import("./coach/Objectifs"));
+const ListeArchers    = lazy(() => import("./coach/ListeArchers"));
 
 // "new-session" n'est volontairement pas dans cette liste : ce n'est pas un
 // onglet, on y arrive uniquement via le bouton "+ Nouvelle séance" de l'Accueil.
@@ -34,6 +35,11 @@ const COACH_TABS = [
   { id: "objectives",         label: "Objectifs" },
 ];
 
+// Section réservée aux coachs : les comptes de l'appli et le droit coach.
+const ARCHERS_TABS = [
+  { id: "liste-archers", label: "Liste des archers" },
+];
+
 function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil, onOuvrirSeance, seanceAOuvrir } = {}) {
   switch (id) {
     case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} onSaisieManuelle={onAllerSaisieManuelle} onOuvrirSeance={onOuvrirSeance} />;
@@ -46,6 +52,7 @@ function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccuei
     case "coach-journal":    return <CoachJournal />;
     case "progression-club": return <ProgressionClub />;
     case "objectives":       return <Objectifs />;
+    case "liste-archers":    return <ListeArchers />;
     default:
       return <div style={sDefault}>Vue <strong style={{ color: "var(--text)" }}>{id}</strong> — à venir</div>;
   }
@@ -81,10 +88,10 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
 
   const switchSection = (sec) => {
     setSection(sec);
-    setActiveTab(sec === "coach" ? "dashboard" : "accueil");
+    setActiveTab(sec === "coach" ? "dashboard" : sec === "archers" ? "liste-archers" : "accueil");
   };
 
-  const subTabs = section === "coach" ? COACH_TABS : ARCHER_TABS;
+  const subTabs = section === "coach" ? COACH_TABS : section === "archers" ? ARCHERS_TABS : ARCHER_TABS;
   const enSeance = activeTab === "new-session" || activeTab === "saisie-manuelle";
 
   return (
@@ -161,6 +168,7 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
             }}>
               <SectionBtn label="Archer" active={section === "archer"} onClick={() => switchSection("archer")} />
               {isCoach && <SectionBtn label="Coach" active={section === "coach"} onClick={() => switchSection("coach")} />}
+              {isCoach && <SectionBtn label="Archers" active={section === "archers"} onClick={() => switchSection("archers")} />}
               <a
                 href="https://www.archers-de-la-bretagne-romantique.fr/en-savoir-plus/mandat-et-inscription-130102"
                 target="_blank" rel="noopener noreferrer"

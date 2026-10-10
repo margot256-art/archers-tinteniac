@@ -1,22 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDoc, query, where } from "firebase/firestore";
-import { db, auth } from "../../lib/firebase";
+import { db } from "../../lib/firebase";
+import { callAdminFunction } from "../../utils/adminApi";
 
 const normAp  = (s) => s.replace(/['`´ʼ'ʹ]/g, "'");
 const toDocId = (prenom, nom) =>
   normAp(`${prenom.trim().toLowerCase()}_${nom.trim().toLowerCase()}`).replace(/\s+/g, "_");
-
-async function callAdminFunction(name, payload) {
-  const token = await auth.currentUser.getIdToken();
-  const res = await fetch(`/.netlify/functions/${name}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || "Erreur serveur.");
-  return body;
-}
 
 function useResetRequests() {
   const [requests, setRequests] = useState([]);

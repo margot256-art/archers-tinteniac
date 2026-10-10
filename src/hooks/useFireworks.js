@@ -1,8 +1,6 @@
-import { useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 
-const storageKey = () => `fireworks-${new Date().getFullYear()}-${new Date().getMonth()}`;
-
+// Feu d'artifice (record battu, objectif de volume atteint) — voir Celebrations.jsx.
 export function launch() {
   const fire = (x, angle) =>
     confetti({
@@ -28,26 +26,4 @@ export function launch() {
     gravity: 0.6,
     ticks: 250,
   }), 450);
-}
-
-export function useFireworks(pct) {
-  const prevPct = useRef(pct);
-
-  useEffect(() => {
-    const key = storageKey();
-    const alreadyShown = localStorage.getItem(key);
-
-    if (pct >= 100 && !alreadyShown) {
-      launch();
-      localStorage.setItem(key, "1");
-    }
-
-    // Déclenche aussi si on passe le seuil en direct (nouvelle séance saisie)
-    if (pct >= 100 && prevPct.current < 100) {
-      launch();
-      localStorage.setItem(key, "1");
-    }
-
-    prevPct.current = pct;
-  }, [pct]);
 }

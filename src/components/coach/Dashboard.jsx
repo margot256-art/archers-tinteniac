@@ -19,7 +19,7 @@ function useResetRequests() {
   return requests;
 }
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { PRIMARY, fmtDate, CURRENT_SAISON } from "../../utils/seances";
+import { PRIMARY, fmtDate, CURRENT_SAISON, cleSeance, nbSeances } from "../../utils/seances";
 
 const GREEN   = "var(--good)";
 const RED     = "var(--bad)";
@@ -118,10 +118,10 @@ export default function Dashboard() {
     const c = {};
     for (const s of monthSeances) {
       if (!s.archer) continue;
-      if (!c[s.archer]) c[s.archer] = { name: s.archer, n: 0 };
-      c[s.archer].n++;
+      if (!c[s.archer]) c[s.archer] = { name: s.archer, seances: new Set() };
+      c[s.archer].seances.add(cleSeance(s));
     }
-    return Object.values(c).sort((a, b) => b.n - a.n)[0] ?? null;
+    return Object.values(c).map((a) => ({ name: a.name, n: a.seances.size })).sort((a, b) => b.n - a.n)[0] ?? null;
   }, [monthSeances]);
 
   // ── tous les archers, triés par dernière séance décroissante ──────────────
@@ -240,8 +240,8 @@ export default function Dashboard() {
 
       {/* ── Stat cards ── */}
       <div className="coach-cards-grid">
-        <StatCard label="Séances cette semaine" value={weekSeances.length} />
-        <StatCard label="Séances ce mois"       value={monthSeances.length} />
+        <StatCard label="Séances cette semaine" value={nbSeances(weekSeances)} />
+        <StatCard label="Séances ce mois"       value={nbSeances(monthSeances)} />
         <StatCard label="Flèches ce mois"       value={fleches.toLocaleString("fr-FR")} />
         <StatCard
           label="🏆 Archer du mois"

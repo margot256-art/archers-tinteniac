@@ -21,18 +21,6 @@ export function filtrerSeances(seances, { saison, distance, type, archer } = {})
   });
 }
 
-/** Moyenne des N meilleurs scores normalisés (score/flèche × facteur de distance). */
-export function topNMoyenneNormalisee(seances, { n = 3 } = {}) {
-  if (!seances.length) return null;
-  const scores = seances
-    .filter(estTirCompte)
-    .map((s) => (s.score / getCompte(s)) * normFactor(s.distance))
-    .sort((a, b) => b - a)
-    .slice(0, n);
-  if (!scores.length) return null;
-  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-}
-
 export function ecartType(valeurs) {
   if (valeurs.length < 2) return null;
   const moy = valeurs.reduce((a, b) => a + b, 0) / valeurs.length;

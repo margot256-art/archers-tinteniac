@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
-import { normFactor } from "../../../utils/seances";
+import { normFactor, todayISO } from "../../../utils/seances";
 import { pointsZone, couleurZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
@@ -11,7 +11,6 @@ import { exerciceStyles, PINK } from "./exerciceStyles";
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const OBJECTIF_FLECHES = 100;
 
-const todayISO = () => new Date().toISOString().split("T")[0];
 
 const compteursVides = () => ({});
 const nbCompteurs = (c) => Object.values(c).reduce((s, n) => s + n, 0);

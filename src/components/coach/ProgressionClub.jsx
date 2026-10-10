@@ -17,7 +17,8 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtDate, fmtYM } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtDate, fmtYM, cleSeance, nbSeances } from "../../utils/seances";
+import { scoreEpreuve } from "../../utils/records";
 import FilterSelect from "../shared/FilterSelect";
 
 const OBJ_COLOR = "#d99a2b"; // ≈ var(--warn), littéral car dessiné sur canvas
@@ -161,9 +162,9 @@ export default function ProgressionClub() {
       .filter(d => distMap[d]?.compteSum > 0)
       .map(d => ({ dist: d, moy: distMap[d].scoreSum / distMap[d].compteSum }));
     return {
-      total: saisonSeances.length, actifs, fleches, moyByDist,
-      entr: saisonSeances.filter(s => s.type === "Entraînement").length,
-      comp: saisonSeances.filter(s => s.type === "Compétition").length,
+      total: nbSeances(saisonSeances), actifs, fleches, moyByDist,
+      entr: nbSeances(saisonSeances.filter(s => s.type === "Entraînement")),
+      comp: nbSeances(saisonSeances.filter(s => s.type === "Compétition")),
     };
   }, [saisonSeances]);
 
@@ -171,8 +172,8 @@ export default function ProgressionClub() {
     const map = {};
     for (const s of saisonSeances) {
       if (!s.archer) continue;
-      if (!map[s.archer]) map[s.archer] = { name: s.archer, n: 0, fleches: 0, distData: {} };
-      map[s.archer].n++;
+      if (!map[s.archer]) map[s.archer] = { name: s.archer, seances: new Set(), fleches: 0, distData: {} };
+      map[s.archer].seances.add(cleSeance(s));
       map[s.archer].fleches += getPaille(s) + getBlason(s) + getCompte(s);
       const c = getCompte(s);
       if (c > 0 && (s.score ?? 0) > 0 && s.distance) {
@@ -182,6 +183,7 @@ export default function ProgressionClub() {
       }
     }
     return Object.values(map)
+      .map(a => ({ ...a, n: a.seances.size }))
       .sort((a, b) => b.n - a.n)
       .map(a => ({
         ...a,
@@ -232,7 +234,7 @@ export default function ProgressionClub() {
     }
 
     const computed = Object.values(map).map(({ archer, sessions }) => {
-      const nbSeances    = sessions.length;
+      const nbSeancesArcher = nbSeances(sessions);
       const totalFleches = sessions.reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0);
       const withCompte   = sessions.filter(s => getCompte(s) > 0 && (s.score ?? 0) > 0);
       const moyennes     = withCompte.map(s => s.score / getCompte(s));
@@ -242,10 +244,10 @@ export default function ProgressionClub() {
         : null;
       let bestNorm = null;
       for (const s of withCompte) {
-        const n = Math.round((s.score / getCompte(s)) * normFactor(s.distance));
-        if (bestNorm === null || n > bestNorm) bestNorm = n;
+        const n = scoreEpreuve(s);
+        if (n != null && (bestNorm === null || n > bestNorm)) bestNorm = n;
       }
-      return { archer, nbSeances, totalFleches, avgMoy, scoreMoy, sigma: stdDev(moyennes), bestNorm };
+      return { archer, nbSeances: nbSeancesArcher, totalFleches, avgMoy, scoreMoy, sigma: stdDev(moyennes), bestNorm };
     });
 
     computed.sort((a, b) => {
@@ -372,15 +374,15 @@ export default function ProgressionClub() {
       if (!map[key]) {
         map[key] = {
           month, archer: s.archer ?? "—", distance: s.distance,
-          nbrEntr: 0, nbrComp: 0, paille: 0, blason: 0,
+          seancesEntr: new Set(), seancesComp: new Set(), paille: 0, blason: 0,
           compteTotal: 0, compteEntr: 0, scoreEntr: 0, compteComp: 0, scoreComp: 0,
         };
       }
       const g  = map[key];
       const p = getPaille(s), b = getBlason(s), c = getCompte(s), sc = s.score ?? 0;
       g.paille += p; g.blason += b; g.compteTotal += c;
-      if (s.type === "Entraînement") { g.nbrEntr++; if (c > 0 && sc > 0) { g.compteEntr += c; g.scoreEntr += sc; } }
-      else if (s.type === "Compétition") { g.nbrComp++; if (c > 0 && sc > 0) { g.compteComp += c; g.scoreComp += sc; } }
+      if (s.type === "Entraînement") { g.seancesEntr.add(cleSeance(s)); if (c > 0 && sc > 0) { g.compteEntr += c; g.scoreEntr += sc; } }
+      else if (s.type === "Compétition") { g.seancesComp.add(cleSeance(s)); if (c > 0 && sc > 0) { g.compteComp += c; g.scoreComp += sc; } }
     }
     return Object.values(map)
       .map(g => {
@@ -388,7 +390,7 @@ export default function ProgressionClub() {
         const moyEntr = g.compteEntr > 0 ? g.scoreEntr / g.compteEntr : null;
         const moyComp = g.compteComp > 0 ? g.scoreComp / g.compteComp : null;
         return {
-          ...g, total: g.paille + g.blason + g.compteTotal, score: g.scoreEntr + g.scoreComp,
+          ...g, nbrEntr: g.seancesEntr.size, nbrComp: g.seancesComp.size, total: g.paille + g.blason + g.compteTotal, score: g.scoreEntr + g.scoreComp,
           moyEntr, scoreMoyEntr: moyEntr != null ? Math.round(moyEntr * nf) : null,
           moyComp, scoreMoyComp: moyComp != null ? Math.round(moyComp * nf) : null,
         };
@@ -506,8 +508,8 @@ export default function ProgressionClub() {
         let best = null;
         for (const s of src) {
           if (s.archer !== archer || getSaison(s.date) !== saison) continue;
-          const n = Math.round((s.score / getCompte(s)) * normFactor(s.distance));
-          if (best === null || n > best) best = n;
+          const n = scoreEpreuve(s);
+          if (n != null && (best === null || n > best)) best = n;
         }
         return best;
       });
@@ -559,7 +561,7 @@ export default function ProgressionClub() {
             const ym    = months[ctx.dataIndex];
             const type  = ctx.dataset.label === "Entraînements" ? "Entraînement" : "Compétition";
             const group = src.filter(s => s.date.startsWith(ym) && s.type === type);
-            return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `${group.length} séance${group.length > 1 ? "s" : ""} ce mois`];
+            return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `${nbSeances(group)} séance${nbSeances(group) > 1 ? "s" : ""} ce mois`];
           },
         } },
       },
@@ -580,7 +582,7 @@ export default function ProgressionClub() {
       const nf = normFactor(dist);
       const top3avg = (type, saison) => {
         const scores = src.filter(s => s.type === type && getSaison(s.date) === saison)
-          .map(s => (s.score / getCompte(s)) * nf).sort((a, b) => b - a).slice(0, 3);
+          .map(scoreEpreuve).filter(v => v != null).sort((a, b) => b - a).slice(0, 3);
         return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
       };
       const entrData = allSaisons.map(sn => top3avg("Entraînement", sn));

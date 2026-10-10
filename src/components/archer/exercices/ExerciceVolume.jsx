@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
+import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles, PINK } from "./exerciceStyles";
+import { todayISO } from "../../../utils/seances";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
@@ -18,7 +20,6 @@ const libelleSupport = (v) => SUPPORTS.find((s) => s.id === supportDe(v)).libell
 
 const MAX_PAR_VOLEE = 24;
 
-const todayISO = () => new Date().toISOString().split("T")[0];
 
 // Les volumes "sans score" du protocole Volume alimentent les mêmes compteurs que
 // le formulaire classique (vol. paille / vol. blason), pour rester compatibles avec
@@ -39,19 +40,38 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
   const autonome = !seanceInfo;
   const enEdition = !!existant;
 
-  const [date,     setDate]     = useState(existant?.date ?? seanceInfo?.date ?? todayISO());
-  const [distance, setDistance] = useState(existant?.distance ?? seanceInfo?.distance ?? "18m");
-  const [type,     setType]     = useState(existant?.type ?? seanceInfo?.type ?? "Entraînement");
-  const [lieu,     setLieu]     = useState(existant?.lieu ?? seanceInfo?.lieu ?? "");
+  // Saisie interrompue (appli fermée, retour à l'accueil…) : on reprend le brouillon.
+  const exercice = { protocole: "volume", seanceId, existantId: existant?.id };
+  const [brouillon] = useState(() => lireBrouillon(user?.id, exercice));
+
+  const [date,     setDate]     = useState(brouillon?.date ?? existant?.date ?? seanceInfo?.date ?? todayISO());
+  const [distance, setDistance] = useState(brouillon?.distance ?? existant?.distance ?? seanceInfo?.distance ?? "18m");
+  const [type,     setType]     = useState(brouillon?.type ?? existant?.type ?? seanceInfo?.type ?? "Entraînement");
+  const [lieu,     setLieu]     = useState(brouillon?.lieu ?? existant?.lieu ?? seanceInfo?.lieu ?? "");
 
   // Texte brut du champ, pour pouvoir le vider et retaper un nombre ; le nombre
   // utilisé n'est valide que s'il est entre 1 et MAX_PAR_VOLEE.
-  const [saisieFpv, setSaisieFpv] = useState("6");
+  const [saisieFpv, setSaisieFpv] = useState(brouillon?.saisieFpv ?? "6");
   const flechesParVolee = Math.min(MAX_PAR_VOLEE, parseInt(saisieFpv) || 0);
   const fpvValide = flechesParVolee >= 1;
-  const [support,         setSupport]         = useState("blason");
-  const [volees,           setVolees]          = useState(existant?.volees ?? []); // [{ support, fleches }]
-  const [commentaire,     setCommentaire]     = useState(existant?.commentaire ?? "");
+  const [support,         setSupport]         = useState(brouillon?.support ?? "blason");
+  const [volees,           setVolees]          = useState(brouillon?.volees ?? existant?.volees ?? []); // [{ support, fleches }]
+  const [commentaire,     setCommentaire]     = useState(brouillon?.commentaire ?? existant?.commentaire ?? "");
+
+  // Brouillon écrit dès le premier changement (pas à la simple ouverture de l'écran) ;
+  // un nouvel exercice sans aucune volée n'a rien à reprendre.
+  const ouverture = useRef(true);
+  useEffect(() => {
+    if (ouverture.current) { ouverture.current = false; return; }
+    if (!enEdition && volees.length === 0) {
+      effacerBrouillon(user?.id, exercice);
+      return;
+    }
+    ecrireBrouillon(user?.id, exercice, { date, distance, type, lieu, saisieFpv, support, volees, commentaire });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `exercice` et `enEdition` sont fixes pour la vie de l'écran
+  }, [user?.id, date, distance, type, lieu, saisieFpv, support, volees, commentaire]);
+
+  const quitter = (callback) => { effacerBrouillon(user?.id, exercice); callback?.(); };
 
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
@@ -77,6 +97,10 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
       if (n <= 0) return prev.slice(0, -1); // −1 sur 1 flèche : on annule la volée
       return [...prev.slice(0, -1), { ...derniere, fleches: Math.min(n, MAX_PAR_VOLEE) }];
     });
+  };
+
+  const retirerVolee = (index) => {
+    setVolees((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleTerminer = async () => {
@@ -111,7 +135,7 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
       } else {
         await addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() });
       }
-      onTermine?.();
+      quitter(onTermine);
     } catch (err) {
       console.error("[ExerciceVolume] erreur Firestore :", err);
       setError("Erreur lors de l'enregistrement. Réessayez.");
@@ -123,7 +147,7 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
     setSaving(true);
     try {
       await deleteDoc(doc(db, "seances", existant.id));
-      onTermine?.();
+      quitter(onTermine);
     } catch (err) {
       console.error("[ExerciceVolume] erreur suppression :", err);
       setError("Erreur lors de la suppression. Réessayez.");
@@ -135,10 +159,10 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
     <div style={s.page}>
       <div style={s.header}>
         <h2 style={s.title}>{enEdition ? "Modifier — Volume" : "Volume"}</h2>
-        <button style={s.annulerBtn} onClick={onAnnuler}>✕ Annuler</button>
+        <button style={s.annulerBtn} onClick={() => quitter(onAnnuler)}>✕ Annuler</button>
       </div>
       <p style={s.resume}>
-        Tirez sans compter les points. Un appui ajoute une volée ; −1 et +1 corrigent la dernière.
+        Tirez sans compter les points. Un appui ajoute une volée ; −1 et +1 corrigent la dernière, × retire une volée.
       </p>
 
       {/* ── Réglages de séance ── */}
@@ -226,13 +250,22 @@ export default function ExerciceVolume({ seanceInfo, seanceId, existant, onTermi
       </div>
 
       {volees.length > 0 && (
-        <div style={s.journal}>
-          {[...volees].reverse().slice(0, 8).map((v, i) => (
-            <span key={volees.length - 1 - i} style={s.journalItem}>
-              {v.fleches} fl. · {libelleSupport(v)}
-            </span>
-          ))}
-        </div>
+        <>
+          <button style={s.annulerVoleeBtn} onClick={() => retirerVolee(volees.length - 1)}>
+            ↶ Annuler la dernière volée
+          </button>
+          <div style={s.journal}>
+            {[...volees].reverse().slice(0, 8).map((v, i) => {
+              const index = volees.length - 1 - i;
+              return (
+                <span key={index} style={{ ...s.journalItem, ...s.voleeItem }}>
+                  {v.fleches} fl. · {libelleSupport(v)}
+                  <button style={s.retirerBtn} onClick={() => retirerVolee(index)} aria-label="Retirer cette volée">×</button>
+                </span>
+              );
+            })}
+          </div>
+        </>
       )}
 
       <Field label="Commentaire (optionnel)">
@@ -273,4 +306,15 @@ const s = {
     cursor: "pointer", fontFamily: "inherit",
   },
   supportBtnActif: { backgroundColor: PINK, borderColor: PINK, color: "#fff" },
+
+  annulerVoleeBtn: {
+    alignSelf: "flex-start", background: "none", border: "1.5px solid var(--border-3)", borderRadius: "10px",
+    color: "var(--text-2)", fontSize: "13px", fontWeight: "700", padding: "8px 14px",
+    cursor: "pointer", fontFamily: "inherit",
+  },
+  voleeItem: { display: "inline-flex", alignItems: "center", gap: "6px", paddingRight: "4px" },
+  retirerBtn: {
+    background: "none", border: "none", color: "var(--text-dim)", fontSize: "15px", lineHeight: 1,
+    padding: "0 4px", cursor: "pointer", fontFamily: "inherit",
+  },
 };

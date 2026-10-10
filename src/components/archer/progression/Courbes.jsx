@@ -15,7 +15,8 @@ import {
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
 import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
-import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON } from "../../../utils/seances";
+import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, nbSeances } from "../../../utils/seances";
+import { scoreEpreuve } from "../../../utils/records";
 import { DIST_ORDER } from "../../../utils/statsCalc";
 import FilterSelect from "../../shared/FilterSelect";
 
@@ -214,7 +215,7 @@ export default function Courbes() {
               const ym = months[ctx.dataIndex];
               const type = ctx.dataset.label === "Entraînements" ? "Entraînement" : "Compétition";
               const group = src.filter((s) => s.date.startsWith(ym) && s.type === type);
-              const nb = group.length;
+              const nb = nbSeances(group);
               return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `${nb} séance${nb > 1 ? "s" : ""} ce mois`];
             },
           },
@@ -233,7 +234,7 @@ export default function Courbes() {
         if (!src.length) return null;
         const nf = normFactor(dist);
         const top3avg = (type, saison) => {
-          const scores = src.filter((s) => s.type === type && getSaison(s.date) === saison).map((s) => (s.score / getCompte(s)) * nf).sort((a, b) => b - a).slice(0, 3);
+          const scores = src.filter((s) => s.type === type && getSaison(s.date) === saison).map(scoreEpreuve).filter((v) => v != null).sort((a, b) => b - a).slice(0, 3);
           return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
         };
         const entrData = allSaisons.map((sn) => top3avg("Entraînement", sn));

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
@@ -7,7 +7,8 @@ import { Line } from "react-chartjs-2";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { useChartColors } from "../../../hooks/useChartColors";
-import { normFactor } from "../../../utils/seances";
+import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
+import { normFactor, todayISO } from "../../../utils/seances";
 import { couleurZone } from "../../../utils/blason";
 import { flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, dispersion } from "../../../utils/tirCompte";
 import ZoneButtons from "./ZoneButtons";
@@ -19,7 +20,6 @@ import { exerciceStyles, PINK } from "./exerciceStyles";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip);
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const todayISO = () => new Date().toISOString().split("T")[0];
 
 const CLE_MODE_SAISIE = "archers-tinteniac.modeSaisieTir";
 const MODES_VALIDES = ["clavier", "blason", "trispot"];
@@ -46,24 +46,46 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
   const autonome = !seanceInfo;
   const enEdition = !!existant;
 
-  const [date,     setDate]     = useState(existant?.date ?? seanceInfo?.date ?? todayISO());
-  const [distance, setDistance] = useState(existant?.distance ?? seanceInfo?.distance ?? "18m");
-  const [type,     setType]     = useState(existant?.type ?? seanceInfo?.type ?? "Entraînement");
-  const [lieu,     setLieu]     = useState(existant?.lieu ?? seanceInfo?.lieu ?? "");
-  const [commentaire, setCommentaire] = useState(existant?.commentaire ?? "");
+  // Saisie interrompue (appli fermée, retour à l'accueil…) : on reprend le brouillon.
+  const exercice = { protocole: "tir-compte", seanceId, existantId: existant?.id };
+  const [brouillon] = useState(() => lireBrouillon(user?.id, exercice));
 
-  const [format,   setFormat]   = useState(existant?.format ?? "standard"); // "standard" | "libre"
-  const [nbSeries, setNbSeries] = useState(existant?.nbSeries ?? 2);
+  const [date,     setDate]     = useState(brouillon?.date ?? existant?.date ?? seanceInfo?.date ?? todayISO());
+  const [distance, setDistance] = useState(brouillon?.distance ?? existant?.distance ?? seanceInfo?.distance ?? "18m");
+  const [type,     setType]     = useState(brouillon?.type ?? existant?.type ?? seanceInfo?.type ?? "Entraînement");
+  const [lieu,     setLieu]     = useState(brouillon?.lieu ?? existant?.lieu ?? seanceInfo?.lieu ?? "");
+  const [commentaire, setCommentaire] = useState(brouillon?.commentaire ?? existant?.commentaire ?? "");
+
+  const [format,   setFormat]   = useState(brouillon?.format ?? existant?.format ?? "standard"); // "standard" | "libre"
+  const [nbSeries, setNbSeries] = useState(brouillon?.nbSeries ?? existant?.nbSeries ?? 2);
 
   // Stockage Firestore : volees = [{ codes: [...], impacts: [...] }, ...] (Firestore interdit les
   // tableaux directement imbriqués dans un tableau — d'où l'enveloppe par objet). En mémoire, on
   // garde deux tableaux parallèles (codes / impacts) pour simplifier la logique de saisie.
   const voleesExistantes = existant?.volees ?? [];
-  const [volees,  setVolees]  = useState(() => voleesExistantes.map((v) => v.codes ?? []));   // [[code, ...], ...] — volées validées
-  const [impacts, setImpacts] = useState(() => voleesExistantes.map((v) => v.impacts ?? [])); // parallèle
+  const [volees,  setVolees]  = useState(() => brouillon?.volees ?? voleesExistantes.map((v) => v.codes ?? []));   // [[code, ...], ...] — volées validées
+  const [impacts, setImpacts] = useState(() => brouillon?.impacts ?? voleesExistantes.map((v) => v.impacts ?? [])); // parallèle
 
-  const [voleeEnCours,  setVoleeEnCours]  = useState([]);
-  const [impactEnCours, setImpactEnCours] = useState([]);
+  const [voleeEnCours,  setVoleeEnCours]  = useState(brouillon?.voleeEnCours ?? []);
+  const [impactEnCours, setImpactEnCours] = useState(brouillon?.impactEnCours ?? []);
+
+  // Brouillon écrit dès le premier changement (pas à la simple ouverture de l'écran) ;
+  // un nouvel exercice sans aucune flèche n'a rien à reprendre.
+  const ouverture = useRef(true);
+  useEffect(() => {
+    if (ouverture.current) { ouverture.current = false; return; }
+    if (!enEdition && volees.length === 0 && voleeEnCours.length === 0) {
+      effacerBrouillon(user?.id, exercice);
+      return;
+    }
+    ecrireBrouillon(user?.id, exercice, {
+      date, distance, type, lieu, commentaire, format, nbSeries,
+      volees, impacts, voleeEnCours, impactEnCours,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `exercice` et `enEdition` sont fixes pour la vie de l'écran
+  }, [user?.id, date, distance, type, lieu, commentaire, format, nbSeries, volees, impacts, voleeEnCours, impactEnCours]);
+
+  const quitter = (callback) => { effacerBrouillon(user?.id, exercice); callback?.(); };
   const [selection,     setSelection]     = useState(null); // index dans voleeEnCours en cours de correction
 
   const [modeSaisie, setModeSaisie] = useState(lireModeSaisie);
@@ -204,7 +226,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       } else {
         await addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() });
       }
-      onTermine?.();
+      quitter(onTermine);
     } catch (err) {
       console.error("[ExerciceTirCompte] erreur Firestore :", err);
       setError("Erreur lors de l'enregistrement. Réessayez.");
@@ -216,7 +238,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
     setSaving(true);
     try {
       await deleteDoc(doc(db, "seances", existant.id));
-      onTermine?.();
+      quitter(onTermine);
     } catch (err) {
       console.error("[ExerciceTirCompte] erreur suppression :", err);
       setError("Erreur lors de la suppression. Réessayez.");
@@ -228,7 +250,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
     <div style={s.page}>
       <div style={s.header}>
         <h2 style={s.title}>{enEdition ? "Modifier — Tir compté" : "Tir compté"}</h2>
-        <button style={s.annulerBtn} onClick={onAnnuler}>✕ Annuler</button>
+        <button style={s.annulerBtn} onClick={() => quitter(onAnnuler)}>✕ Annuler</button>
       </div>
       <p style={s.resume}>
         {reglages.voleesParSerie

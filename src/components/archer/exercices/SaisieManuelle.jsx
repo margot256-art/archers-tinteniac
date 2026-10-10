@@ -1,29 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
-import { getPaille, getBlason, getCompte } from "../../../utils/seances";
+import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
+import { getPaille, getBlason, getCompte, todayISO } from "../../../utils/seances";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles } from "./exerciceStyles";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const todayISO = () => new Date().toISOString().split("T")[0];
 
 // Saisie d'une séance après coup, en un seul formulaire (volumes + score),
 // sans passer par la saisie en direct des exercices.
-export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
+// `seanceInfo` : la saisie fait partie d'une séance à plusieurs exercices — la
+// date, la distance, le type et le lieu se modifient alors au niveau de la séance.
+export default function SaisieManuelle({ existant, seanceInfo, onTermine, onAnnuler }) {
   const { user } = useAuth();
   const enEdition = !!existant;
+  const autonome  = !seanceInfo;
 
-  const [date,     setDate]     = useState(existant?.date ?? todayISO());
-  const [distance, setDistance] = useState(existant?.distance ?? "18m");
-  const [type,     setType]     = useState(existant?.type ?? "Entraînement");
-  const [lieu,     setLieu]     = useState(existant?.lieu ?? "");
-  const [paille,   setPaille]   = useState(existant ? String(getPaille(existant) || "") : "");
-  const [blason,   setBlason]   = useState(existant ? String(getBlason(existant) || "") : "");
-  const [compte,   setCompte]   = useState(existant ? String(getCompte(existant) || "") : "");
-  const [score,    setScore]    = useState(existant?.score ? String(existant.score) : "");
-  const [commentaire, setCommentaire] = useState(existant?.commentaire ?? "");
+  // Formulaire interrompu (retour à l'accueil, appli fermée…) : on reprend le brouillon.
+  const saisie = { protocole: "manuel", existantId: existant?.id };
+  const [brouillon] = useState(() => lireBrouillon(user?.id, saisie));
+
+  const [date,     setDate]     = useState(brouillon?.date ?? existant?.date ?? todayISO());
+  const [distance, setDistance] = useState(brouillon?.distance ?? existant?.distance ?? "18m");
+  const [type,     setType]     = useState(brouillon?.type ?? existant?.type ?? "Entraînement");
+  const [lieu,     setLieu]     = useState(brouillon?.lieu ?? existant?.lieu ?? "");
+  const [paille,   setPaille]   = useState(brouillon?.paille ?? (existant ? String(getPaille(existant) || "") : ""));
+  const [blason,   setBlason]   = useState(brouillon?.blason ?? (existant ? String(getBlason(existant) || "") : ""));
+  const [compte,   setCompte]   = useState(brouillon?.compte ?? (existant ? String(getCompte(existant) || "") : ""));
+  const [score,    setScore]    = useState(brouillon?.score ?? (existant?.score ? String(existant.score) : ""));
+  // Une saisie manuelle est une séance entière : son commentaire est le commentaire
+  // de séance (les anciennes saisies l'avaient en commentaire d'exercice).
+  const [commentaire, setCommentaire] = useState(brouillon?.commentaire ?? existant?.commentaireSeance ?? existant?.commentaire ?? "");
+
+  // Brouillon écrit dès le premier changement ; un nouveau formulaire vide n'a rien à reprendre.
+  const ouverture = useRef(true);
+  useEffect(() => {
+    if (ouverture.current) { ouverture.current = false; return; }
+    if (!enEdition && !paille && !blason && !compte && !score && !commentaire.trim() && !lieu.trim()) {
+      effacerBrouillon(user?.id, saisie);
+      return;
+    }
+    ecrireBrouillon(user?.id, saisie, { date, distance, type, lieu, paille, blason, compte, score, commentaire });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `saisie` et `enEdition` sont fixes pour la vie de l'écran
+  }, [user?.id, date, distance, type, lieu, paille, blason, compte, score, commentaire]);
+
+  const quitter = (callback) => { effacerBrouillon(user?.id, saisie); callback?.(); };
 
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
@@ -61,7 +84,9 @@ export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
       score:        sc,
       totalFleches: p + b + c,
       moyenne:      c > 0 && sc > 0 ? parseFloat((sc / c).toFixed(2)) : null,
-      commentaire:  commentaire.trim() || null,
+      // Rattachée à une séance à plusieurs exercices, le commentaire se modifie au
+      // niveau de la séance (Journal) : on n'y touche pas ici.
+      ...(autonome ? { commentaireSeance: commentaire.trim() || null, commentaire: null } : {}),
     };
     try {
       if (enEdition) {
@@ -69,7 +94,7 @@ export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
       } else {
         await addDoc(collection(db, "seances"), { ...payload, createdAt: serverTimestamp() });
       }
-      onTermine?.();
+      quitter(onTermine);
     } catch (e) {
       console.error("[SaisieManuelle] erreur Firestore :", e);
       setError("Erreur lors de l'enregistrement. Réessayez.");
@@ -81,7 +106,7 @@ export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
     setSaving(true);
     try {
       await deleteDoc(doc(db, "seances", existant.id));
-      onTermine?.();
+      quitter(onTermine);
     } catch (e) {
       console.error("[SaisieManuelle] erreur suppression :", e);
       setError("Erreur lors de la suppression. Réessayez.");
@@ -102,10 +127,11 @@ export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
     <div style={s.page}>
       <div style={s.header}>
         <h2 style={s.title}>{enEdition ? "Modifier — Saisie manuelle" : "Saisie manuelle"}</h2>
-        <button style={s.annulerBtn} onClick={onAnnuler}>✕ Annuler</button>
+        <button style={s.annulerBtn} onClick={() => quitter(onAnnuler)}>✕ Annuler</button>
       </div>
       <p style={s.resume}>Notez une séance après coup : nombre de flèches et score, en une fois.</p>
 
+      {autonome && (
       <div className="form-grid-4">
         <Field label="Date">
           <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} style={s.input} />
@@ -125,6 +151,7 @@ export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
           <input type="text" value={lieu} onChange={(e) => setLieu(e.target.value)} style={s.input} placeholder="ex : Salle Tinténiac" />
         </Field>
       </div>
+      )}
 
       <div className="form-grid-4">
         <Field label="Flèches paille">{nombre(paille, setPaille)}</Field>
@@ -140,14 +167,16 @@ export default function SaisieManuelle({ existant, onTermine, onAnnuler }) {
         </p>
       )}
 
-      <Field label="Commentaire (optionnel)">
-        <textarea
-          value={commentaire}
-          onChange={(e) => setCommentaire(e.target.value)}
-          style={s.textarea} rows={3}
-          placeholder="Ressenti général, conditions, points travaillés…"
-        />
-      </Field>
+      {autonome && (
+        <Field label="Commentaire de séance (optionnel)">
+          <textarea
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
+            style={s.textarea} rows={3}
+            placeholder="Ressenti général, conditions, points travaillés…"
+          />
+        </Field>
+      )}
 
       {error && <div style={s.msgError}>{error}</div>}
 

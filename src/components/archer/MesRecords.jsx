@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useSeances } from "../../hooks/useSeances";
-import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
+import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDate } from "../../utils/seances";
+import { scoreEpreuve, scoreSerie, maxEpreuve, maxSerie } from "../../utils/records";
 
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
@@ -20,7 +21,7 @@ function CalendarIcon() {
 
 // ── Section entr. / comp. ─────────────────────────────────────────────────────
 
-function RecordSection({ type, color, bgColor, best, max, history }) {
+function RecordSection({ type, color, bgColor, best, max, history, serie, maxS }) {
   const [open, setOpen] = useState(false);
   const pct = best ? Math.round(best.score / max * 100) : 0;
   return (
@@ -53,7 +54,15 @@ function RecordSection({ type, color, bgColor, best, max, history }) {
           </div>
         </>
       ) : (
-        <div style={s.noData}>Aucune séance</div>
+        <div style={s.noData}>{serie ? "Aucune épreuve complète (2 séries)" : "Aucune séance"}</div>
+      )}
+
+      {serie && (
+        <div style={s.serieRecord}>
+          <span style={{ ...s.serieLabel, color }}>Série record</span>
+          <span style={s.serieScore}>{serie.score}<span style={s.serieMax}>/{maxS}</span></span>
+          <span style={s.serieDate}>{fmtDate(serie.date)}{serie.lieu ? ` · ${serie.lieu}` : ""}</span>
+        </div>
       )}
 
       {open && (
@@ -102,17 +111,16 @@ export default function MesRecords() {
       const distSrc = src.filter(s => s.distance === dist);
       if (!distSrc.length) return null;
 
-      const nf  = normFactor(dist);
-      const max = nf * 10;
+      const max  = maxEpreuve(dist);
+      const maxS = maxSerie(dist);
 
-      const getBest = (type) => {
-        const hits = distSrc.filter(s => s.type === type);
-        if (!hits.length) return null;
+      // Meilleur résultat d'un type selon une règle (épreuve complète ou série).
+      const getBest = (type, calcul) => {
         let best = null;
-        for (const s of hits) {
-          const norm = Math.round(s.score / getCompte(s) * nf);
-          if (!best || norm > best.score) {
-            best = { score: norm, date: s.date, lieu: s.lieu || null };
+        for (const s of distSrc.filter(x => x.type === type)) {
+          const score = calcul(s);
+          if (score != null && (!best || score > best.score)) {
+            best = { score, date: s.date, lieu: s.lieu || null };
           }
         }
         return best;
@@ -120,8 +128,8 @@ export default function MesRecords() {
 
       const getHistory = (type) => {
         const hits = distSrc
-          .filter(s => s.type === type)
-          .map(s => ({ score: Math.round(s.score / getCompte(s) * nf), date: s.date, lieu: s.lieu || null }))
+          .filter(s => s.type === type && scoreEpreuve(s) != null)
+          .map(s => ({ score: scoreEpreuve(s), date: s.date, lieu: s.lieu || null }))
           .sort((a, b) => a.date.localeCompare(b.date));
         const history = [];
         let prev = 0;
@@ -134,11 +142,16 @@ export default function MesRecords() {
         return history;
       };
 
-      const entr = getBest("Entraînement");
-      const comp = getBest("Compétition");
-      if (!entr && !comp) return null;
+      const entr = getBest("Entraînement", scoreEpreuve);
+      const comp = getBest("Compétition", scoreEpreuve);
+      const entrSerie = getBest("Entraînement", scoreSerie);
+      const compSerie = getBest("Compétition", scoreSerie);
+      if (!entr && !comp && !entrSerie && !compSerie) return null;
 
-      return { dist, nf, max, entr, comp, entrHistory: getHistory("Entraînement"), compHistory: getHistory("Compétition") };
+      return {
+        dist, max, maxS, entr, comp, entrSerie, compSerie,
+        entrHistory: getHistory("Entraînement"), compHistory: getHistory("Compétition"),
+      };
     }).filter(Boolean);
   }, [seances, filterSaison]);
 
@@ -169,7 +182,7 @@ export default function MesRecords() {
         <div style={s.empty}>{toutesLesSaisons ? "Aucune séance avec tir compté." : "Aucune séance avec tir compté pour cette saison."}</div>
       ) : (
         <div style={s.grid}>
-          {records.map(({ dist, max, entr, comp, entrHistory, compHistory }) => (
+          {records.map(({ dist, max, maxS, entr, comp, entrSerie, compSerie, entrHistory, compHistory }) => (
             <div key={dist} style={s.card}>
               <div style={s.cardHead}>
                 <span style={s.cardDistKey}>DISTANCE :</span>
@@ -184,6 +197,8 @@ export default function MesRecords() {
                 best={entr}
                 max={max}
                 history={entrHistory}
+                serie={entrSerie}
+                maxS={maxS}
               />
               <RecordSection
                 type="Compétition"
@@ -192,6 +207,8 @@ export default function MesRecords() {
                 best={comp}
                 max={max}
                 history={compHistory}
+                serie={compSerie}
+                maxS={maxS}
               />
             </div>
           ))}
@@ -294,6 +311,15 @@ const s = {
   barFill: { height: "100%", borderRadius: "3px", transition: "width 0.4s ease" },
 
   noData: { fontSize: "12px", color: "var(--text-3)", fontStyle: "italic" },
+
+  serieRecord: {
+    display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap",
+    borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "4px",
+  },
+  serieLabel: { fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em" },
+  serieScore: { fontFamily: "var(--mono)", fontSize: "16px", fontWeight: "700", color: "var(--text)" },
+  serieMax:   { fontSize: "12px", fontWeight: "600", color: "var(--text-dim)" },
+  serieDate:  { fontSize: "12px", color: "var(--text-dim)" },
 
   historyBtn: {
     background: "none", border: "none", cursor: "pointer",

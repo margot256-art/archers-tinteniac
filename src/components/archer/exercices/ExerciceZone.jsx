@@ -6,12 +6,12 @@ import { pointsZone, couleurZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles } from "./exerciceStyles";
+import { todayISO } from "../../../utils/seances";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const ZONE_MIN = 1;
 const ZONE_MAX = 10;
 
-const todayISO = () => new Date().toISOString().split("T")[0];
 const estSalle = (distance) => distance === "5m" || distance === "18m";
 const flechesParVolee = (distance) => estSalle(distance) ? 3 : 6;
 const zoneInitiale = (distance) => estSalle(distance) ? 9 : 7;

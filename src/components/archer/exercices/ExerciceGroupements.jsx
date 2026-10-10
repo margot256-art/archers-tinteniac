@@ -4,11 +4,11 @@ import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import BoutonSupprimer from "./BoutonSupprimer";
 import { exerciceStyles, PINK } from "./exerciceStyles";
+import { todayISO } from "../../../utils/seances";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const VOLEES_PAR_PHASE = 10;
 
-const todayISO = () => new Date().toISOString().split("T")[0];
 const flechesParVolee = (distance) => (distance === "5m" || distance === "18m") ? 3 : 6;
 
 const moyenne = (vals) => vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;

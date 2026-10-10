@@ -12,6 +12,19 @@ export const getSaison = (iso) => {
   return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
 };
 
+// Une séance peut contenir plusieurs exercices (un doc Firestore chacun, même
+// `seanceId`) : on compte les séances, pas les exercices. Une séance sans
+// `seanceId` (saisie manuelle, ancienne séance) compte pour une.
+export const cleSeance = (s) => s.seanceId ?? s.id;
+export const nbSeances = (docs) => new Set(docs.map(cleSeance)).size;
+
+// Date du jour (AAAA-MM-JJ) à l'heure locale. Surtout pas toISOString(), qui
+// donne l'heure UTC : entre minuit et 2 h en France, ce serait encore la veille.
+export const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 export const CURRENT_SAISON = (() => {
   const d = new Date();
   const m = d.getMonth() + 1;

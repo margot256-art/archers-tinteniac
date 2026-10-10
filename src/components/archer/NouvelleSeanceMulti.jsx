@@ -1,15 +1,15 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
-import { fmtDate } from "../../utils/seances";
+import { fmtDate, todayISO } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
 import { lireSeanceEnCours, ecrireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
+import { brouillonsDeSeance, effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
 import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
 import BoutonSupprimer from "./exercices/BoutonSupprimer";
 import { exerciceStyles, PINK } from "./exercices/exerciceStyles";
 
 const DISTANCES = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
-const todayISO = () => new Date().toISOString().split("T")[0];
 
 const nouveauSeanceId = () =>
   `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -31,13 +31,28 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
   const [enregistrement, setEnregistrement] = useState(false);
   const [erreur,         setErreur]         = useState(null);
 
-  const [enCours,    setEnCours]    = useState(null); // id de protocole en cours de saisie (nouvel exercice)
+  // Un exercice de cette séance était en cours de saisie quand l'appli s'est
+  // fermée (ou qu'on est revenu à l'accueil) : on le rouvre tel quel.
+  const [brouillon] = useState(() => {
+    if (!sauvegarde) return null;
+    return brouillonsDeSeance(user?.id, sauvegarde.seanceId).find((b) => COMPOSANTS_EXERCICE[b.protocole]) ?? null;
+  });
+
+  const [enCours,    setEnCours]    = useState(brouillon && !brouillon.existantId ? brouillon.protocole : null); // id de protocole en cours de saisie (nouvel exercice)
   const [editingDoc, setEditingDoc] = useState(null); // exercice déjà fait, en cours de modification
 
   const mesResultats = useMemo(
     () => seances.filter((s) => s.seanceId === seanceId),
     [seances, seanceId]
   );
+
+  // Brouillon d'une modification d'exercice : on attend que l'exercice soit chargé.
+  const [brouillonEditionRepris, setBrouillonEditionRepris] = useState(false);
+  const docBrouillon = brouillon?.existantId && mesResultats.find((r) => r.id === brouillon.existantId);
+  if (docBrouillon && !brouillonEditionRepris) {
+    setBrouillonEditionRepris(true);
+    setEditingDoc(docBrouillon);
+  }
 
   const commencer = () => {
     ecrireSeanceEnCours(user?.id, { seanceId, date, distance, type, lieu });
@@ -63,6 +78,7 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
       }
     }
     effacerSeanceEnCours(user?.id);
+    effacerBrouillonsDeSeance(user?.id, seanceId);
     onQuitter?.();
   };
 
@@ -78,6 +94,7 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
       return;
     }
     effacerSeanceEnCours(user?.id);
+    effacerBrouillonsDeSeance(user?.id, seanceId);
     onQuitter?.();
   };
 

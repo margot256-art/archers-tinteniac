@@ -130,10 +130,10 @@ export default function CoachJournal() {
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
-  const COL_HEADS  = ["Date", "Archer", "Type", "Dist.", "Paille", "Blason", "Compté", "Score", "Moy.", "Score moy.", "Commentaire"];
-  const NC         = 11;
-  const RIGHT_COLS = [4, 5, 6, 7, 8, 9];
-  const WRAP_COLS  = [0, 10];
+  const COL_HEADS  = ["Date", "Archer", "Type", "Dist.", "Paille", "Blason", "Compté", "Total", "Score", "Moy.", "Score moy.", "Commentaire"];
+  const NC         = 12;
+  const RIGHT_COLS = [4, 5, 6, 7, 8, 9, 10];
+  const WRAP_COLS  = [0, 11];
 
   const exportTitle = filterArcher !== "Tous"
     ? `Journal — ${filterArcher} — Saison ${filterSaison}`
@@ -141,7 +141,7 @@ export default function CoachJournal() {
 
   const rowCells = (l) => [
     [l.date, l.lieu].filter(Boolean).join("\n"), l.archer || "", l.type || "", l.distance || "",
-    l.paille, l.blason, l.compte,
+    l.paille, l.blason, l.compte, l.paille + l.blason + l.compte,
     fmtScore(l.tir), fmtMoyenne(l.tir), fmtRamene(l.tir),
     [l.commentaire, l.retourCoach && `Coach – ${l.retourCoach}`].filter(Boolean).join("\n"),
   ];
@@ -153,8 +153,8 @@ export default function CoachJournal() {
     const { tp, tb, tt } = buildMonthTotals(docs);
     const st = statsTir(docs);
     return [
-      `Total — ${fmtYM(month)}`, tt ? `${tt} fl.` : "", "", "",
-      tp, tb, somme(docs, getCompte), fmtScore(st), fmtMoyenne(st), fmtRamene(st), "",
+      `Total — ${fmtYM(month)}`, "", "", "",
+      tp, tb, somme(docs, getCompte), tt, fmtScore(st), fmtMoyenne(st), fmtRamene(st), "",
     ];
   };
 
@@ -193,7 +193,7 @@ export default function CoachJournal() {
     ws["!merges"] = merges;
     ws["!cols"]   = [
       { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 7 },
-      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 7 }, { wch: 11 }, { wch: 48 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 7 }, { wch: 11 }, { wch: 44 },
     ];
 
     const ST = {
@@ -262,7 +262,7 @@ export default function CoachJournal() {
     const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pw    = pdf.internal.pageSize.width;
     const ph    = pdf.internal.pageSize.height;
-    const COL_W = [26, 26, 20, 10, 12, 12, 12, 12, 11, 17, 0];
+    const COL_W = [26, 26, 20, 10, 12, 12, 12, 12, 12, 11, 17, 0];
 
     const colStyles = COL_W.reduce((acc, w, i) => {
       acc[i] = w > 0 ? { cellWidth: w } : {};
@@ -411,6 +411,7 @@ export default function CoachJournal() {
               <th style={s.thR}>Paille</th>
               <th style={s.thR}>Blason</th>
               <th style={s.thR}>Compté</th>
+              <th style={s.thR}>Total</th>
               <th style={s.thR}>Score</th>
               <th style={s.thR}>Moy.</th>
               <th style={s.thR}>Score moy.</th>
@@ -449,6 +450,7 @@ export default function CoachJournal() {
                       <td style={s.tdR}>{ligne.paille > 0 ? ligne.paille : "—"}</td>
                       <td style={s.tdR}>{ligne.blason > 0 ? ligne.blason : "—"}</td>
                       <td style={s.tdR}>{ligne.compte > 0 ? ligne.compte : "—"}</td>
+                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>{ligne.paille + ligne.blason + ligne.compte || "—"}</td>
                       <td style={s.tdR}>{fmtScore(ligne.tir) || "—"}</td>
                       <td style={s.tdR}>{fmtMoyenne(ligne.tir) || "—"}</td>
                       <td style={{ ...s.tdR, fontWeight: "700", color: ligne.tir.ramene != null ? PRIMARY : "var(--text-dim)" }}>
@@ -463,17 +465,18 @@ export default function CoachJournal() {
                     </tr>
                   ))}
                   <tr key={`sub-${month}`} style={s.trSub}>
-                    <td style={{ ...s.tdSub, textAlign: "left" }}>{fmtYM(month)}</td>
-                    <td style={{ ...s.tdSub, textAlign: "left" }}>
-                      {rows.length} séance{rows.length > 1 ? "s" : ""}{subTot > 0 ? ` · ${subTot} fl.` : ""}
+                    <td style={s.tdSub}>{fmtYM(month)}</td>
+                    <td style={s.tdSub}>
+                      {rows.length} séance{rows.length > 1 ? "s" : ""}
                     </td>
                     <td style={s.tdSub} /><td style={s.tdSub} />
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subP > 0 ? subP : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subB > 0 ? subB : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{subC > 0 ? subC : "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{fmtScore(subTir) || "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{fmtMoyenne(subTir) || "—"}</td>
-                    <td style={{ ...s.tdSub, textAlign: "right" }}>{fmtRamene(subTir) || "—"}</td>
+                    <td style={s.tdSub}>{subP > 0 ? subP : "—"}</td>
+                    <td style={s.tdSub}>{subB > 0 ? subB : "—"}</td>
+                    <td style={s.tdSub}>{subC > 0 ? subC : "—"}</td>
+                    <td style={s.tdSub}>{subTot > 0 ? subTot : "—"}</td>
+                    <td style={s.tdSub}>{fmtScore(subTir) || "—"}</td>
+                    <td style={s.tdSub}>{fmtMoyenne(subTir) || "—"}</td>
+                    <td style={s.tdSub}>{fmtRamene(subTir) || "—"}</td>
                     <td style={s.tdSub} />
                   </tr>
                 </Fragment>
@@ -551,14 +554,14 @@ const s = {
   },
   table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
   th: {
-    padding: "11px 12px", textAlign: "left",
+    padding: "11px 12px", textAlign: "center",
     fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
     borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
     backgroundColor: "var(--surface-raised)",
   },
   thR: {
-    padding: "11px 12px", textAlign: "right",
+    padding: "11px 12px", textAlign: "center",
     fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: "0.07em",
     borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
@@ -576,8 +579,8 @@ const s = {
     fontSize: "13px", color: "var(--text-2)", outline: "none", minWidth: "220px",
     fontFamily: "inherit", backgroundColor: "var(--input-bg)",
   },
-  td:  { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap" },
-  tdR: { padding: "10px 12px", textAlign: "right", color: "var(--text-3)", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums" },
+  td:  { padding: "10px 12px", textAlign: "center", color: "var(--text-2)", whiteSpace: "nowrap" },
+  tdR: { padding: "10px 12px", textAlign: "center", color: "var(--text-3)", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums" },
 
   typeEntr: {
     backgroundColor: "var(--pink-soft)", color: PRIMARY,
@@ -594,7 +597,7 @@ const s = {
   },
 
   trSub: { backgroundColor: "var(--surface-raised)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" },
-  tdSub: { padding: "9px 12px", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", fontStyle: "italic" },
+  tdSub: { padding: "9px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", fontStyle: "italic" },
 
   empty: { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
   count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },

@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON, cleSeance, nbSeances } from "../../utils/seances";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
+import { lireBrouillon } from "../../utils/brouillonExercice";
 import FilterSelect from "../shared/FilterSelect";
 
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -19,6 +20,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
   const rawObjectif = useObjectif();
 
   const enCours = lireSeanceEnCours(user?.id);
+  const manuelleEnCours = !!lireBrouillon(user?.id, { protocole: "manuel" });
 
   const currentYM = useMemo(() => todayYM(), []);
 
@@ -42,7 +44,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
   const { nbSeancesSaison, flechesSaison } = useMemo(() => {
     const src = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
     return {
-      nbSeancesSaison: src.length,
+      nbSeancesSaison: nbSeances(src),
       flechesSaison: src.reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0),
     };
   }, [seances]);
@@ -56,11 +58,11 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
   }, [seances]);
 
   const parDistance = useMemo(() => {
-    const vide = () => ({ nbSeances: 0, fleches: 0, scoreSum: 0, compteSum: 0 });
+    const vide = () => ({ seances: new Set(), fleches: 0, scoreSum: 0, compteSum: 0 });
     const finalise = (g, d) => {
       const moyenne = g.compteSum > 0 ? g.scoreSum / g.compteSum : null;
       return {
-        nbSeances: g.nbSeances, fleches: g.fleches,
+        nbSeances: g.seances.size, fleches: g.fleches,
         moyenne, scoreMoyen: moyenne != null ? Math.round(moyenne * normFactor(d)) : null,
       };
     };
@@ -71,7 +73,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
       if (!s.distance) continue;
       if (!map[s.distance]) map[s.distance] = { entr: vide(), comp: vide() };
       const g = s.type === "Compétition" ? map[s.distance].comp : map[s.distance].entr;
-      g.nbSeances++;
+      g.seances.add(cleSeance(s));
       g.fleches += getPaille(s) + getBlason(s) + getCompte(s);
       const c = getCompte(s);
       if (c > 0 && (s.score ?? 0) > 0) { g.scoreSum += s.score; g.compteSum += c; }
@@ -104,7 +106,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
           <p style={s.heroSous}>Vos séances, vos exercices et vos scores — même sans réseau.</p>
           <div style={s.ctaRow}>
             <button style={s.cta} onClick={onNouvelleSeance}>▶ Séance en direct</button>
-            <button style={s.ctaSecondaire} onClick={onSaisieManuelle}>✎ Saisie manuelle</button>
+            <button style={s.ctaSecondaire} onClick={onSaisieManuelle}>{manuelleEnCours ? "✎ Reprendre la saisie manuelle" : "✎ Saisie manuelle"}</button>
           </div>
         </div>
       )}

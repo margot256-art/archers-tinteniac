@@ -9,6 +9,7 @@ const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 const Accueil         = lazy(() => import("./archer/Accueil"));
 const SeanceTab       = lazy(() => import("./archer/SeanceTab"));
 const SaisieManuelle  = lazy(() => import("./archer/exercices/SaisieManuelle"));
+const Celebrations    = lazy(() => import("./archer/Celebrations"));
 const Journal         = lazy(() => import("./archer/Journal"));
 const Progression     = lazy(() => import("./archer/Progression"));
 const MesRecords      = lazy(() => import("./archer/MesRecords"));
@@ -192,6 +193,11 @@ export default function Layout({ user, isCoach, onLogout, theme, toggleTheme }) 
           })}
         </Suspense>
       </main>
+
+      {/* Feu d'artifice : record battu ou objectif de volume atteint (côté archer). */}
+      {section === "archer" && (
+        <Suspense fallback={null}><Celebrations /></Suspense>
+      )}
     </div>
   );
 }

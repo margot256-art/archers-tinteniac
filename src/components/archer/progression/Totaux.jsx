@@ -3,7 +3,8 @@ import { useAuth } from "../../../hooks/useAuth";
 import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
 import { PRIMARY, BLUE, getSaison, CURRENT_SAISON, fmtYM, normFactor } from "../../../utils/seances";
-import { filtrerSeances, agregerParMoisDistance, trierParMoisPuisDistance, topNMoyenneNormalisee, DIST_ORDER } from "../../../utils/statsCalc";
+import { filtrerSeances, agregerParMoisDistance, trierParMoisPuisDistance, DIST_ORDER } from "../../../utils/statsCalc";
+import { scoreEpreuve } from "../../../utils/records";
 import { exporterExcel, exporterPDF } from "../../../utils/export";
 import FilterSelect from "../../shared/FilterSelect";
 
@@ -40,9 +41,17 @@ export default function Totaux() {
     return entries
       .map(([dist, objScore]) => {
         const nf = normFactor(dist);
+        // Niveau actuel : moyenne des 3 meilleures épreuves complètes (2 séries)
+        // de la saison choisie, comme pour les records.
         const parType = (type) => {
-          const list = seances.filter((s) => s.distance === dist && s.type === type);
-          const avg = topNMoyenneNormalisee(list);
+          const scores = seances
+            .filter((s) => s.distance === dist && s.type === type && s.date
+              && (filterSaison === "Toutes" || getSaison(s.date) === filterSaison))
+            .map(scoreEpreuve)
+            .filter((v) => v != null)
+            .sort((a, b) => b - a)
+            .slice(0, 3);
+          const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
           return {
             current: avg,
             delta: avg != null ? avg - objScore : null,
@@ -52,7 +61,7 @@ export default function Totaux() {
         return { dist, objScore, nf, comp: parType("Compétition"), entr: parType("Entraînement") };
       })
       .sort((a, b) => DIST_ORDER.indexOf(a.dist) - DIST_ORDER.indexOf(b.dist));
-  }, [seances, objectives]);
+  }, [seances, objectives, filterSaison]);
 
   const saisons = useMemo(() => {
     const set = new Set(seances.map((s) => (s.date ? getSaison(s.date) : null)).filter(Boolean));
@@ -138,7 +147,7 @@ export default function Totaux() {
         <div style={s.objCard}>
           <div style={s.objHeader}>
             <span style={s.objTitle}>Objectifs</span>
-            <span style={s.objHint}>Moy. top 3 · score normalisé</span>
+            <span style={s.objHint}>Moy. des 3 meilleures épreuves complètes (2 séries) de la saison</span>
           </div>
           {objSummary.map(({ dist, objScore, nf, comp, entr }, i) => (
             <div key={dist} style={{ ...s.objRow, ...(i === objSummary.length - 1 ? { borderBottom: "none" } : {}) }}>

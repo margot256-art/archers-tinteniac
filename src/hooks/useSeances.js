@@ -63,6 +63,13 @@ export function useSeances() {
     await batch.commit();
   };
 
+  // Modifie des champs communs (date, distance, type, lieu…) sur tous les exercices d'une séance.
+  const modifierSeance = async (ids, champs) => {
+    const batch = writeBatch(db);
+    for (const id of ids) batch.update(doc(db, "seances", id), champs);
+    await batch.commit();
+  };
+
   // Supprime une séance entière : tous ses exercices d'un coup.
   const supprimerSeance = async (ids) => {
     const batch = writeBatch(db);
@@ -70,5 +77,5 @@ export function useSeances() {
     await batch.commit();
   };
 
-  return { seances, loading, error, deleteSeance, updateSeance, updateCommentaireSeance, supprimerSeance };
+  return { seances, loading, error, deleteSeance, updateSeance, updateCommentaireSeance, modifierSeance, supprimerSeance };
 }

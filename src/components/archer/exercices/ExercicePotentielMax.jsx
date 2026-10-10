@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
-import { normFactor } from "../../../utils/seances";
+import { normFactor, todayISO } from "../../../utils/seances";
 import { pointsZone, couleurZone } from "../../../utils/blason";
 import ZoneButtons from "./ZoneButtons";
 import BoutonSupprimer from "./BoutonSupprimer";
@@ -13,7 +13,6 @@ const MIN_FLECHES = 3;
 const MAX_FLECHES = 6;
 const COMPTEES    = 3;
 
-const todayISO = () => new Date().toISOString().split("T")[0];
 
 function meilleur3(codes) {
   return [...codes].sort((a, b) => pointsZone(b) - pointsZone(a)).slice(0, COMPTEES);

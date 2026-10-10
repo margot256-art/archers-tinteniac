@@ -3,7 +3,7 @@ import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
-import { epreuveStandard, resumeTir } from "../../utils/tirCompte";
+import { epreuveStandard, resumeTir, reussite, SEUIL_REUSSITE_DEFAUT } from "../../utils/tirCompte";
 import { PRIMARY as PINK, BLUE, getCompte, getPaille, getBlason, normFactor, buildMonthTotals, fmtDate, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 
@@ -499,6 +499,9 @@ function detailsExercice(d) {
       { label: "Manqués", valeur: r.manques },
     ];
     if (r.moyenne != null) chiffres.push({ label: `Proj. ${base} fl.`, valeur: Math.round(r.moyenne * base) });
+    const seuil = d.zoneReussite ?? SEUIL_REUSSITE_DEFAUT;
+    const zone  = reussite(volees, seuil);
+    if (zone.pct != null) chiffres.push({ label: `Zone ${seuil === "X" ? "X" : `${seuil}+`}`, valeur: `${zone.pct} %` });
     const series = r.series?.filter((se) => se.volees.length > 0)
       .map((se) => `Série ${se.numero} : ${se.total}/${se.max}`).join(" · ");
     return { chiffres, series: series || null };

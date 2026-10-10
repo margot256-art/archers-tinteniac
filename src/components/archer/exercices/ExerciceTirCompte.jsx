@@ -10,7 +10,10 @@ import { useChartColors } from "../../../hooks/useChartColors";
 import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils/brouillonExercice";
 import { normFactor, todayISO } from "../../../utils/seances";
 import { couleurZone } from "../../../utils/blason";
-import { flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, dispersion } from "../../../utils/tirCompte";
+import {
+  flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, dispersion,
+  reussite, SEUILS_REUSSITE, SEUIL_REUSSITE_DEFAUT, libelleSeuil,
+} from "../../../utils/tirCompte";
 import ZoneButtons from "./ZoneButtons";
 import CibleSaisie from "./CibleSaisie";
 import TrispotSaisie from "./TrispotSaisie";
@@ -31,6 +34,17 @@ function lireModeSaisie() {
 }
 function ecrireModeSaisie(mode) {
   try { localStorage.setItem(CLE_MODE_SAISIE, mode); } catch { /* stockage indisponible */ }
+}
+
+const CLE_SEUIL = "archers-tinteniac.zoneReussite";
+function lireSeuil() {
+  try {
+    const v = localStorage.getItem(CLE_SEUIL);
+    return SEUILS_REUSSITE.includes(v) ? v : SEUIL_REUSSITE_DEFAUT;
+  } catch { return SEUIL_REUSSITE_DEFAUT; }
+}
+function ecrireSeuil(seuil) {
+  try { localStorage.setItem(CLE_SEUIL, seuil); } catch { /* stockage indisponible */ }
 }
 
 function texteDecalage({ x, y }) {
@@ -58,6 +72,10 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
 
   const [format,   setFormat]   = useState(brouillon?.format ?? existant?.format ?? "standard"); // "standard" | "libre"
   const [nbSeries, setNbSeries] = useState(brouillon?.nbSeries ?? existant?.nbSeries ?? 2);
+  // Zone de réussite visée (« 8 et mieux »…) : enregistrée avec l'exercice, et
+  // retenue sur l'appareil comme choix par défaut des prochains tirs.
+  const [seuil, setSeuil] = useState(brouillon?.zoneReussite ?? existant?.zoneReussite ?? lireSeuil);
+  useEffect(() => { ecrireSeuil(seuil); }, [seuil]);
 
   // Stockage Firestore : volees = [{ codes: [...], impacts: [...] }, ...] (Firestore interdit les
   // tableaux directement imbriqués dans un tableau — d'où l'enveloppe par objet). En mémoire, on
@@ -79,11 +97,11 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       return;
     }
     ecrireBrouillon(user?.id, exercice, {
-      date, distance, type, lieu, commentaire, format, nbSeries,
+      date, distance, type, lieu, commentaire, format, nbSeries, zoneReussite: seuil,
       volees, impacts, voleeEnCours, impactEnCours,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `exercice` et `enEdition` sont fixes pour la vie de l'écran
-  }, [user?.id, date, distance, type, lieu, commentaire, format, nbSeries, volees, impacts, voleeEnCours, impactEnCours]);
+  }, [user?.id, date, distance, type, lieu, commentaire, format, nbSeries, seuil, volees, impacts, voleeEnCours, impactEnCours]);
 
   const quitter = (callback) => { effacerBrouillon(user?.id, exercice); callback?.(); };
   const [selection,     setSelection]     = useState(null); // index dans voleeEnCours en cours de correction
@@ -108,6 +126,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
   const resume   = useMemo(() => resumeTir(volees, reglages), [volees, reglages]);
   const position = useMemo(() => positionEpreuve(volees.length, voleeEnCours.length, reglages), [volees.length, voleeEnCours.length, reglages]);
   const dispersionImpacts = useMemo(() => dispersion(impacts), [impacts]);
+  const zone = useMemo(() => reussite(volees, seuil, reglages.voleesParSerie), [volees, seuil, reglages.voleesParSerie]);
 
   const serieEnCours = reglages.voleesParSerie ? resume.series[Math.min(position.serie, resume.series.length) - 1] : null;
   const projection   = resume.moyenne != null ? Math.round(resume.moyenne * base) : null;
@@ -210,6 +229,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       protocole:    "tir-compte",
       format,
       nbSeries:     reglages.voleesParSerie ? nbSeries : null,
+      zoneReussite: seuil,
       volees:       volees.map((codes, i) => ({ codes, impacts: impacts[i] ?? [] })),
       volumePaille: 0,
       volumeBlason: 0,
@@ -307,6 +327,38 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
         <div style={s.compteurLabel}>
           {resume.fleches} fl.{resume.moyenne != null && ` · moy. ${resume.moyenne.toFixed(2)} · ≈ ${projection} sur ${base}`} · {volees.length} volée{volees.length > 1 ? "s" : ""}
         </div>
+      </div>
+
+      <div style={s.zoneBox}>
+        <div style={s.zoneTete}>
+          <span style={s.zoneTitre}>Zone de réussite</span>
+          <div style={s.zoneChoix} role="group" aria-label="Zone de réussite visée">
+            {SEUILS_REUSSITE.map((z) => (
+              <button
+                key={z} type="button"
+                style={{ ...s.zoneBtn, ...(seuil === z ? s.zoneBtnActif : {}) }}
+                onClick={() => setSeuil(z)}
+                aria-pressed={seuil === z}
+              >{z === "X" ? "X" : `${z}+`}</button>
+            ))}
+          </div>
+        </div>
+        {zone.total > 0 ? (
+          <>
+            <div style={s.zoneLigne}>
+              <div style={s.zonePiste}>
+                <div style={{ ...s.zoneBarre, width: `${zone.pct}%` }} />
+              </div>
+              <span style={s.zonePct}>{zone.pct} %</span>
+            </div>
+            <div style={s.zoneDetail}>
+              {zone.dans} flèche{zone.dans > 1 ? "s" : ""} sur {zone.total} dans « {libelleSeuil(seuil)} »
+              {zone.parSerie?.length > 1 && ` · ${zone.parSerie.map((se) => `S${se.numero} ${se.pct} %`).join(" · ")}`}
+            </div>
+          </>
+        ) : (
+          <div style={s.zoneDetail}>Choisissez la zone visée : le pourcentage s'affiche dès la première volée.</div>
+        )}
       </div>
 
       {reglages.voleesParSerie && position.terminee && (
@@ -530,6 +582,24 @@ const s = {
   },
   finTitre: { fontFamily: "var(--display)", fontSize: "16px", fontWeight: "600", color: "var(--text)" },
   finDetail: { fontSize: "12px", color: "var(--text-muted)" },
+
+  zoneBox: {
+    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
+    padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px",
+  },
+  zoneTete:    { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" },
+  zoneTitre:   { fontSize: "11px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
+  zoneChoix:   { display: "flex", gap: "4px", flexWrap: "wrap" },
+  zoneBtn: {
+    border: "1.5px solid var(--border-2)", backgroundColor: "var(--input-bg)", color: "var(--text-muted)",
+    borderRadius: "7px", padding: "4px 9px", fontSize: "12px", fontWeight: "700", cursor: "pointer", fontFamily: "inherit",
+  },
+  zoneBtnActif: { backgroundColor: PINK, borderColor: PINK, color: "#fff" },
+  zoneLigne:   { display: "flex", alignItems: "center", gap: "10px" },
+  zonePiste:   { flex: 1, height: "8px", backgroundColor: "var(--input-bg)", borderRadius: "8px", overflow: "hidden" },
+  zoneBarre:   { height: "100%", backgroundColor: PINK, borderRadius: "8px", transition: "width 0.3s ease" },
+  zonePct:     { fontFamily: "var(--mono)", fontSize: "18px", fontWeight: "700", color: "var(--text)", minWidth: "54px", textAlign: "right" },
+  zoneDetail:  { fontSize: "12px", color: "var(--text-muted)" },
 
   dispersionTexte: { fontSize: "12px", color: "var(--text-dim)", margin: 0, lineHeight: 1.5 },
 

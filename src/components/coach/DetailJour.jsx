@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PRIMARY, getPaille, getBlason, getCompte, fmtDate } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
-import { epreuveStandard, flechesParVolee, resumeTir, dispersion } from "../../utils/tirCompte";
+import { epreuveStandard, flechesParVolee, resumeTir, dispersion, reussite, SEUIL_REUSSITE_DEFAUT, libelleSeuil } from "../../utils/tirCompte";
 import BlasonImpacts from "../archer/exercices/BlasonImpacts";
 
 const nomExercice = (s) => PROTOCOLE_PAR_ID[protocoleDe(s)]?.nom ?? s.protocole ?? "—";
@@ -91,6 +91,8 @@ function DetailTirCompte({ doc: d }) {
     (v.codes ?? []).map((code, i) => (v.impacts?.[i] ? { code, ...v.impacts[i] } : null)).filter(Boolean)
   );
   const disp = dispersion(d.volees.map((v) => v.impacts ?? []));
+  const seuil = d.zoneReussite ?? SEUIL_REUSSITE_DEFAUT;
+  const zone  = reussite(volees, seuil, reglages.voleesParSerie);
 
   const groupes = resume.series
     ? resume.series.filter((se) => se.volees.length > 0).map((se) => ({ titre: `Série ${se.numero}`, score: `${se.total}/${se.max}`, volees: se.volees }))
@@ -101,6 +103,12 @@ function DetailTirCompte({ doc: d }) {
       <p style={s.stats}>
         {resume.x} X · {resume.dixPlusX} 10+X · {resume.manques} manqué{resume.manques > 1 ? "s" : ""}
       </p>
+      {zone.pct != null && (
+        <p style={s.stats}>
+          Zone de réussite « {libelleSeuil(seuil)} » : {zone.pct} % ({zone.dans}/{zone.total})
+          {zone.parSerie?.length > 1 && ` · ${zone.parSerie.map((se) => `S${se.numero} ${se.pct} %`).join(" · ")}`}
+        </p>
+      )}
 
       <div style={s.tirCompteGrille}>
         <div style={s.feuille}>

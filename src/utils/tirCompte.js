@@ -60,6 +60,27 @@ export function resumeTir(volees, { flechesParVolee, voleesParSerie, nbSeries })
   };
 }
 
+// Zone de réussite : la zone visée par l'archer (« 8 et mieux »…). Seuil "X" = les X
+// seulement ; "10" compte aussi les X.
+export const SEUILS_REUSSITE = ["X", "10", "9", "8", "7", "6"];
+export const SEUIL_REUSSITE_DEFAUT = "8";
+export const libelleSeuil = (seuil) => (seuil === "X" ? "X" : `${seuil} et mieux`);
+
+/** Flèches dans la zone de réussite, en tout et par série (si l'épreuve a des séries). */
+export function reussite(volees, seuil, voleesParSerie = null) {
+  const dansZone = (code) => (seuil === "X" ? code === "X" : pointsZone(code) >= Number(seuil));
+  const compter = (liste) => {
+    const fleches = liste.flat();
+    const dans = fleches.filter(dansZone).length;
+    return { dans, total: fleches.length, pct: fleches.length ? Math.round((dans / fleches.length) * 100) : null };
+  };
+  const parSerie = voleesParSerie
+    ? Array.from({ length: Math.ceil(volees.length / voleesParSerie) }, (_, i) =>
+        ({ numero: i + 1, ...compter(volees.slice(i * voleesParSerie, (i + 1) * voleesParSerie)) }))
+    : null;
+  return { ...compter(volees), parSerie };
+}
+
 /** Position dans l'épreuve (série/volée en cours, 1-based) et si elle est terminée. */
 export function positionEpreuve(nbVoleesValidees, voleeEnCoursLength, { voleesParSerie, nbSeries }) {
   if (!voleesParSerie) return { serie: 1, volee: nbVoleesValidees + 1, terminee: false };

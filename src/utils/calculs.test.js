@@ -5,7 +5,7 @@ import { pointsZone } from "./blason";
 import { slug } from "./slug";
 import { getSaison, nbSeances, retoursNonLus } from "./seances";
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
-import { resumeTir, epreuveStandard, positionEpreuve } from "./tirCompte";
+import { resumeTir, epreuveStandard, positionEpreuve, reussite } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
 
 // Volées de 3 flèches identiques (format salle).
@@ -129,6 +129,15 @@ describe("tir compté", () => {
     expect(r.manques).toBe(1);
     expect(r.series.map((se) => se.total)).toEqual([29, 18]);
     expect(r.series.every((se) => se.complete)).toBe(true);
+  });
+  it("zone de réussite : % de flèches dans la zone visée, en tout et par série", () => {
+    const tir = [["X", "10", "9"], ["8", "7", "M"], ["9", "9", "6"], ["10", "8", "8"]];
+    const r = reussite(tir, "8", 2);
+    expect(r).toMatchObject({ dans: 9, total: 12, pct: 75 });
+    expect(r.parSerie.map((se) => se.pct)).toEqual([67, 83]);
+    expect(reussite(tir, "10").dans).toBe(3);   // X compte dans le 10
+    expect(reussite(tir, "X").dans).toBe(1);
+    expect(reussite([], "8").pct).toBeNull();
   });
   it("position dans l'épreuve et fin d'épreuve", () => {
     const reglages = { voleesParSerie: 10, nbSeries: 2 };

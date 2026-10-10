@@ -10,6 +10,10 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "");
     localStorage.setItem("theme", theme);
+    // Barre du haut du téléphone (navigateur ou appli installée) de la couleur de
+    // l'en-tête (--surface), pour qu'elle se fonde dans l'appli.
+    document.querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "light" ? "#fffdf8" : "#1b1b20");
   }, [theme]);
 
   const toggleTheme = useCallback(() => setTheme(t => t === "dark" ? "light" : "dark"), []);

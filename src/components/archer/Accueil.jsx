@@ -9,6 +9,40 @@ import FilterSelect from "../shared/FilterSelect";
 
 const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 
+// Phrase d'encouragement de l'accueil : tirée au hasard à chaque ouverture de
+// l'appli (pas à chaque retour sur l'onglet), jamais la même qu'à l'ouverture précédente.
+const PHRASES = [
+  "Chaque flèche est une nouvelle chance de bien faire.",
+  "La régularité bat le talent quand le talent ne s'entraîne pas.",
+  "Respire, vise, lâche : le reste suivra.",
+  "Les grands scores se construisent une volée à la fois.",
+  "Aujourd'hui, une flèche de mieux qu'hier.",
+  "Le 10 n'est pas un hasard, c'est un geste répété.",
+  "Concentre-toi sur le geste, le score viendra.",
+  "Une mauvaise flèche ne fait pas une mauvaise séance.",
+  "Chaque entraînement te rapproche de ton objectif.",
+  "Calme dans la tête, solide dans le geste.",
+  "La patience est la corde la plus solide de l'archer.",
+  "Fais confiance à ton entraînement.",
+  "Progresser, c'est tirer encore une volée quand on pense avoir fini.",
+  "Le centre se mérite, flèche après flèche.",
+];
+
+const CLE_PHRASE = "archers-tinteniac.dernierePhrase";
+
+let phraseOuverture = null; // tirée une seule fois par ouverture de l'appli
+
+const phraseDuMoment = () => {
+  if (phraseOuverture) return phraseOuverture;
+  let precedente = -1;
+  try { precedente = Number(localStorage.getItem(CLE_PHRASE) ?? -1); } catch { /* stockage indisponible */ }
+  let index;
+  do { index = Math.floor(Math.random() * PHRASES.length); } while (index === precedente);
+  try { localStorage.setItem(CLE_PHRASE, String(index)); } catch { /* stockage indisponible */ }
+  phraseOuverture = PHRASES[index];
+  return phraseOuverture;
+};
+
 const todayYM = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -18,6 +52,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
   const { user } = useAuth();
   const { seances, loading, error } = useSeances();
   const rawObjectif = useObjectif();
+  const phrase = phraseDuMoment();
 
   const enCours = lireSeanceEnCours(user?.id);
   const manuelleEnCours = !!lireBrouillon(user?.id, { protocole: "manuel" });
@@ -105,7 +140,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
           <div style={s.glow} />
           <p style={s.heroEyebrow}>Bonjour</p>
           <p style={s.heroTitre}>Prêt à tirer, {user?.prenom} ?</p>
-          <p style={s.heroSous}>Vos séances, vos exercices et vos scores — même sans réseau.</p>
+          <p style={s.heroSous}>{phrase}</p>
           <div style={s.ctaRow}>
             <button style={s.cta} onClick={onNouvelleSeance}>▶ Séance en direct</button>
             <button style={s.ctaSecondaire} onClick={onSaisieManuelle}>{manuelleEnCours ? "✎ Reprendre la saisie manuelle" : "✎ Saisie manuelle"}</button>

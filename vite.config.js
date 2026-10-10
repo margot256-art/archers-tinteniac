@@ -19,8 +19,8 @@ export default defineConfig({
       manifest: {
         name: 'Archers de Tinténiac',
         short_name: 'Archers Tinténiac',
-        theme_color: '#FF007A',
-        background_color: '#ffffff',
+        theme_color: '#1b1b20',
+        background_color: '#121214',
         display: 'standalone',
         start_url: '/',
         lang: 'fr',

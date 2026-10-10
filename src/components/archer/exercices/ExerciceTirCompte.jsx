@@ -591,7 +591,8 @@ const s = {
   zoneTitre:   { fontSize: "11px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
   zoneChoix:   { display: "flex", gap: "4px", flexWrap: "wrap" },
   zoneBtn: {
-    border: "1.5px solid var(--border-2)", backgroundColor: "var(--input-bg)", color: "var(--text-muted)",
+    borderWidth: "1.5px", borderStyle: "solid", borderColor: "var(--border-2)",
+    backgroundColor: "var(--input-bg)", color: "var(--text-muted)",
     borderRadius: "7px", padding: "4px 9px", fontSize: "12px", fontWeight: "700", cursor: "pointer", fontFamily: "inherit",
   },
   zoneBtnActif: { backgroundColor: PINK, borderColor: PINK, color: "#fff" },

@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { fmtDateLongue, todayISO } from "../../utils/seances";
-import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice } from "../../utils/exercices";
+import { PROTOCOLES_ACTIFS, protocoleDe } from "../../utils/exercices";
+import { CarteExercice } from "../coach/DetailJour";
 import { lireSeanceEnCours, ecrireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { brouillonsDeSeance, effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
 import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
@@ -171,21 +172,11 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
       </div>
       <p style={s.resume}>{distance} · {type}{lieu ? ` · ${lieu}` : ""}</p>
 
-      {mesResultats.length > 0 && (
-        <div style={s.recapListe}>
-          {mesResultats.map((r) => {
-            const proto = PROTOCOLE_PAR_ID[protocoleDe(r)];
-            const ind   = indicateurExercice(protocoleDe(r), r);
-            return (
-              <button key={r.id} type="button" style={s.recapRow} onClick={() => setEditingDoc(r)}>
-                <span style={s.recapNom}>{proto?.nom ?? r.protocole}</span>
-                <span style={s.recapResultat}>{ind?.texte ?? "—"}</span>
-                <span style={s.recapModifier}>Modifier →</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Exercices déjà faits : même carte que le journal, en version résumée
+          (le détail complet — feuille de marque, blason — reste dans le journal). */}
+      {mesResultats.map((r) => (
+        <CarteExercice key={r.id} doc={r} compact onModifier={() => setEditingDoc(r)} />
+      ))}
 
       <div style={s.ajoutZone}>
         <span style={s.ajoutLabel}>
@@ -244,16 +235,6 @@ const s = {
     cursor: "pointer", fontFamily: "inherit", textAlign: "left",
   },
   choixNom: { fontSize: "13px", fontWeight: "700", color: "var(--text)" },
-
-  recapListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "10px", overflow: "hidden" },
-  recapRow: {
-    display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px",
-    padding: "12px 14px", backgroundColor: "var(--surface-raised)",
-    border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-  },
-  recapNom: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)", flex: "1 1 auto" },
-  recapResultat: { fontFamily: "var(--mono)", fontSize: "14px", fontWeight: "800", color: PINK },
-  recapModifier: { fontSize: "11px", color: "var(--text-dim)", whiteSpace: "nowrap" },
 
   ajoutZone: { display: "flex", flexDirection: "column", gap: "8px" },
   ajoutLabel: { fontSize: "12px", color: "var(--text-dim)" },

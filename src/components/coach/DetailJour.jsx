@@ -41,7 +41,9 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
 
 // Détail complet d'un exercice (feuille de marque et blason pour le tir compté),
 // partagé avec le Journal de l'archer, qui y ajoute un bouton « Modifier ».
-export function CarteExercice({ doc: d, onModifier }) {
+// `compact` (séance en cours) : seulement les chiffres clés, sans feuille de
+// marque, blason ni liste des volées.
+export function CarteExercice({ doc: d, onModifier, compact = false }) {
   const proto    = protocoleDe(d);
   const resultat = resultatAvecMoyenne(d);
   const detail   = indicateurExercice(proto, d)?.detail;
@@ -64,7 +66,7 @@ export function CarteExercice({ doc: d, onModifier }) {
         </p>
       )}
 
-      {proto === "tir-compte" && d.volees?.length > 0 && <DetailTirCompte doc={d} />}
+      {proto === "tir-compte" && d.volees?.length > 0 && <DetailTirCompte doc={d} compact={compact} />}
 
       {proto === "volume" && total > 0 && (
         <p style={s.detail}>
@@ -72,7 +74,7 @@ export function CarteExercice({ doc: d, onModifier }) {
           {d.volees?.length > 0 && ` · ${d.volees.length} volée${d.volees.length > 1 ? "s" : ""}`}
         </p>
       )}
-      {proto === "volume" && d.volees?.length > 0 && (
+      {proto === "volume" && !compact && d.volees?.length > 0 && (
         <p style={s.detail}>
           Volées : {d.volees.map((v) => `${v.fleches}${v.support === "paille" ? " (paille)" : ""}`).join(" · ")}
         </p>
@@ -85,7 +87,7 @@ export function CarteExercice({ doc: d, onModifier }) {
   );
 }
 
-function DetailTirCompte({ doc: d }) {
+function DetailTirCompte({ doc: d, compact = false }) {
   const volees  = d.volees.map((v) => v.codes ?? []);
   const reglages = d.format === "libre"
     ? { flechesParVolee: flechesParVolee(d.distance), voleesParSerie: null, nbSeries: null }
@@ -116,6 +118,14 @@ function DetailTirCompte({ doc: d }) {
         </p>
       )}
 
+      {compact ? (
+        resume.series && resume.series.filter((se) => se.volees.length > 0).length > 0 && (
+          <p style={s.stats}>
+            {resume.series.filter((se) => se.volees.length > 0)
+              .map((se) => `Série ${se.numero} : ${se.total}/${se.max}`).join(" · ")}
+          </p>
+        )
+      ) : (
       <div style={s.tirCompteGrille}>
         <div style={s.feuille}>
           {groupes.map((g, gi) => (
@@ -153,6 +163,7 @@ function DetailTirCompte({ doc: d }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

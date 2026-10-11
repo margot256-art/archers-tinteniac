@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PRIMARY, getPaille, getBlason, getCompte, fmtDateLongue, normFactor } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, fmtDateLongue, normFactor } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
 import { epreuveStandard, flechesParVolee, resumeTir, dispersion, reussite, SEUIL_REUSSITE_DEFAUT, libelleSeuil } from "../../utils/tirCompte";
@@ -39,6 +39,9 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
   );
 }
 
+// Couleur du type de séance : rose pour un entraînement, bleu pour une compétition.
+const couleurDe = (d) => (d.type === "Compétition" ? BLUE : PRIMARY);
+
 // Détail complet d'un exercice (feuille de marque et blason pour le tir compté),
 // partagé avec le Journal de l'archer, qui y ajoute un bouton « Modifier ».
 // `compact` (séance en cours) : seulement les chiffres clés, sans feuille de
@@ -46,7 +49,8 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
 export function CarteExercice({ doc: d, onModifier, compact = false }) {
   const proto    = protocoleDe(d);
   const resultat = resultatAvecMoyenne(d);
-  const detail   = indicateurExercice(proto, d)?.detail;
+  // Le Volume détaille lui-même paille / blason : pas de ligne « flèches tirées ».
+  const detail   = proto === "volume" ? null : indicateurExercice(proto, d)?.detail;
   const total    = getPaille(d) + getBlason(d) + getCompte(d);
 
   return (
@@ -54,7 +58,7 @@ export function CarteExercice({ doc: d, onModifier, compact = false }) {
       <div style={s.carteHead}>
         <span style={s.carteNom}>{nomExercice(d)}</span>
         <span style={s.carteDroite}>
-          {resultat && <span style={s.carteResultat}>{resultat}</span>}
+          {resultat && <span style={{ ...s.carteResultat, color: couleurDe(d) }}>{resultat}</span>}
           {onModifier && <button style={s.modifierBtn} onClick={onModifier}>✎ Modifier</button>}
         </span>
       </div>
@@ -70,8 +74,10 @@ export function CarteExercice({ doc: d, onModifier, compact = false }) {
 
       {proto === "volume" && total > 0 && (
         <p style={s.detail}>
-          Paille {getPaille(d)} fl. · Blason {getBlason(d)} fl.
-          {d.volees?.length > 0 && ` · ${d.volees.length} volée${d.volees.length > 1 ? "s" : ""}`}
+          {[
+            ...[["Paille", getPaille(d)], ["Blason", getBlason(d)]].filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n} fl.`),
+            ...(d.volees?.length > 0 ? [`${d.volees.length} volée${d.volees.length > 1 ? "s" : ""}`] : []),
+          ].join(" · ")}
         </p>
       )}
 
@@ -128,7 +134,7 @@ function DetailTirCompte({ doc: d, compact = false }) {
               {g.titre && (
                 <div style={s.serieHead}>
                   <span style={s.serieNom}>{g.titre}</span>
-                  <span style={s.serieScore}>{g.score}</span>
+                  <span style={{ ...s.serieScore, color: couleurDe(d) }}>{g.score}</span>
                 </div>
               )}
               {g.volees.map((v) => (

@@ -3,7 +3,7 @@ import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
-import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu, fmtDateLongue, jourDate } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu, fmtDateLongue, jourDate, parOrdreDeTir } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { CarteExercice } from "../coach/DetailJour";
 
@@ -41,7 +41,7 @@ export default function Journal({ seanceInitiale = null }) {
     }
     return [...map.entries()]
       .map(([cle, docs]) => {
-        const tries = [...docs].sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
+        const tries = [...docs].sort(parOrdreDeTir);
         const premier = tries[0];
         const commentaireSeance = tries.map(commentaireSeanceDe).find(Boolean) ?? "";
         const retourCoach = tries.find((d) => d.retourCoach)?.retourCoach ?? "";
@@ -191,7 +191,7 @@ export default function Journal({ seanceInitiale = null }) {
               {session.chiffres.blason > 0 && <Chiffre label="Blason" valeur={session.chiffres.blason} />}
               {session.chiffres.compte > 0 && <Chiffre label="Compté" valeur={session.chiffres.compte} />}
               <Chiffre label="Total" valeur={`${session.chiffres.total} fl.`} />
-              {session.chiffres.score > 0 && <Chiffre label="Score" valeur={session.chiffres.score} />}
+              {session.chiffres.score > 0 && session.docs.filter((d) => getCompte(d) > 0 && (d.score ?? 0) > 0).length === 1 && <Chiffre label="Score" valeur={session.chiffres.score} />}
               {session.chiffres.moyenne != null && <Chiffre label="Moy." valeur={session.chiffres.moyenne.toFixed(2)} />}
               {session.chiffres.scoreMoy != null && <Chiffre label="Score moy." valeur={session.chiffres.scoreMoy} couleur={couleurType(session.type)} />}
             </div>}
@@ -346,7 +346,11 @@ export default function Journal({ seanceInitiale = null }) {
               const c = sess.chiffres;
               const j = jourDate(sess.date);
               // Chiffre clé à droite : le score s'il y a du tir compté, sinon les flèches.
-              const cle = c.score > 0 ? { valeur: c.score, unite: "pts" } : { valeur: c.total, unite: "flèches" };
+              // Plusieurs tirs comptés : leurs points ne s'additionnent pas, on montre le score moyen.
+              const nbComptes = sess.docs.filter((d) => getCompte(d) > 0 && (d.score ?? 0) > 0).length;
+              const cle = nbComptes > 1 && c.scoreMoy != null ? { valeur: c.scoreMoy, unite: "score moy." }
+                : c.score > 0 ? { valeur: c.score, unite: "pts" }
+                : { valeur: c.total, unite: "flèches" };
               const details = [
                 ...(c.score > 0 && c.moyenne != null ? [`moy. ${c.moyenne.toFixed(2)}`, `${c.total} flèches`] : []),
                 ...[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
@@ -366,7 +370,7 @@ export default function Journal({ seanceInitiale = null }) {
                         <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>Compétition</span>
                       )}
                     </span>
-                    <span style={s.exos}>{sess.docs.map(nomExercice).join(" · ")}</span>
+                    <span style={s.exos}>{resumeExercices(sess.docs)}</span>
                     {details.length > 0 && <span style={s.stats}>{details.join(" · ")}</span>}
 
                     {sess.commentaireSeance && <span style={s.citation}>{sess.commentaireSeance}</span>}
@@ -451,6 +455,13 @@ function InfosSeance({ initial, onEnregistrer, onAnnuler }) {
       </div>
     </div>
   );
+}
+
+// « Volume ×3 · Tir compté ×2 » : exercices d'une séance, dans l'ordre de leur premier tir.
+function resumeExercices(docs) {
+  const nb = new Map();
+  for (const d of docs) nb.set(nomExercice(d), (nb.get(nomExercice(d)) ?? 0) + 1);
+  return [...nb].map(([nom, n]) => (n > 1 ? `${nom} ×${n}` : nom)).join(" · ");
 }
 
 // Barre de répartition des flèches du mois (paille / blason / compté) avec légende.

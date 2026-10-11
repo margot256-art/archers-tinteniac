@@ -22,7 +22,7 @@ export function useSeances() {
       (snapshot) => {
         const data = snapshot.docs
           .map((d) => {
-            const raw = d.data();
+            const raw = d.data({ serverTimestamps: "estimate" });
             return { id: d.id, ...raw, distance: raw.distance === "18 ans" ? "18m" : raw.distance };
           })
           .sort((a, b) => (a.date < b.date ? 1 : -1));

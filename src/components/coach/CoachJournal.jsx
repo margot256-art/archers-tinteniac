@@ -1,7 +1,7 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { chargerExport } from "../../utils/exportLibs";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
 import DetailJour from "./DetailJour";
@@ -40,7 +40,7 @@ function regrouperParJour(docs) {
     map.get(cle).push(s);
   }
   return [...map.entries()].map(([cle, ds]) => {
-    const tries = [...ds].sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
+    const tries = [...ds].sort(parOrdreDeTir);
     return {
       id: cle, docs: tries,
       date: tries[0].date, archer: tries[0].archer,
@@ -122,7 +122,7 @@ export default function CoachJournal() {
         rows: rows.sort((a, b) =>
           b.date.localeCompare(a.date)
           || (a.archer ?? "").localeCompare(b.archer ?? "")
-          || (a.docs[0].createdAt?.seconds ?? 0) - (b.docs[0].createdAt?.seconds ?? 0)),
+          || parOrdreDeTir(a.docs[0], b.docs[0])),
       }));
   }, [lignes]);
 

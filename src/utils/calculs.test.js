@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { pointsZone } from "./blason";
 import { slug } from "./slug";
-import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume } from "./seances";
+import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume, parOrdreDeTir } from "./seances";
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
 import { resumeTir, epreuveStandard, positionEpreuve, reussite } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
@@ -49,6 +49,14 @@ describe("dates et jauges", () => {
     expect(couleurJaugeVolume(85)).toBe("var(--ok)");
     expect(couleurJaugeVolume(60)).toBe("var(--warn)");
     expect(couleurJaugeVolume(29)).toBe("var(--bad)");
+  });
+});
+
+describe("parOrdreDeTir", () => {
+  it("trie les exercices par heure d'enregistrement, ceux sans heure en premier", () => {
+    const a = (ms, id) => ({ id, createdAt: { toMillis: () => ms } });
+    const docs = [a(3000, "c"), a(1000, "a"), { id: "sans" }, a(2000, "b")];
+    expect([...docs].sort(parOrdreDeTir).map((d) => d.id)).toEqual(["sans", "a", "b", "c"]);
   });
 });
 

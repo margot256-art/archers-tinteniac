@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
-import { fmtDateLongue, todayISO } from "../../utils/seances";
+import { fmtDateLongue, todayISO, parOrdreDeTir } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, protocoleDe } from "../../utils/exercices";
 import { CarteExercice } from "../coach/DetailJour";
 import { lireSeanceEnCours, ecrireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
@@ -43,7 +43,7 @@ export default function NouvelleSeanceMulti({ onQuitter }) {
   const [editingDoc, setEditingDoc] = useState(null); // exercice déjà fait, en cours de modification
 
   const mesResultats = useMemo(
-    () => seances.filter((s) => s.seanceId === seanceId),
+    () => seances.filter((s) => s.seanceId === seanceId).sort(parOrdreDeTir),
     [seances, seanceId]
   );
 

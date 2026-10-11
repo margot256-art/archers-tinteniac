@@ -18,6 +18,12 @@ export const getSaison = (iso) => {
 export const cleSeance = (s) => s.seanceId ?? s.id;
 export const nbSeances = (docs) => new Set(docs.map(cleSeance)).size;
 
+// Ordre de tir des exercices d'une séance : heure d'enregistrement (`createdAt`).
+// Les séances sont lues avec serverTimestamps « estimate » : un exercice enregistré
+// hors ligne a déjà une heure, avant même la confirmation du serveur.
+const instant = (d) => d.createdAt?.toMillis?.() ?? 0;
+export const parOrdreDeTir = (a, b) => instant(a) - instant(b);
+
 // Couleur d'une jauge de volume mensuel selon l'avancement (Accueil de l'archer et
 // tableau de bord coach) : rose = objectif atteint, vert ≥ 80 %, orange ≥ 50 %, rouge en dessous.
 export const couleurJaugeVolume = (pct) =>

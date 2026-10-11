@@ -12,7 +12,7 @@ export function useAllSeances() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setSeances(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setSeances(snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) })));
         setLoading(false);
       },
       (err) => {

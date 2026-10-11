@@ -135,7 +135,7 @@ export default function Totaux() {
       <div style={ui.barre}>
         <div style={ui.filtres}>
           <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
-          <FilterSelect label="Distance" value={filterDist} options={optionsDistances(seances, filterSaison, filterDist)} onChange={setFilterDist} />
+          <FilterSelect label="Distance" value={filterDist} options={optionsDistances(seances, filterDist)} onChange={setFilterDist} />
         </div>
         <div style={ui.filtres}>
           <button style={{ ...ui.boutonSecondaire, ...(rows.length === 0 ? s.off : {}) }} onClick={handleExportExcel} disabled={rows.length === 0}>↓ Excel</button>

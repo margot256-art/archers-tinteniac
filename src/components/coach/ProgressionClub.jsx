@@ -377,7 +377,7 @@ export default function ProgressionClub() {
       <div style={ui.filtres}>
         <FilterSelect label="Saison"   value={filterSaison} options={saisonOptions} onChange={setFilterSaison} libelle={libelleSaison} />
         <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
-        <FilterSelect label="Distance" value={filterDist}   options={optionsDistances(seances.filter(okArcher), filterSaison, filterDist)} onChange={setFilterDist} />
+        <FilterSelect label="Distance" value={filterDist}   options={optionsDistances(seances.filter(okArcher), filterDist)} onChange={setFilterDist} />
         <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
       </div>
 

@@ -123,7 +123,7 @@ export default function Courbes() {
     <div style={s.page}>
       <div style={s.filters}>
         <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
-        <FilterSelect label="Distance" value={filterDist} options={optionsDistances(seances, filterSaison, filterDist)} onChange={setFilterDist} />
+        <FilterSelect label="Distance" value={filterDist} options={optionsDistances(seances, filterDist)} onChange={setFilterDist} />
       </div>
       <CourbesGraphiques seances={seances} rawObjectif={rawObjectif} filterSaison={filterSaison} filterDist={filterDist} />
     </div>

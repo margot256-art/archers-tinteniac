@@ -334,7 +334,7 @@ export default function CoachJournal({ initial }) {
             onChange={(v) => { setFilterSaison(v); setFilterArcher("Tous"); }} />
           <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
-          <FilterSelect label="Distance" value={filterDist}   options={optionsDistances(saisonSeances.filter((s) => filterArcher === "Tous" || s.archer === filterArcher), "Toutes", filterDist)} onChange={setFilterDist} />
+          <FilterSelect label="Distance" value={filterDist}   options={optionsDistances(seances.filter((s) => filterArcher === "Tous" || s.archer === filterArcher), filterDist)} onChange={setFilterDist} />
         </div>
         <div style={{ display: "flex", gap: "6px" }}>
           <button

@@ -27,6 +27,8 @@ export default function Journal({ seanceInitiale = null }) {
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [erreurSuppression,  setErreurSuppression]  = useState(null);
   const [filterSaison,       setFilterSaison]       = useState(CURRENT_SAISON);
+  const [filterDistance,     setFilterDistance]     = useState("Toutes");
+  const [filterType,         setFilterType]         = useState("Tous");
   const [ajout,              setAjout]              = useState(null);  // null | "choix" | id de protocole à ajouter
   const [editionInfos,       setEditionInfos]       = useState(false);
   const [vue,                setVue]                = useState("seances"); // "seances" | "commentaires"
@@ -65,12 +67,24 @@ export default function Journal({ seanceInitiale = null }) {
     return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
   }, [sessions]);
 
-  // Séances de la saison choisie, regroupées par mois (le plus récent d'abord),
+  // Distances réellement tirées, dans l'ordre habituel.
+  const distanceOptions = useMemo(() => {
+    const presentes = new Set(sessions.map((x) => x.distance));
+    return ["Toutes", ...DISTANCES.filter((d) => presentes.has(d))];
+  }, [sessions]);
+
+  // Séances retenues par les filtres Saison / Distance / Type.
+  const retenue = (sess) =>
+    (filterSaison === "Toutes" || getSaison(sess.date) === filterSaison)
+    && (filterDistance === "Toutes" || sess.distance === filterDistance)
+    && (filterType === "Tous" || sess.type === filterType);
+
+  // Séances retenues, regroupées par mois (le plus récent d'abord),
   // avec les totaux du mois en tête de chaque groupe.
   const mois = useMemo(() => {
     const map = new Map();
     for (const sess of sessions) {
-      if (filterSaison !== "Toutes" && getSaison(sess.date) !== filterSaison) continue;
+      if (!retenue(sess)) continue;
       const ym = sess.date.slice(0, 7);
       if (!map.has(ym)) map.set(ym, []);
       map.get(ym).push(sess);
@@ -99,13 +113,15 @@ export default function Journal({ seanceInitiale = null }) {
           },
         };
       });
-  }, [sessions, filterSaison]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `retenue` ne dépend que des filtres listés
+  }, [sessions, filterSaison, filterDistance, filterType]);
 
-  // Historique des commentaires : séances de la saison choisie qui portent au moins
-  // un commentaire (de l'archer, du coach ou d'un exercice), la plus récente d'abord.
-  const avecCommentaires = sessions.filter((x) =>
-    (filterSaison === "Toutes" || getSaison(x.date) === filterSaison)
-    && (x.commentaireSeance || x.retourCoach || x.commentairesExercices.length > 0));
+  // Historique des commentaires : mêmes mois, séances qui portent au moins un
+  // commentaire (de l'archer, du coach ou d'un exercice).
+  const aCommentaire = (x) => x.commentaireSeance || x.retourCoach || x.commentairesExercices.length > 0;
+  const moisCommentaires = mois
+    .map(({ ym, liste }) => ({ ym, liste: liste.filter(aCommentaire) }))
+    .filter((m) => m.liste.length > 0);
 
   // Ouvrir une séance qui a un retour du coach non lu le marque comme lu
   // (la pastille de l'onglet Journal et l'encart de l'accueil disparaissent).
@@ -201,6 +217,20 @@ export default function Journal({ seanceInitiale = null }) {
           </div>
         )}
 
+        {session.commentaireSeance && (
+          <div style={s.commentaireHaut}>
+            <span style={s.commentaireHautTexte}>{session.commentaireSeance}</span>
+            <button
+              style={{ ...s.lienBtn, whiteSpace: "nowrap", flex: "0 0 auto" }}
+              onClick={() => {
+                const champ = document.getElementById("commentaire-seance");
+                champ?.scrollIntoView({ block: "center" });
+                champ?.focus({ preventScroll: true });
+              }}
+            >✎ Modifier</button>
+          </div>
+        )}
+
         {session.retourCoach && (
           <div style={s.retourCoachBox}>
             <p style={s.retourCoachLabel}>Retour du coach</p>
@@ -268,7 +298,11 @@ export default function Journal({ seanceInitiale = null }) {
   return (
     <div style={s.page}>
       <div style={s.filtreBar}>
-        <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
+        <div style={s.filtres}>
+          <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
+          <FilterSelect label="Distance" value={filterDistance} options={distanceOptions} onChange={setFilterDistance} />
+          <FilterSelect label="Type" value={filterType} options={["Tous", "Entraînement", "Compétition"]} onChange={setFilterType} />
+        </div>
         <div style={s.bascule}>
           {[["seances", "Séances"], ["commentaires", "Commentaires"]].map(([id, label]) => (
             <button
@@ -283,46 +317,50 @@ export default function Journal({ seanceInitiale = null }) {
       </div>
 
       {vue === "commentaires" ? (
-        avecCommentaires.length === 0 ? (
-          <div style={s.empty}>Aucun commentaire sur cette saison.</div>
-        ) : (
-          <div style={s.liste}>
-            {avecCommentaires.map((sess) => {
-              const couleur = couleurType(sess.type);
-              return (
-                <button key={sess.cle} style={{ ...s.sessionCard, borderLeft: `4px solid ${couleur}` }} onClick={() => setOuverte(sess.cle)}>
-                  <div style={s.sessionHead}>
-                    <span style={s.sessionDate}>{fmtDateLongue(sess.date)}</span>
-                    <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>{sess.type}</span>
-                  </div>
-                  <div style={s.sessionMeta}>{sess.distance}{sess.lieu ? ` · ${sess.lieu}` : ""}</div>
-
-                  {sess.commentaireSeance && (
-                    <div style={s.histoBloc}>
-                      <span style={s.histoLabel}>Mon commentaire</span>
-                      <span style={s.histoTexte}>{sess.commentaireSeance}</span>
-                    </div>
-                  )}
-                  {sess.commentairesExercices.map((c) => (
-                    <div key={c.id} style={s.histoBloc}>
-                      <span style={s.histoLabel}>{c.nom}</span>
-                      <span style={s.histoTexte}>{c.texte}</span>
-                    </div>
-                  ))}
-                  {sess.retourCoach && (
-                    <div style={s.histoBloc}>
-                      <span style={s.sessionRetour}>Retour du coach</span>
-                      <span style={s.histoTexte}>{sess.retourCoach}</span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )
+        moisCommentaires.length === 0 ? (
+          <div style={s.empty}>Aucun commentaire avec ces filtres.</div>
+        ) : moisCommentaires.map(({ ym, liste }) => (
+          <section key={ym} style={s.moisSection}>
+            <div style={s.moisTitreLigne}>
+              <span style={s.moisTitre}>{fmtYM(ym)}</span>
+              <span style={s.moisNb}>{liste.length} séance{liste.length > 1 ? "s" : ""} commentée{liste.length > 1 ? "s" : ""}</span>
+            </div>
+            <div style={s.liste}>
+              {liste.map((sess) => {
+                const couleur = couleurType(sess.type);
+                const j = jourDate(sess.date);
+                return (
+                  <button key={sess.cle} style={s.carte} onClick={() => setOuverte(sess.cle)}>
+                    <span style={{ ...s.tuile, color: couleur, backgroundColor: fondType(sess.type) }}>
+                      <span style={s.tuileJour}>{j.semaine}</span>
+                      <span style={s.tuileNum}>{j.num}</span>
+                    </span>
+                    <span style={s.carteCorps}>
+                      <span style={s.carteTitre}>{sess.lieu ? `${sess.lieu} · ${sess.distance}` : sess.distance}</span>
+                      {sess.commentaireSeance && <span style={s.commentaireCarte}>{sess.commentaireSeance}</span>}
+                      {sess.commentairesExercices.map((c) => (
+                        <span key={c.id} style={s.commentaireExo}>
+                          <span style={s.commentaireExoNom}>{c.nom}</span> {c.texte}
+                        </span>
+                      ))}
+                      {sess.retourCoach && (
+                        <span style={s.retour}>
+                          <span style={s.retourTitre}>
+                            Retour du coach{sess.retourNonLu && <span style={s.nouveauBadge}>Nouveau</span>}
+                          </span>
+                          <span style={s.retourTexteListe}>{sess.retourCoach}</span>
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))
       ) : mois.length === 0 ? (
         <div style={s.empty}>
-          {sessions.length === 0 ? "Aucune séance pour l'instant." : "Aucune séance sur cette saison."}
+          {sessions.length === 0 ? "Aucune séance pour l'instant." : "Aucune séance avec ces filtres."}
         </div>
       ) : mois.map(({ ym, liste, totaux: m }) => (
         <section key={ym} style={s.moisSection}>
@@ -336,8 +374,9 @@ export default function Journal({ seanceInitiale = null }) {
             <Repartition paille={m.paille} blason={m.blason} compte={m.compte} />
             {m.types.filter((sc) => sc.moyenne != null).map((sc) => (
               <div key={sc.type} style={s.moisScore}>
-                <span style={{ ...s.typeBadge, color: couleurType(sc.type), backgroundColor: fondType(sc.type) }}>{sc.type}</span>
-                <span>moy. <strong style={s.moisFort}>{sc.moyenne.toFixed(2)}</strong> / flèche</span>
+                <span style={{ ...s.typePoint, backgroundColor: couleurType(sc.type) }} />
+                <span style={s.typeNom}>{sc.type}</span>
+                <span>· moy. <strong style={s.moisFort}>{sc.moyenne.toFixed(2)}</strong> / flèche</span>
                 {sc.scoreMoy != null && <span>· score moy. <strong style={{ ...s.moisFort, color: couleurType(sc.type) }}>{sc.scoreMoy}</strong></span>}
               </div>
             ))}
@@ -358,6 +397,9 @@ export default function Journal({ seanceInitiale = null }) {
                 ...(c.score > 0 && c.moyenne != null ? [`moy. ${c.moyenne.toFixed(2)}`] : []),
                 ...[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
                   .filter(([, n]) => n > 0 && n < c.total).map(([l, n]) => `${l} ${n}`),
+                ...(sess.commentairesExercices.length > 0
+                  ? [`💬 ${sess.commentairesExercices.length > 1 ? `${sess.commentairesExercices.length} commentaires` : "commentaire"} d'exercice`]
+                  : []),
               ];
               return (
                 <button key={sess.cle} style={s.carte} onClick={() => setOuverte(sess.cle)}>
@@ -518,6 +560,7 @@ function CommentaireSeance({ initial, onEnregistrer }) {
     <div style={s.commentaireBox}>
       <label style={s.commentaireLabel}>Commentaire de séance</label>
       <textarea
+        id="commentaire-seance"
         value={texte}
         onChange={(e) => { setTexte(e.target.value); setEtat(null); }}
         style={s.textarea}
@@ -555,17 +598,19 @@ const s = {
   },
   basculeBtnActif: { backgroundColor: "var(--surface)", color: "var(--text)", boxShadow: "var(--shadow-card)" },
 
-  histoBloc: {
-    display: "flex", flexDirection: "column", gap: "4px",
-    borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "4px",
-  },
-  histoLabel: {
-    fontSize: "10px", fontWeight: "700", color: "var(--text-dim)",
-    textTransform: "uppercase", letterSpacing: "0.06em",
-  },
-  histoTexte: { fontSize: "14px", color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-line" },
   moisSection: { display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" },
-  moisFort: { fontFamily: "var(--mono)", fontWeight: "700", color: "var(--text)" },
+  moisFort: { fontWeight: "700", color: "var(--text)" },
+  typePoint: { width: "8px", height: "8px", borderRadius: "50%", display: "inline-block", flex: "0 0 auto" },
+  typeNom: { fontWeight: "600", color: "var(--text-2)" },
+  filtres: { display: "flex", alignItems: "center", gap: "10px 14px", flexWrap: "wrap" },
+  commentaireCarte: { fontSize: "13px", color: "var(--text-2)", lineHeight: 1.5, whiteSpace: "pre-line" },
+  commentaireExo: { fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, borderLeft: "2px solid var(--border-3)", paddingLeft: "9px" },
+  commentaireExoNom: { fontWeight: "700", color: "var(--text-2)" },
+  commentaireHaut: {
+    display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px",
+    borderLeft: "2px solid var(--border-3)", padding: "2px 0 2px 12px",
+  },
+  commentaireHautTexte: { fontSize: "14px", color: "var(--text-2)", fontStyle: "italic", lineHeight: 1.5, whiteSpace: "pre-line" },
   moisScore: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "12px", color: "var(--text-muted)" },
 
   repartition: { display: "flex", flexDirection: "column", gap: "6px" },
@@ -622,30 +667,7 @@ const s = {
     display: "flex", alignItems: "center", gap: "6px 16px",
     borderLeft: "1px solid var(--border-2)", paddingLeft: "16px",
   },
-  sessionCard: {
-    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
-    boxShadow: "var(--shadow-card)", padding: "16px 18px",
-    display: "flex", flexDirection: "column", gap: "6px",
-    textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-  },
-  sessionHead: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "4px 12px" },
-  sessionDate: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text)" },
-  sessionMeta: { fontSize: "12px", color: "var(--text-muted)" },
-  typeBadge: { borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "700" },
 
-  sessionExercices: { display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px" },
-  exoLigne: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px", flexWrap: "wrap" },
-  exoNom: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
-  exoResultat: { fontFamily: "var(--mono)", fontSize: "13px", fontWeight: "700" },
-
-
-  sessionCommentaire: { fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", lineHeight: 1.4 },
-  sessionRetourTexte: { fontSize: "12px", color: "var(--text-2)", lineHeight: 1.5 },
-
-  sessionRetour: {
-    alignSelf: "flex-start", fontSize: "11px", fontWeight: "700", color: PINK,
-    backgroundColor: "var(--pink-soft)", borderRadius: "5px", padding: "2px 8px",
-  },
   nouveauBadge: {
     marginLeft: "6px", fontSize: "10px", fontWeight: "700", color: "#fff",
     backgroundColor: "var(--bad)", borderRadius: "10px", padding: "1px 7px",
@@ -711,7 +733,6 @@ const s = {
   totauxSeance: { fontSize: "13px", color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.6 },
   totalFort: { fontWeight: "700", color: "var(--text)" },
   detailMeta: { fontSize: "13px", color: "var(--text-muted)", margin: 0 },
-
 
   empty: {
     backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",

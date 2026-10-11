@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { PRIMARY, BLUE, getPaille, getBlason, getCompte, fmtDateLongue, normFactor } from "../../utils/seances";
-import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
+import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
-import { epreuveStandard, flechesParVolee, resumeTir, reussite, SEUIL_REUSSITE_DEFAUT, libelleSeuil } from "../../utils/tirCompte";
+import { epreuveStandard, flechesParVolee, resumeTir, reussite, SEUIL_REUSSITE_DEFAUT } from "../../utils/tirCompte";
 import BlasonImpacts from "../archer/exercices/BlasonImpacts";
 import TrispotImpacts from "../archer/exercices/TrispotImpacts";
 import { tirSurTrispot } from "../archer/exercices/cibleBlason";
@@ -44,35 +44,46 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
 // Couleur du type de séance : rose pour un entraînement, bleu pour une compétition.
 const couleurDe = (d) => (d.type === "Compétition" ? BLUE : PRIMARY);
 
-// Détail complet d'un exercice (feuille de marque et blason pour le tir compté),
-// partagé avec le Journal de l'archer, qui y ajoute un bouton « Modifier ».
-// `compact` (séance en cours) : seulement les chiffres clés, sans feuille de
-// marque ni blason. Le Volume n'affiche que paille / blason / nombre de volées.
+/** Un chiffre clé : la valeur en avant, son libellé discret en dessous. */
+function Stat({ label, valeur }) {
+  return (
+    <span style={s.stat}>
+      <span style={s.statValeur}>{valeur}</span>
+      <span style={s.statLabel}>{label}</span>
+    </span>
+  );
+}
+
+// Détail d'un exercice, partagé avec le Journal de l'archer (qui y ajoute un
+// bouton « Modifier ») et l'écran de la séance en cours (`compact`).
+// Ordre : résultat → chiffres clés → blason / trispot et groupement → feuille de
+// marque, repliée (« Feuille de marque · 20 volées »). En `compact` : chiffres clés
+// et séries seulement. Le rose (bleu en compétition) est réservé aux scores.
 export function CarteExercice({ doc: d, onModifier, compact = false }) {
-  const proto    = protocoleDe(d);
-  const resultat = resultatAvecMoyenne(d);
-  // Le Volume détaille lui-même paille / blason : pas de ligne « flèches tirées ».
-  const detail   = proto === "volume" ? null : indicateurExercice(proto, d)?.detail;
-  const total    = getPaille(d) + getBlason(d) + getCompte(d);
+  const proto     = protocoleDe(d);
+  const resultat  = indicateurExercice(proto, d)?.texte;
+  const total     = getPaille(d) + getBlason(d) + getCompte(d);
+  const avecScore = getCompte(d) > 0 && (d.score ?? 0) > 0;
 
   return (
     <div style={s.carte}>
       <div style={s.carteHead}>
         <span style={s.carteNom}>{nomExercice(d)}</span>
         <span style={s.carteDroite}>
-          {resultat && <span style={{ ...s.carteResultat, color: couleurDe(d) }}>{resultat}</span>}
+          {resultat && <span style={{ ...s.carteResultat, color: avecScore ? couleurDe(d) : "var(--text)" }}>{resultat}</span>}
           {onModifier && <button style={s.modifierBtn} onClick={onModifier}>✎ Modifier</button>}
         </span>
       </div>
-      {detail && <p style={s.detail}>{detail}</p>}
-      {proto === "manuel" && total > 0 && (
-        <p style={s.detail}>
-          {[["Paille", getPaille(d)], ["Blason", getBlason(d)], ["Compté", getCompte(d)]]
-            .filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n}`).join(" · ")}
-        </p>
-      )}
 
       {proto === "tir-compte" && d.volees?.length > 0 && <DetailTirCompte doc={d} compact={compact} />}
+
+      {proto === "manuel" && total > 0 && (
+        <div style={s.stats}>
+          {[["Paille", getPaille(d)], ["Blason", getBlason(d)], ["Compté", getCompte(d)]]
+            .filter(([, n]) => n > 0).map(([l, n]) => <Stat key={l} label={l} valeur={n} />)}
+          {avecScore && <Stat label="Moy." valeur={(d.score / getCompte(d)).toFixed(2)} />}
+        </div>
+      )}
 
       {proto === "volume" && total > 0 && (
         <p style={s.detail}>
@@ -96,6 +107,7 @@ function DetailTirCompte({ doc: d, compact = false }) {
     ? { flechesParVolee: flechesParVolee(d.distance), voleesParSerie: null, nbSeries: null }
     : { ...epreuveStandard(d.distance), nbSeries: d.nbSeries ?? 2 };
   const resume = resumeTir(volees, reglages);
+  const base   = normFactor(d.distance);
 
   const fleches = d.volees.flatMap((v) =>
     (v.codes ?? []).map((code, i) => (v.impacts?.[i] ? { code, ...v.impacts[i] } : null)).filter(Boolean)
@@ -103,64 +115,75 @@ function DetailTirCompte({ doc: d, compact = false }) {
   const trispot = tirSurTrispot(d);
   const seuil = d.zoneReussite ?? SEUIL_REUSSITE_DEFAUT;
   const zone  = reussite(volees, seuil, reglages.voleesParSerie);
+  const series = (resume.series ?? []).filter((se) => se.volees.length > 0);
 
-  const groupes = resume.series
-    ? resume.series.filter((se) => se.volees.length > 0).map((se) => ({ titre: `Série ${se.numero}`, score: `${se.total}/${se.max}`, volees: se.volees }))
+  const chiffres = [
+    ["Moy.", resume.moyenne != null ? resume.moyenne.toFixed(2) : "—"],
+    ["Flèches", resume.fleches],
+    ["10+X", resume.dixPlusX],
+    ["X", resume.x],
+    ["Manqués", resume.manques],
+    ...(resume.moyenne != null ? [[`Sur ${base * 10}`, `≈ ${Math.round(resume.moyenne * base)}`]] : []),
+    ...(zone.pct != null ? [[`Zone ${seuil === "X" ? "X" : `${seuil}+`}`, `${zone.pct} %`]] : []),
+  ];
+
+  const groupes = series.length
+    ? series.map((se) => ({ titre: `Série ${se.numero}`, score: `${se.total}/${se.max}`, volees: se.volees }))
     : [{ titre: null, score: null, volees: resume.volees }];
 
   return (
     <div style={s.tirCompte}>
-      <p style={s.stats}>
-        {resume.x} X · {resume.dixPlusX} 10+X · {resume.manques} manqué{resume.manques > 1 ? "s" : ""}
-        {resume.moyenne != null && ` · ≈ ${Math.round(resume.moyenne * normFactor(d.distance))} sur ${normFactor(d.distance) * 10}`}
-      </p>
-      {zone.pct != null && (
-        <p style={s.stats}>
-          Zone de réussite « {libelleSeuil(seuil)} » : {zone.pct} % ({zone.dans}/{zone.total})
-          {zone.parSerie?.length > 1 && ` · ${zone.parSerie.map((se) => `S${se.numero} ${se.pct} %`).join(" · ")}`}
-        </p>
-      )}
+      <div style={s.stats}>
+        {chiffres.map(([l, v]) => <Stat key={l} label={l} valeur={v} />)}
+      </div>
 
-      {compact ? (
-        resume.series && resume.series.filter((se) => se.volees.length > 0).length > 0 && (
-          <p style={s.stats}>
-            {resume.series.filter((se) => se.volees.length > 0)
-              .map((se) => `Série ${se.numero} : ${se.total}/${se.max}`).join(" · ")}
-          </p>
-        )
-      ) : (
-      <div style={s.tirCompteGrille}>
-        <div style={s.feuille}>
-          {groupes.map((g, gi) => (
-            <div key={gi} style={s.serie}>
-              {g.titre && (
-                <div style={s.serieHead}>
-                  <span style={s.serieNom}>{g.titre}</span>
-                  <span style={{ ...s.serieScore, color: couleurDe(d) }}>{g.score}</span>
-                </div>
-              )}
-              {g.volees.map((v) => (
-                <div key={v.index} style={s.voleeRow}>
-                  <span style={s.voleeNum}>V{v.index + 1}</span>
-                  <span style={s.pastilles}>
-                    {v.codes.map((c, i) => {
-                      const col = couleurZone(c);
-                      return <span key={i} style={{ ...s.pastille, backgroundColor: col.bg, color: col.text }}>{c}</span>;
-                    })}
-                  </span>
-                  <span style={s.voleeTotal}>{v.total}</span>
-                </div>
-              ))}
-            </div>
+      {series.length > 0 && (
+        <div style={s.seriesLigne}>
+          {series.map((se, i) => (
+            <span key={se.numero}>
+              Série {se.numero} <strong style={{ color: couleurDe(d) }}>{se.total}</strong>/{se.max}
+              {zone.parSerie?.[i] && <span style={s.seriesZone}> · zone {zone.parSerie[i].pct} %</span>}
+            </span>
           ))}
         </div>
+      )}
 
-        {fleches.length > 0 && (
-          <div style={s.blasonBox}>
-            {trispot ? <TrispotImpacts volees={d.volees} /> : <BlasonImpacts fleches={fleches} />}
+      {!compact && fleches.length > 0 && (
+        <div style={s.blasonBox}>
+          {trispot ? <TrispotImpacts volees={d.volees} /> : <BlasonImpacts fleches={fleches} />}
+        </div>
+      )}
+
+      {!compact && (
+        <details style={s.feuilleDetails}>
+          <summary style={s.feuilleResume}>
+            Feuille de marque · {volees.length} volée{volees.length > 1 ? "s" : ""}
+          </summary>
+          <div style={s.feuille}>
+            {groupes.map((g, gi) => (
+              <div key={gi} style={s.serie}>
+                {g.titre && (
+                  <div style={s.serieHead}>
+                    <span style={s.serieNom}>{g.titre}</span>
+                    <span style={{ ...s.serieScore, color: couleurDe(d) }}>{g.score}</span>
+                  </div>
+                )}
+                {g.volees.map((v) => (
+                  <div key={v.index} style={s.voleeRow}>
+                    <span style={s.voleeNum}>V{v.index + 1}</span>
+                    <span style={s.pastilles}>
+                      {v.codes.map((c, i) => {
+                        const col = couleurZone(c);
+                        return <span key={i} style={{ ...s.pastille, backgroundColor: col.bg, color: col.text }}>{c}</span>;
+                      })}
+                    </span>
+                    <span style={s.voleeTotal}>{v.total}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </details>
       )}
     </div>
   );
@@ -240,9 +263,15 @@ const s = {
   commentaire: { fontSize: "13px", color: "var(--text-2)", fontStyle: "italic", margin: 0, lineHeight: 1.5 },
 
   tirCompte: { display: "flex", flexDirection: "column", gap: "10px" },
-  stats: { fontSize: "12px", color: "var(--text-muted)", margin: 0, fontWeight: "600" },
-  tirCompteGrille: { display: "flex", flexWrap: "wrap", gap: "18px", alignItems: "flex-start" },
-  feuille: { flex: "1 1 280px", display: "flex", flexDirection: "column", gap: "10px" },
+  stats: { display: "flex", flexWrap: "wrap", gap: "10px 18px" },
+  stat: { display: "flex", flexDirection: "column", gap: "1px", minWidth: "44px" },
+  statValeur: { fontSize: "15px", fontWeight: "700", color: "var(--text)", lineHeight: 1.2 },
+  statLabel: { fontSize: "11px", color: "var(--text-muted)" },
+  seriesLigne: { display: "flex", flexWrap: "wrap", gap: "4px 18px", fontSize: "13px", color: "var(--text-muted)" },
+  seriesZone: { color: "var(--text-dim)" },
+  feuilleDetails: { borderTop: "1px solid var(--border)", paddingTop: "10px" },
+  feuilleResume: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)", cursor: "pointer" },
+  feuille: { display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" },
   serie: { display: "flex", flexDirection: "column", gap: "4px" },
   serieHead: { display: "flex", justifyContent: "space-between", alignItems: "baseline" },
   serieNom: { fontSize: "11px", fontWeight: "700", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" },
@@ -255,7 +284,7 @@ const s = {
     borderRadius: "5px", padding: "2px 6px", border: "1px solid rgba(0,0,0,0.25)",
   },
   voleeTotal: { fontFamily: "var(--mono)", fontSize: "13px", fontWeight: "700", color: "var(--text)" },
-  blasonBox: { flex: "0 1 240px", display: "flex", flexDirection: "column", gap: "6px", alignItems: "center", margin: "0 auto" },
+  blasonBox: { display: "flex", flexDirection: "column", gap: "6px", alignItems: "center", width: "100%", maxWidth: "260px", margin: "0 auto" },
 
   textarea: {
     padding: "10px 12px", border: "1.5px solid var(--border-2)", borderRadius: "9px",

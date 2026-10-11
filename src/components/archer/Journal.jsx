@@ -186,15 +186,18 @@ export default function Journal({ seanceInitiale = null }) {
             </p>
             {/* Totaux de la séance : utiles seulement s'il y a plusieurs exercices
                 (sinon la carte de l'exercice, juste en dessous, dit déjà tout). */}
-            {session.docs.length > 1 && <div style={s.chiffres}>
-              {session.chiffres.paille > 0 && <Chiffre label="Paille" valeur={session.chiffres.paille} />}
-              {session.chiffres.blason > 0 && <Chiffre label="Blason" valeur={session.chiffres.blason} />}
-              {session.chiffres.compte > 0 && <Chiffre label="Compté" valeur={session.chiffres.compte} />}
-              <Chiffre label="Total" valeur={`${session.chiffres.total} fl.`} />
-              {session.chiffres.score > 0 && session.docs.filter((d) => getCompte(d) > 0 && (d.score ?? 0) > 0).length === 1 && <Chiffre label="Score" valeur={session.chiffres.score} />}
-              {session.chiffres.moyenne != null && <Chiffre label="Moy." valeur={session.chiffres.moyenne.toFixed(2)} />}
-              {session.chiffres.scoreMoy != null && <Chiffre label="Score moy." valeur={session.chiffres.scoreMoy} couleur={couleurType(session.type)} />}
-            </div>}
+            {/* Totaux de la séance (plusieurs exercices) : même style que la liste. */}
+            {session.docs.length > 1 && (
+              <p style={s.totauxSeance}>
+                <strong style={s.totalFort}>{session.chiffres.total}</strong> flèches
+                {[["paille", session.chiffres.paille], ["blason", session.chiffres.blason], ["compté", session.chiffres.compte]]
+                  .filter(([, n]) => n > 0).map(([l, n]) => <span key={l}> · {l} {n}</span>)}
+                {session.chiffres.moyenne != null && <span> · moy. <strong style={s.totalFort}>{session.chiffres.moyenne.toFixed(2)}</strong></span>}
+                {session.chiffres.scoreMoy != null && (
+                  <span> · score moy. <strong style={{ ...s.totalFort, color: couleurType(session.type) }}>{session.chiffres.scoreMoy}</strong></span>
+                )}
+              </p>
+            )}
           </div>
         )}
 
@@ -491,15 +494,6 @@ function Repartition({ paille, blason, compte }) {
   );
 }
 
-function Chiffre({ label, valeur, couleur }) {
-  return (
-    <span style={s.chiffre}>
-      <span style={s.chiffreLabel}>{label}</span>
-      <span style={{ ...s.chiffreValeur, ...(couleur ? { color: couleur } : {}) }}>{valeur}</span>
-    </span>
-  );
-}
-
 function CommentaireSeance({ initial, onEnregistrer }) {
   const [texte,  setTexte]  = useState(initial);
   const [etat,   setEtat]   = useState(null); // null | "envoi" | "ok" | "erreur"
@@ -639,13 +633,6 @@ const s = {
   exoNom: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
   exoResultat: { fontFamily: "var(--mono)", fontSize: "13px", fontWeight: "700" },
 
-  chiffres: {
-    display: "flex", flexWrap: "wrap", gap: "6px 16px",
-    borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "4px",
-  },
-  chiffre: { display: "flex", flexDirection: "column", gap: "1px" },
-  chiffreLabel: { fontSize: "10px", fontWeight: "700", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
-  chiffreValeur: { fontFamily: "var(--mono)", fontSize: "14px", fontWeight: "700", color: "var(--text)" },
 
   sessionCommentaire: { fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", lineHeight: 1.4 },
   sessionRetourTexte: { fontSize: "12px", color: "var(--text-2)", lineHeight: 1.5 },
@@ -716,6 +703,8 @@ const s = {
   champ: { display: "flex", flexDirection: "column", gap: "6px" },
   aideTexte: { fontSize: "12px", color: "var(--text-dim)", margin: 0 },
   detailDate: { fontFamily: "var(--display)", fontSize: "20px", fontWeight: "600", color: "var(--text)", margin: 0 },
+  totauxSeance: { fontSize: "13px", color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.6 },
+  totalFort: { fontWeight: "700", color: "var(--text)" },
   detailMeta: { fontSize: "13px", color: "var(--text-muted)", margin: 0 },
 
 

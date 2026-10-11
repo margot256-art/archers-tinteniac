@@ -3,7 +3,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
 import {
-  PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, getSaison, fmtYM, CURRENT_SAISON,
+  PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, getSaison, fmtYM, CURRENT_SAISON, libelleSaison,
   cleSeance, nbSeances, retoursNonLus, fmtDateLongue, couleurJaugeVolume, avancementMois, parOrdreDeTir,
 } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe } from "../../utils/exercices";
@@ -181,7 +181,7 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
       )}
 
       <section style={s.section}>
-        <h3 style={ui.titreSection}>Saison {CURRENT_SAISON}</h3>
+        <h3 style={ui.titreSection}>Saison {libelleSaison(CURRENT_SAISON)}</h3>
         <div style={s.kpis}>
           <Kpi valeur={nbSeancesSaison} label={nbSeancesSaison > 1 ? "séances" : "séance"} />
           <Kpi valeur={flechesSaison.toLocaleString("fr-FR")} label="flèches tirées" />

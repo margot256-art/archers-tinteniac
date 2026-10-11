@@ -3,7 +3,7 @@ import { useSeances } from "../../hooks/useSeances";
 import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
-import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu, fmtDateLongue, jourDate, parOrdreDeTir } from "../../utils/seances";
+import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu, fmtDateLongue, jourDate, parOrdreDeTir, libelleSaison } from "../../utils/seances";
 import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { CarteExercice } from "../coach/DetailJour";
 
@@ -299,7 +299,7 @@ export default function Journal({ seanceInitiale = null }) {
   return (
     <div style={s.page}>
       <div style={s.filtres}>
-        <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
+        <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} libelle={libelleSaison} />
         <FilterSelect label="Distance" value={filterDistance} options={distanceOptions} onChange={setFilterDistance} />
       </div>
       <div style={s.filtreBar}>

@@ -15,7 +15,7 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtDate, fmtYM, cleSeance, nbSeances } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtDate, fmtYM, cleSeance, nbSeances, libelleSaison } from "../../utils/seances";
 import { scoreEpreuve } from "../../utils/records";
 import FilterSelect from "../shared/FilterSelect";
 
@@ -66,7 +66,7 @@ const ARCHER_COLORS = [
 
 const fmtDec    = (v) => (v != null ? v.toFixed(2) : "—");
 const fmtInt    = (v) => (v != null ? String(v) : "—");
-const fmtSaison = (sn) => "S" + sn.split("/")[1];
+const fmtSaison = (sn) => "S" + libelleSaison(sn);
 const fmtMonth  = (ym) => { const [y, m] = ym.split("-"); return `${MONTHS_FR[parseInt(m) - 1]} ${y.slice(2)}`; };
 
 function archerColor(name) {
@@ -260,7 +260,7 @@ export default function ProgressionClub() {
   }, [saisonSeances, rankPeriod, rankDist, rankType]);
 
   const rankExportTitle = (() => {
-    let t = `Classement — Saison ${filterSaison}`;
+    let t = `Classement — Saison ${libelleSaison(filterSaison)}`;
     if (rankDist   !== "Toutes")          t += ` · ${rankDist}`;
     if (rankType   !== "Tous")            t += ` · ${rankType}`;
     if (rankPeriod !== "Toute la saison") t += ` · ${rankPeriod}`;
@@ -345,14 +345,14 @@ export default function ProgressionClub() {
   const handleRankExportExcel = () => exportXlsx(
     rankExportTitle, RANK_COLS, RANK_RIGHT,
     rankRows.map((r, i) => ({ row: rankRowArr(r, false), i })).map(({ row }) => row),
-    "Classement", `classement-${filterSaison.replace("/", "-")}.xlsx`,
+    "Classement", `classement-saison-${libelleSaison(filterSaison)}.xlsx`,
     [8, 22, 10, 12, 10, 12, 14, 14]
   );
   const handleRankExportPDF = () => exportPdf(
     rankExportTitle, RANK_COLS, RANK_RIGHT,
     rankRows.map(r => rankRowArr(r, true)),
     [16, 60, 22, 24, 22, 24, 36, 0],
-    `classement-${filterSaison.replace("/", "-")}.pdf`
+    `classement-saison-${libelleSaison(filterSaison)}.pdf`
   );
 
   // ── Tableau mensuel par archer ────────────────────────────────────────────
@@ -428,27 +428,27 @@ export default function ProgressionClub() {
     const moyComp = t.compteComp > 0 ? t.scoreComp / t.compteComp : null;
     const fmt = (v) => v != null ? (asString ? v.toFixed(2) : parseFloat(v.toFixed(2))) : "";
     return [
-      `Total — Saison ${filterSaison}`, "", "", t.nbrEntr || "", t.nbrComp || "",
+      `Total — Saison ${libelleSaison(filterSaison)}`, "", "", t.nbrEntr || "", t.nbrComp || "",
       t.paille || "", t.blason || "", t.compteTotal || "", t.score || "", t.total || "",
       fmt(moyEntr), "", fmt(moyComp), "",
     ];
   };
 
   const monthExportTitle = tabArcher !== "Tous"
-    ? `Stats mensuelles — ${tabArcher} — Saison ${filterSaison}`
-    : `Stats mensuelles — club — Saison ${filterSaison}`;
+    ? `Stats mensuelles — ${tabArcher} — Saison ${libelleSaison(filterSaison)}`
+    : `Stats mensuelles — club — Saison ${libelleSaison(filterSaison)}`;
 
   const handleMonthExportExcel = () => exportXlsx(
     monthExportTitle, MONTH_COLS, MONTH_RIGHT,
     [...monthlyRows.map(r => monthRowArr(r, false)), monthTotalArr(false)],
-    "Stats", `stats-club-${filterSaison.replace("/", "-")}.xlsx`,
+    "Stats", `stats-club-saison-${libelleSaison(filterSaison)}.xlsx`,
     [14, 16, 10, 14, 14, 8, 8, 8, 8, 10, 14, 18, 14, 18]
   );
   const handleMonthExportPDF = () => exportPdf(
     monthExportTitle, MONTH_COLS, MONTH_RIGHT,
     [...monthlyRows.map(r => monthRowArr(r, true)), monthTotalArr(true)],
     [22, 24, 10, 14, 14, 10, 10, 10, 10, 12, 18, 22, 18, 0],
-    `stats-club-${filterSaison.replace("/", "-")}.pdf`
+    `stats-club-saison-${libelleSaison(filterSaison)}.pdf`
   );
 
   // ── Graphiques ─────────────────────────────────────────────────────────────
@@ -626,7 +626,7 @@ export default function ProgressionClub() {
       <div style={s.saisonBar}>
         <span style={s.saisonLabel}>Saison</span>
         <select value={filterSaison} onChange={e => setFilterSaison(e.target.value)} style={s.saisonSelect}>
-          {saisonOptions.map(sn => <option key={sn}>{sn}</option>)}
+          {saisonOptions.map(sn => <option key={sn} value={sn}>{libelleSaison(sn)}</option>)}
         </select>
       </div>
 

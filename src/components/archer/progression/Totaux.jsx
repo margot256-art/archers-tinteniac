@@ -3,7 +3,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
 import { useEcranEtroit } from "../../../hooks/useEcranEtroit";
-import { PRIMARY, BLUE, getSaison, CURRENT_SAISON, fmtYM, normFactor } from "../../../utils/seances";
+import { PRIMARY, BLUE, getSaison, CURRENT_SAISON, fmtYM, normFactor, libelleSaison } from "../../../utils/seances";
 import { filtrerSeances, agregerParMoisDistance, trierParMoisPuisDistance, DIST_ORDER } from "../../../utils/statsCalc";
 import { niveauEpreuves } from "../../../utils/records";
 import { exporterExcel, exporterPDF } from "../../../utils/export";
@@ -100,7 +100,7 @@ export default function Totaux() {
     const t = totalRowData;
     const fmt = (v) => (v != null ? (asString ? v.toFixed(2) : parseFloat(v.toFixed(2))) : "");
     return [
-      `Total — Saison ${filterSaison}`, "", t.nbrEntr || "", t.nbrComp || "",
+      `Total — Saison ${libelleSaison(filterSaison)}`, "", t.nbrEntr || "", t.nbrComp || "",
       t.paille || "", t.blason || "", t.compteTotal || "", t.total || "",
       fmt(t.moyEntr), "", fmt(t.moyComp), "",
     ];
@@ -109,21 +109,21 @@ export default function Totaux() {
   const archerNom = user ? `${user.prenom} ${user.nom}` : "";
 
   const handleExportExcel = () => exporterExcel({
-    titre: `Progression — ${archerNom} — Saison ${filterSaison}`,
+    titre: `Progression — ${archerNom} — Saison ${libelleSaison(filterSaison)}`,
     colonnes: EXPORT_COLS,
     lignes: rows.map((r) => rowToArr(r, false)),
     ligneTotal: totalRowArr(false),
-    fichier: `progression-${filterSaison.replace("/", "-")}`,
+    fichier: `progression-saison-${libelleSaison(filterSaison)}`,
     colonnesNumeriques: NUM_COLS,
     largeurs: [{ wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 18 }],
   });
 
   const handleExportPDF = () => exporterPDF({
-    titre: `Progression — ${archerNom} — Saison ${filterSaison}`,
+    titre: `Progression — ${archerNom} — Saison ${libelleSaison(filterSaison)}`,
     colonnes: EXPORT_COLS,
     lignes: rows.map((r) => rowToArr(r, true)),
     ligneTotal: totalRowArr(true),
-    fichier: `progression-${filterSaison.replace("/", "-")}`,
+    fichier: `progression-saison-${libelleSaison(filterSaison)}`,
     colonnesNumeriques: NUM_COLS,
     largeursColonnes: [24, 12, 14, 14, 10, 10, 10, 12, 18, 22, 18, 0],
   });
@@ -135,7 +135,7 @@ export default function Totaux() {
     <div style={s.page}>
       <div style={ui.barre}>
         <div style={ui.filtres}>
-          <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} />
+          <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
           <FilterSelect label="Distance" value={filterDist} options={DISTANCES} onChange={setFilterDist} />
         </div>
         <div style={ui.filtres}>

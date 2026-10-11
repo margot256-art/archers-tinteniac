@@ -1,9 +1,9 @@
-export default function FilterSelect({ label, value, options, onChange }) {
+export default function FilterSelect({ label, value, options, onChange, libelle = (o) => o }) {
   return (
     <label style={s.label}>
       <span style={s.labelText}>{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)} style={s.select}>
-        {options.map((o) => <option key={o}>{o}</option>)}
+        {options.map((o) => <option key={o} value={o}>{libelle(o)}</option>)}
       </select>
     </label>
   );

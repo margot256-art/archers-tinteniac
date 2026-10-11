@@ -1,7 +1,7 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { chargerExport } from "../../utils/exportLibs";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir, libelleSaison } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import FilterSelect from "../shared/FilterSelect";
 import DetailJour from "./DetailJour";
@@ -134,8 +134,8 @@ export default function CoachJournal() {
   const WRAP_COLS  = [0, 11];
 
   const exportTitle = filterArcher !== "Tous"
-    ? `Journal — ${filterArcher} — Saison ${filterSaison}`
-    : `Journal — Saison ${filterSaison}`;
+    ? `Journal — ${filterArcher} — Saison ${libelleSaison(filterSaison)}`
+    : `Journal — Saison ${libelleSaison(filterSaison)}`;
 
   const rowCells = (l) => [
     [l.date, l.lieu].filter(Boolean).join("\n"), l.archer || "", l.type || "", l.distance || "",
@@ -254,7 +254,7 @@ export default function CoachJournal() {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Journal");
-    XLSX.writeFile(wb, `journal-coach-${filterSaison.replace("/", "-")}.xlsx`);
+    XLSX.writeFile(wb, `journal-coach-saison-${libelleSaison(filterSaison)}.xlsx`);
   };
 
   const handleExportPDF = async () => {
@@ -333,7 +333,7 @@ export default function CoachJournal() {
       startY = nextY > ph - 30 ? ph : nextY;
     });
 
-    pdf.save(`journal-coach-${filterSaison.replace("/", "-")}.pdf`);
+    pdf.save(`journal-coach-saison-${libelleSaison(filterSaison)}.pdf`);
   };
 
   if (loading) return <div style={s.info}>Chargement…</div>;
@@ -364,7 +364,7 @@ export default function CoachJournal() {
           onChange={e => { setFilterSaison(e.target.value); setFilterArcher("Tous"); }}
           style={s.saisonSelect}
         >
-          {saisons.map(sn => <option key={sn} value={sn}>{sn}</option>)}
+          {saisons.map(sn => <option key={sn} value={sn}>{libelleSaison(sn)}</option>)}
         </select>
       </div>
 

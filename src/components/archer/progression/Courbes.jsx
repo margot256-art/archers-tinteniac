@@ -15,7 +15,7 @@ import {
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
 import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
-import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, nbSeances } from "../../../utils/seances";
+import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, nbSeances, libelleSaison } from "../../../utils/seances";
 import { scoreEpreuve } from "../../../utils/records";
 import { DIST_ORDER } from "../../../utils/statsCalc";
 import FilterSelect from "../../shared/FilterSelect";
@@ -63,7 +63,7 @@ const fmtMonth = (ym) => {
   return `${MONTHS_FR[parseInt(m) - 1]} ${y.slice(2)}`;
 };
 
-const fmtSaison = (s) => "S" + s.split("/")[1];
+const fmtSaison = (s) => "S" + libelleSaison(s);
 
 const makeDistBarOpts = (nf, colors) => ({
   responsive: true,
@@ -259,7 +259,7 @@ export default function Courbes() {
   return (
     <div style={s.page}>
       <div style={s.filters}>
-        <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} />
+        <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
         <FilterSelect label="Distance" value={filterDist} options={DISTANCES} onChange={setFilterDist} />
       </div>
 

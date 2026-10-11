@@ -66,6 +66,17 @@ export const CURRENT_SAISON = (() => {
   return m >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
 })();
 
+// Une saison va du 1er septembre au 31 août. En base, elle reste identifiée par
+// « 2026/2027 » (clés des objectifs) ; à l'écran, elle porte le nom de l'année où
+// elle se termine : « 2027 » pour le 1/09/2026 – 31/08/2027.
+export const libelleSaison = (sn) => (sn?.includes("/") ? sn.split("/")[1] : sn);
+
+/** « 1er sept. 2026 – 31 août 2027 » */
+export const periodeSaison = (sn) => {
+  const [y1, y2] = sn.split("/");
+  return `1er sept. ${y1} – 31 août ${y2}`;
+};
+
 export const fmtDate = (iso) => {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");

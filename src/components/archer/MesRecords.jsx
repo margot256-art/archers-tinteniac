@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSeances } from "../../hooks/useSeances";
-import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte } from "../../utils/seances";
+import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, libelleSaison, periodeSaison } from "../../utils/seances";
 import { scoreEpreuve, scoreSerie, maxEpreuve, maxSerie } from "../../utils/records";
 import FilterSelect from "../shared/FilterSelect";
 import * as ui from "./styleArcher";
@@ -84,7 +84,7 @@ export default function MesRecords() {
   const toutesLesSaisons = filterSaison === "Toutes";
   const subtitle = toutesLesSaisons
     ? "Meilleurs scores personnels — toutes saisons confondues"
-    : (() => { const [y1, y2] = filterSaison.split("/"); return `Records de la saison ${filterSaison} (1 sept. ${y1} — 31 août ${y2})`; })();
+    : `Records de la saison ${libelleSaison(filterSaison)} (${periodeSaison(filterSaison)})`;
 
   const records = useMemo(() => {
     const src = seances.filter(s => {
@@ -148,7 +148,7 @@ export default function MesRecords() {
     <div style={s.page}>
 
       <div style={ui.filtres}>
-        <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} />
+        <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
         <span style={ui.sousTitre}>{subtitle}</span>
       </div>
 

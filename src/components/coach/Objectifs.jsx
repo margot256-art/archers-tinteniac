@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { PRIMARY, CURRENT_SAISON } from "../../utils/seances";
+import { PRIMARY, CURRENT_SAISON, libelleSaison } from "../../utils/seances";
 import { niveauEpreuves } from "../../utils/records";
 
 const DIST_LIST = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
@@ -233,7 +233,7 @@ export default function Objectifs() {
               onChange={e => setSaison(e.target.value)}
               style={s.saisonSelect}
             >
-              {saisonOptions.map(sn => <option key={sn}>{sn}</option>)}
+              {saisonOptions.map(sn => <option key={sn} value={sn}>{libelleSaison(sn)}</option>)}
             </select>
           </div>
         </div>

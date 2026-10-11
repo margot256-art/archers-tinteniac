@@ -593,8 +593,8 @@ const s = {
   exos: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
   stats: { fontSize: "12px", color: "var(--text-muted)" },
   cle: { flex: "0 0 auto", alignSelf: "center", display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: "64px" },
-  // Score et total de flèches : même taille ; seul le score est en couleur.
-  cleValeur: { fontFamily: "var(--display)", fontSize: "20px", fontWeight: "600", lineHeight: 1 },
+  // Score (un pixel de plus que les flèches) et total de flèches ; seul le score est en couleur.
+  cleValeur: { fontFamily: "var(--display)", fontSize: "21px", fontWeight: "600", lineHeight: 1 },
   cleUnite: { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", marginTop: "2px" },
   cleFleches: { fontFamily: "var(--display)", fontSize: "20px", fontWeight: "600", color: "var(--text)", marginTop: "8px", lineHeight: 1 },
   citation: {

@@ -114,7 +114,7 @@ export default function ListeArchers() {
 
       <DemandesMotDePasse />
 
-      <h2 style={s.titre}>Utilisateurs</h2>
+      <h2 style={s.titre}>Liste des archers</h2>
 
       <p style={s.aide}>
         Un coach voit la partie coach et les séances de tous les archers. Le changement est pris en

@@ -37,7 +37,7 @@ const COACH_TABS = [
 
 // Section réservée aux coachs : les comptes de l'appli et le droit coach.
 const ARCHERS_TABS = [
-  { id: "liste-archers", label: "Utilisateurs" },
+  { id: "liste-archers", label: "Liste des archers" },
 ];
 
 function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil, onOuvrirSeance, seanceAOuvrir } = {}) {
@@ -168,7 +168,7 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
             }}>
               <SectionBtn label="Archer" active={section === "archer"} onClick={() => switchSection("archer")} />
               {isCoach && <SectionBtn label="Coach" active={section === "coach"} onClick={() => switchSection("coach")} />}
-              {isCoach && <SectionBtn label="Archers" active={section === "archers"} onClick={() => switchSection("archers")} badge={pendingResets} />}
+              {isCoach && <SectionBtn label="Utilisateurs" active={section === "archers"} onClick={() => switchSection("archers")} badge={pendingResets} />}
               <a
                 href="https://www.archers-de-la-bretagne-romantique.fr/en-savoir-plus/mandat-et-inscription-130102"
                 target="_blank" rel="noopener noreferrer"

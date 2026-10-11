@@ -68,6 +68,9 @@ export default function ProgressionClub() {
   const [filterArcher, setFilterArcher] = useState("Tous");
   const [filterDist,   setFilterDist]   = useState("Toutes");
   const [filterType,   setFilterType]   = useState("Tous");
+  // Deux vues, comme la Progression de l'archer : Totaux (chiffres, classement,
+  // stats mensuelles) et Courbes. Les filtres sont communs aux deux.
+  const [vue, setVue] = useState("totaux");
 
   const saisonOptions = useMemo(() => {
     const set = new Set(seances.filter(s => s.date).map(s => getSaison(s.date)));
@@ -429,6 +432,18 @@ export default function ProgressionClub() {
   return (
     <div style={{ ...ui.pageLarge, gap: "22px" }}>
 
+      <div style={{ ...ui.bascule, alignSelf: "flex-start" }} role="tablist" aria-label="Vue">
+        {[["totaux", "Totaux"], ["courbes", "Courbes"]].map(([id, label]) => (
+          <button
+            key={id} role="tab" aria-selected={vue === id}
+            style={{ ...ui.basculeBtn, ...(vue === id ? ui.basculeBtnActif : {}) }}
+            onClick={() => setVue(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* ── Filtres de la page ── */}
       <div style={ui.filtres}>
         <FilterSelect label="Saison"   value={filterSaison} options={saisonOptions} onChange={setFilterSaison} libelle={libelleSaison} />
@@ -437,6 +452,7 @@ export default function ProgressionClub() {
         <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
       </div>
 
+      {vue === "totaux" && <>
       {/* ── Chiffres clés ── */}
       <div className="coach-cards-grid">
         <Kpi label="Séances"  value={globalStats.total} sub={`${globalStats.entr} entr. · ${globalStats.comp} comp.`} />
@@ -571,6 +587,9 @@ export default function ProgressionClub() {
         </div>
       </section>
 
+      </>}
+
+      {vue === "courbes" && <>
       {/* ── Graphiques ── */}
       <section style={s.carteGraph}>
         <h3 style={ui.titreSection}>Moyenne par flèche, séance après séance</h3>
@@ -587,6 +606,7 @@ export default function ProgressionClub() {
           ? <div style={{ height: 320, marginTop: "16px" }}><Line data={{ labels: g2Labels, datasets: g2Datasets }} options={g2Opts} /></div>
           : <div style={s.empty}>Aucune donnée pour cette sélection.</div>}
       </section>
+      </>}
     </div>
   );
 }

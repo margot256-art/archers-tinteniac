@@ -42,7 +42,7 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
 // Détail complet d'un exercice (feuille de marque et blason pour le tir compté),
 // partagé avec le Journal de l'archer, qui y ajoute un bouton « Modifier ».
 // `compact` (séance en cours) : seulement les chiffres clés, sans feuille de
-// marque, blason ni liste des volées.
+// marque ni blason. Le Volume n'affiche que paille / blason / nombre de volées.
 export function CarteExercice({ doc: d, onModifier, compact = false }) {
   const proto    = protocoleDe(d);
   const resultat = resultatAvecMoyenne(d);
@@ -72,11 +72,6 @@ export function CarteExercice({ doc: d, onModifier, compact = false }) {
         <p style={s.detail}>
           Paille {getPaille(d)} fl. · Blason {getBlason(d)} fl.
           {d.volees?.length > 0 && ` · ${d.volees.length} volée${d.volees.length > 1 ? "s" : ""}`}
-        </p>
-      )}
-      {proto === "volume" && !compact && d.volees?.length > 0 && (
-        <p style={s.detail}>
-          Volées : {d.volees.map((v) => `${v.fleches}${v.support === "paille" ? " (paille)" : ""}`).join(" · ")}
         </p>
       )}
 

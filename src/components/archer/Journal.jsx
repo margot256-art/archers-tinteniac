@@ -397,10 +397,8 @@ export default function Journal({ seanceInitiale = null }) {
                 ...(c.score > 0 && c.moyenne != null ? [`moy. ${c.moyenne.toFixed(2)}`] : []),
                 ...[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
                   .filter(([, n]) => n > 0 && n < c.total).map(([l, n]) => `${l} ${n}`),
-                ...(sess.commentairesExercices.length > 0
-                  ? [`💬 ${sess.commentairesExercices.length > 1 ? `${sess.commentairesExercices.length} commentaires` : "commentaire"} d'exercice`]
-                  : []),
               ];
+              const nbCommentairesExo = sess.commentairesExercices.length;
               return (
                 <button key={sess.cle} style={s.carte} onClick={() => setOuverte(sess.cle)}>
                   <span style={{ ...s.tuile, color: couleur, backgroundColor: fondType(sess.type) }}>
@@ -414,6 +412,11 @@ export default function Journal({ seanceInitiale = null }) {
                     </span>
                     <span style={s.exos}>{resumeExercices(sess.docs)}</span>
                     {details.length > 0 && <span style={s.stats}>{details.join(" · ")}</span>}
+                    {nbCommentairesExo > 0 && (
+                      <span style={s.stats}>
+                        💬 {nbCommentairesExo > 1 ? `${nbCommentairesExo} commentaires` : "commentaire"} d'exercice
+                      </span>
+                    )}
 
                     {sess.commentaireSeance && <span style={s.citation}>{sess.commentaireSeance}</span>}
                     {sess.retourCoach && (

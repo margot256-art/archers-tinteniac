@@ -22,7 +22,7 @@ export const scoreVolee = (codes) => codes.reduce((n, c) => n + pointsZone(c), 0
 
 /** Résumé d'un tir : score, moyenne, répartition X/10/manques, séries éventuelles. */
 export function resumeTir(volees, { flechesParVolee, voleesParSerie, nbSeries }) {
-  let cumul = 0, fleches = 0, x = 0, dixPlusX = 0, manques = 0;
+  let cumul = 0, fleches = 0, x = 0, dixPlusX = 0, neuf = 0, manques = 0;
   const detail = volees.map((codes, index) => {
     const total = scoreVolee(codes);
     cumul += total;
@@ -30,6 +30,7 @@ export function resumeTir(volees, { flechesParVolee, voleesParSerie, nbSeries })
     for (const c of codes) {
       if (c === "X") { x++; dixPlusX++; }
       else if (c === "10") dixPlusX++;
+      else if (c === "9") neuf++;
       if (c === "M") manques++;
     }
     return { index, codes, total };
@@ -54,11 +55,18 @@ export function resumeTir(volees, { flechesParVolee, voleesParSerie, nbSeries })
     fleches, total: cumul,
     moyenne: fleches > 0 ? cumul / fleches : null,
     maxPossible: fleches * 10,
-    x, dixPlusX, manques,
+    x, dixPlusX, neuf, manques,
     volees: detail,
     series,
   };
 }
+
+// Flèches comptées selon la distance, comme sur une feuille de marque : en salle
+// (18 m et moins) les 10+X et les 9 ; au-delà, les 10+X et les X.
+export const comptagesTir = (distance, r) =>
+  parseInt(distance, 10) <= 18
+    ? [["10+X", r.dixPlusX], ["9", r.neuf]]
+    : [["10+X", r.dixPlusX], ["X", r.x]];
 
 // Zone de réussite : la zone visée par l'archer (« 8 et mieux »…). Seuil "X" = les X
 // seulement ; "10" compte aussi les X.

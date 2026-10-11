@@ -12,7 +12,7 @@ import { normFactor, todayISO } from "../../../utils/seances";
 import { couleurZone } from "../../../utils/blason";
 import {
   flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, groupement, texteGroupement,
-  reussite, SEUILS_REUSSITE, SEUIL_REUSSITE_DEFAUT, libelleSeuil,
+  reussite, SEUILS_REUSSITE, SEUIL_REUSSITE_DEFAUT, libelleSeuil, comptagesTir,
 } from "../../../utils/tirCompte";
 import ZoneButtons from "./ZoneButtons";
 import CibleSaisie from "./CibleSaisie";
@@ -179,15 +179,6 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
     setImpactEnCours((prev) => prev.slice(0, -1));
   };
 
-  const validerVolee = () => {
-    if (voleeEnCours.length !== fpv) return;
-    setVolees((prev) => [...prev, voleeEnCours]);
-    setImpacts((prev) => [...prev, impactEnCours]);
-    setVoleeEnCours([]);
-    setImpactEnCours([]);
-    setSelection(null);
-  };
-
   const ajouterSerie = () => setNbSeries((n) => n + 1);
 
   const remplacerFlecheHistorique = (code) => {
@@ -321,6 +312,9 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
         <div style={s.compteurLabel}>
           {resume.fleches} fl.{resume.moyenne != null && ` · moy. ${resume.moyenne.toFixed(2)} · ≈ ${projection} sur ${base * 10}`} · {volees.length} volée{volees.length > 1 ? "s" : ""}
         </div>
+        <div style={s.compteurLabel}>
+          {comptagesTir(distance, resume).map(([l, v]) => `${l} : ${v}`).join(" · ")}
+        </div>
       </div>
 
       <div style={s.zoneBox}>
@@ -410,10 +404,6 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
           ) : (
             <ZoneButtons onPress={saisirCode} disabled={saisieDisabled} />
           )}
-
-          <button style={s.validerBtn} onClick={validerVolee} disabled={voleeEnCours.length !== fpv}>
-            ✓ Valider la volée
-          </button>
         </div>
       )}
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PRIMARY, BLUE, getPaille, getBlason, getCompte, fmtDateLongue, normFactor } from "../../utils/seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { couleurZone } from "../../utils/blason";
-import { epreuveStandard, flechesParVolee, resumeTir, reussite, SEUIL_REUSSITE_DEFAUT } from "../../utils/tirCompte";
+import { epreuveStandard, flechesParVolee, resumeTir, reussite, SEUIL_REUSSITE_DEFAUT, comptagesTir } from "../../utils/tirCompte";
 import BlasonImpacts from "../archer/exercices/BlasonImpacts";
 import TrispotImpacts from "../archer/exercices/TrispotImpacts";
 import { tirSurTrispot } from "../archer/exercices/cibleBlason";
@@ -120,8 +120,7 @@ function DetailTirCompte({ doc: d, compact = false }) {
   const chiffres = [
     ["Moy.", resume.moyenne != null ? resume.moyenne.toFixed(2) : "—"],
     ["Flèches", resume.fleches],
-    ["10+X", resume.dixPlusX],
-    ["X", resume.x],
+    ...comptagesTir(d.distance, resume),
     ["Manqués", resume.manques],
     ...(resume.moyenne != null ? [[`Sur ${base * 10}`, `≈ ${Math.round(resume.moyenne * base)}`]] : []),
     ...(zone.pct != null ? [[`Zone ${seuil === "X" ? "X" : `${seuil}+`}`, `${zone.pct} %`]] : []),

@@ -5,7 +5,7 @@ import { pointsZone } from "./blason";
 import { slug } from "./slug";
 import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume, avancementMois, parOrdreDeTir } from "./seances";
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
-import { resumeTir, epreuveStandard, positionEpreuve, reussite, groupement, directionDecalage, texteGroupement } from "./tirCompte";
+import { resumeTir, epreuveStandard, positionEpreuve, reussite, groupement, directionDecalage, texteGroupement, comptagesTir } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
 import { impactDeTrispot, tirSurTrispot } from "../components/archer/exercices/cibleBlason";
 
@@ -192,6 +192,13 @@ describe("tir compté", () => {
     expect(r.manques).toBe(1);
     expect(r.series.map((se) => se.total)).toEqual([29, 18]);
     expect(r.series.every((se) => se.complete)).toBe(true);
+  });
+  it("comptages : 10+X et 9 jusqu à 18 m, 10+X et X au-delà", () => {
+    const r = resumeTir([["X", "10", "9"], ["9", "8", "X"]], { flechesParVolee: 3, voleesParSerie: null });
+    expect(comptagesTir("18m", r)).toEqual([["10+X", 3], ["9", 2]]);
+    expect(comptagesTir("5m", r)).toEqual([["10+X", 3], ["9", 2]]);
+    expect(comptagesTir("25m", r)).toEqual([["10+X", 3], ["X", 2]]);
+    expect(comptagesTir("70m", r)).toEqual([["10+X", 3], ["X", 2]]);
   });
   it("zone de réussite : % de flèches dans la zone visée, en tout et par série", () => {
     const tir = [["X", "10", "9"], ["8", "7", "M"], ["9", "9", "6"], ["10", "8", "8"]];

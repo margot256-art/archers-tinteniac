@@ -348,20 +348,20 @@ export default function Journal({ seanceInitiale = null }) {
               const couleur = couleurType(sess.type);
               const c = sess.chiffres;
               const j = jourDate(sess.date);
-              // Chiffre clé à droite : le score s'il y a du tir compté, sinon les flèches.
+              // À droite : le score (s'il y a du tir compté) et le total de flèches.
               // Plusieurs tirs comptés : leurs points ne s'additionnent pas, on montre le score moyen.
               const nbComptes = sess.docs.filter((d) => getCompte(d) > 0 && (d.score ?? 0) > 0).length;
-              const cle = nbComptes > 1 && c.scoreMoy != null ? { valeur: c.scoreMoy, unite: "score moy." }
+              const score = nbComptes > 1 && c.scoreMoy != null ? { valeur: c.scoreMoy, unite: "score moy." }
                 : c.score > 0 ? { valeur: c.score, unite: "pts" }
-                : { valeur: c.total, unite: "flèches" };
+                : null;
               const details = [
-                ...(c.score > 0 && c.moyenne != null ? [`moy. ${c.moyenne.toFixed(2)}`, `${c.total} flèches`] : []),
+                ...(c.score > 0 && c.moyenne != null ? [`moy. ${c.moyenne.toFixed(2)}`] : []),
                 ...[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
                   .filter(([, n]) => n > 0 && n < c.total).map(([l, n]) => `${l} ${n}`),
               ];
               return (
                 <button key={sess.cle} style={s.carte} onClick={() => setOuverte(sess.cle)}>
-                  <span style={s.tuile}>
+                  <span style={{ ...s.tuile, color: couleur, backgroundColor: fondType(sess.type) }}>
                     <span style={s.tuileJour}>{j.semaine}</span>
                     <span style={s.tuileNum}>{j.num}</span>
                   </span>
@@ -369,9 +369,6 @@ export default function Journal({ seanceInitiale = null }) {
                   <span style={s.carteCorps}>
                     <span style={s.carteTete}>
                       <span style={s.carteTitre}>{sess.lieu ? `${sess.lieu} · ${sess.distance}` : sess.distance}</span>
-                      {estCompet(sess.type) && (
-                        <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>Compétition</span>
-                      )}
                     </span>
                     <span style={s.exos}>{resumeExercices(sess.docs)}</span>
                     {details.length > 0 && <span style={s.stats}>{details.join(" · ")}</span>}
@@ -388,8 +385,14 @@ export default function Journal({ seanceInitiale = null }) {
                   </span>
 
                   <span style={s.cle}>
-                    <span style={{ ...s.cleValeur, color: couleur }}>{cle.valeur}</span>
-                    <span style={s.cleUnite}>{cle.unite}</span>
+                    {score && (
+                      <>
+                        <span style={{ ...s.cleValeur, color: couleur }}>{score.valeur}</span>
+                        <span style={s.cleUnite}>{score.unite}</span>
+                      </>
+                    )}
+                    <span style={score ? s.cleFleches : { ...s.cleValeur, color: couleur }}>{c.total}</span>
+                    <span style={s.cleUnite}>flèches</span>
                   </span>
                 </button>
               );
@@ -577,13 +580,13 @@ const s = {
     boxShadow: "var(--shadow-card)", padding: "14px 14px 14px 12px",
     textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "inherit",
   },
+  // Pastille de date aux couleurs du type de séance (rose entraînement, bleu compétition).
   tuile: {
     flex: "0 0 auto", width: "50px", borderRadius: "12px", padding: "7px 0 6px",
     display: "flex", flexDirection: "column", alignItems: "center", gap: "1px",
-    backgroundColor: "var(--surface-raised)", border: "1px solid var(--border)",
   },
-  tuileJour: { fontSize: "10px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" },
-  tuileNum: { fontFamily: "var(--display)", fontSize: "21px", fontWeight: "600", lineHeight: 1.05, color: "var(--text)" },
+  tuileJour: { fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em" },
+  tuileNum: { fontFamily: "var(--display)", fontSize: "21px", fontWeight: "600", lineHeight: 1.05 },
   carteCorps: { flex: "1 1 auto", minWidth: 0, display: "flex", flexDirection: "column", gap: "5px" },
   carteTete: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
   carteTitre: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
@@ -591,7 +594,8 @@ const s = {
   stats: { fontSize: "12px", color: "var(--text-muted)" },
   cle: { flex: "0 0 auto", alignSelf: "center", display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: "64px" },
   cleValeur: { fontFamily: "var(--display)", fontSize: "26px", fontWeight: "600", lineHeight: 1 },
-  cleUnite: { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", marginTop: "3px" },
+  cleUnite: { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", marginTop: "2px" },
+  cleFleches: { fontSize: "15px", fontWeight: "700", color: "var(--text)", marginTop: "8px", lineHeight: 1 },
   citation: {
     fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", lineHeight: 1.45,
     borderLeft: "2px solid var(--border-3)", paddingLeft: "9px",

@@ -297,13 +297,25 @@ export default function Journal({ seanceInitiale = null }) {
   // ── Liste des séances ─────────────────────────────────────────────────────
   return (
     <div style={s.page}>
+      <div style={s.filtres}>
+        <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
+        <FilterSelect label="Distance" value={filterDistance} options={distanceOptions} onChange={setFilterDistance} />
+      </div>
       <div style={s.filtreBar}>
-        <div style={s.filtres}>
-          <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
-          <FilterSelect label="Distance" value={filterDistance} options={distanceOptions} onChange={setFilterDistance} />
-          <FilterSelect label="Type" value={filterType} options={["Tous", "Entraînement", "Compétition"]} onChange={setFilterType} />
+        {/* Type : un appui filtre, un second appui sur le même bouton revient à « tous ». */}
+        <div style={s.bascule} role="group" aria-label="Type de séance">
+          {["Entraînement", "Compétition"].map((type) => (
+            <button
+              key={type}
+              style={{ ...s.basculeBtn, ...(filterType === type ? { ...s.basculeBtnActif, color: couleurType(type) } : {}) }}
+              onClick={() => setFilterType(filterType === type ? "Tous" : type)}
+              aria-pressed={filterType === type}
+            >
+              {type}
+            </button>
+          ))}
         </div>
-        <div style={s.bascule}>
+        <div style={s.bascule} role="group" aria-label="Affichage">
           {[["seances", "Séances"], ["commentaires", "Commentaires"]].map(([id, label]) => (
             <button
               key={id}

@@ -230,6 +230,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       format,
       nbSeries:     reglages.voleesParSerie ? nbSeries : null,
       zoneReussite: seuil,
+      saisie:       modeSaisie, // clavier / blason / trispot : choisit l'affichage des impacts
       volees:       volees.map((codes, i) => ({ codes, impacts: impacts[i] ?? [] })),
       volumePaille: 0,
       volumeBlason: 0,
@@ -426,7 +427,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
       {dispersionImpacts && (
         <p style={s.dispersionTexte}>
           Dispersion : {dispersionImpacts.n} impact{dispersionImpacts.n > 1 ? "s" : ""} positionné{dispersionImpacts.n > 1 ? "s" : ""} ·
-          {" "}décalage {texteDecalage(dispersionImpacts.centre)} · rayon moyen ≈ {dispersionImpacts.rayonMoyen.toFixed(1)} largeur de zone
+          {" "}décalage {texteDecalage(dispersionImpacts.centre)} · rayon moyen ≈ {(modeSaisie === "trispot" ? dispersionImpacts.rayonMoyen / 2 : dispersionImpacts.rayonMoyen).toFixed(1)} largeur de zone
         </p>
       )}
 

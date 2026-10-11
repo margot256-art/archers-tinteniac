@@ -7,6 +7,7 @@ import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jour
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
 import { resumeTir, epreuveStandard, positionEpreuve, reussite } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
+import { impactDeTrispot, tirSurTrispot } from "../components/archer/exercices/cibleBlason";
 
 // Volées de 3 flèches identiques (format salle).
 const volees = (n, code) => Array.from({ length: n }, () => [code, code, code]);
@@ -49,6 +50,21 @@ describe("dates et jauges", () => {
     expect(couleurJaugeVolume(85)).toBe("var(--ok)");
     expect(couleurJaugeVolume(60)).toBe("var(--warn)");
     expect(couleurJaugeVolume(29)).toBe("var(--bad)");
+  });
+});
+
+describe("tir saisi au trispot", () => {
+  // À 0,3 du rayon : zone 9 sur un spot de trispot (5 anneaux), zone 8 sur un blason complet.
+  const p = { x: 0.3, y: 0 };
+  it("reconnaît un impact de trispot par sa valeur", () => {
+    expect(impactDeTrispot("9", p)).toBe(true);
+    expect(impactDeTrispot("8", p)).toBe(false);
+  });
+  it("mode enregistré, sinon déduit des impacts", () => {
+    expect(tirSurTrispot({ saisie: "trispot", volees: [] })).toBe(true);
+    expect(tirSurTrispot({ saisie: "blason", volees: [{ codes: ["9"], impacts: [p] }] })).toBe(false);
+    expect(tirSurTrispot({ volees: [{ codes: ["9", "9"], impacts: [p, p] }] })).toBe(true);
+    expect(tirSurTrispot({ saisie: "clavier", volees: [{ codes: ["8"], impacts: [p] }] })).toBe(false);
   });
 });
 

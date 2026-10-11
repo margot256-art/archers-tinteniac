@@ -4,6 +4,8 @@ import { PROTOCOLE_PAR_ID, protocoleDe, indicateurExercice, resultatAvecMoyenne,
 import { couleurZone } from "../../utils/blason";
 import { epreuveStandard, flechesParVolee, resumeTir, dispersion, reussite, SEUIL_REUSSITE_DEFAUT, libelleSeuil } from "../../utils/tirCompte";
 import BlasonImpacts from "../archer/exercices/BlasonImpacts";
+import TrispotImpacts from "../archer/exercices/TrispotImpacts";
+import { tirSurTrispot } from "../archer/exercices/cibleBlason";
 
 const nomExercice = (s) => PROTOCOLE_PAR_ID[protocoleDe(s)]?.nom ?? s.protocole ?? "—";
 
@@ -99,6 +101,7 @@ function DetailTirCompte({ doc: d, compact = false }) {
     (v.codes ?? []).map((code, i) => (v.impacts?.[i] ? { code, ...v.impacts[i] } : null)).filter(Boolean)
   );
   const disp = dispersion(d.volees.map((v) => v.impacts ?? []));
+  const trispot = tirSurTrispot(d);
   const seuil = d.zoneReussite ?? SEUIL_REUSSITE_DEFAUT;
   const zone  = reussite(volees, seuil, reglages.voleesParSerie);
 
@@ -155,10 +158,11 @@ function DetailTirCompte({ doc: d, compact = false }) {
 
         {fleches.length > 0 && (
           <div style={s.blasonBox}>
-            <BlasonImpacts fleches={fleches} />
+            {trispot ? <TrispotImpacts volees={d.volees} /> : <BlasonImpacts fleches={fleches} />}
             {disp && (
               <p style={s.detail}>
-                {disp.n} impact{disp.n > 1 ? "s" : ""} placé{disp.n > 1 ? "s" : ""} · rayon moyen ≈ {disp.rayonMoyen.toFixed(1)} zone
+                {/* Sur un trispot, une zone est deux fois plus large (5 anneaux au lieu de 10). */}
+                {disp.n} impact{disp.n > 1 ? "s" : ""} placé{disp.n > 1 ? "s" : ""} · rayon moyen ≈ {(trispot ? disp.rayonMoyen / 2 : disp.rayonMoyen).toFixed(1)} zone
               </p>
             )}
           </div>

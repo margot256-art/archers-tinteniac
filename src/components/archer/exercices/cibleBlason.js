@@ -50,3 +50,28 @@ export function positionDepuisClic(svg, clientX, clientY) {
   const py = ((clientY - rect.top) / rect.height) * 200 - 100;
   return { x: px / RAYON_MAX, y: py / RAYON_MAX, rayon: Math.hypot(px, py) };
 }
+
+/** Impact saisi sur un spot de trispot (5 anneaux) plutôt que sur le blason complet :
+ *  sa valeur ne correspond qu'à l'échelle du trispot (cas ambigus près du centre exclus). */
+export function impactDeTrispot(code, p) {
+  const r = Math.hypot(p.x, p.y) * RAYON_MAX;
+  return zoneDepuisRayon(r, 10) !== code && zoneDepuisRayon(r, 5) === code;
+}
+
+/** Tir compté saisi au trispot ? Mode enregistré (`saisie`) quand c'est trispot ou blason ;
+ *  sinon (clavier en fin de tir, tirs anciens sans mode) déduit des impacts eux-mêmes. */
+export function tirSurTrispot(d) {
+  if (d.saisie === "trispot") return true;
+  if (d.saisie === "blason") return false;
+  let trispot = 0, blason = 0;
+  for (const v of d.volees ?? []) {
+    (v.impacts ?? []).forEach((p, i) => {
+      if (!p) return;
+      const code = v.codes?.[i];
+      const r = Math.hypot(p.x, p.y) * RAYON_MAX;
+      if (impactDeTrispot(code, p)) trispot++;
+      else if (zoneDepuisRayon(r, 10) === code && zoneDepuisRayon(r, 5) !== code) blason++;
+    });
+  }
+  return trispot > blason;
+}

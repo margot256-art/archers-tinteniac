@@ -5,7 +5,7 @@ import { pointsZone } from "./blason";
 import { slug } from "./slug";
 import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume, parOrdreDeTir } from "./seances";
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
-import { resumeTir, epreuveStandard, positionEpreuve, reussite } from "./tirCompte";
+import { resumeTir, epreuveStandard, positionEpreuve, reussite, groupement, directionDecalage, texteGroupement } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
 import { impactDeTrispot, tirSurTrispot } from "../components/archer/exercices/cibleBlason";
 
@@ -50,6 +50,26 @@ describe("dates et jauges", () => {
     expect(couleurJaugeVolume(85)).toBe("var(--ok)");
     expect(couleurJaugeVolume(60)).toBe("var(--warn)");
     expect(couleurJaugeVolume(29)).toBe("var(--bad)");
+  });
+});
+
+describe("groupement", () => {
+  it("centre, cercle des 80 % et décalage", () => {
+    // 5 flèches serrées en haut à droite, 1 écartée : le cercle des 80 % l'ignore.
+    const pts = [
+      { x: 0.20, y: -0.20 }, { x: 0.22, y: -0.18 }, { x: 0.18, y: -0.22 },
+      { x: 0.21, y: -0.21 }, { x: 0.19, y: -0.19 }, { x: 0.20, y: 0.40 },
+    ];
+    const g = groupement(pts);
+    expect(g.n).toBe(6);
+    expect(g.centre.x).toBeCloseTo(0.2, 2);
+    expect(g.r80).toBeLessThan(0.15);
+    expect(directionDecalage(g.centre)).toBe("en haut à droite");
+    expect(directionDecalage({ x: 0.01, y: -0.02 })).toBeNull();
+    expect(texteGroupement({ centre: { x: 0, y: 0 }, r80: 0.16 }, 0.1)).toBe("80 % des flèches dans un rayon de 1,6 zone · bien centré");
+  });
+  it("pas de groupement sous 3 impacts", () => {
+    expect(groupement([{ x: 0, y: 0 }, null, { x: 0.1, y: 0 }])).toBeNull();
   });
 });
 

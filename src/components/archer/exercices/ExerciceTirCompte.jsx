@@ -11,7 +11,7 @@ import { lireBrouillon, ecrireBrouillon, effacerBrouillon } from "../../../utils
 import { normFactor, todayISO } from "../../../utils/seances";
 import { couleurZone } from "../../../utils/blason";
 import {
-  flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, dispersion,
+  flechesParVolee, epreuveStandard, scoreVolee, resumeTir, positionEpreuve, groupement, texteGroupement,
   reussite, SEUILS_REUSSITE, SEUIL_REUSSITE_DEFAUT, libelleSeuil,
 } from "../../../utils/tirCompte";
 import ZoneButtons from "./ZoneButtons";
@@ -45,13 +45,6 @@ function lireSeuil() {
 }
 function ecrireSeuil(seuil) {
   try { localStorage.setItem(CLE_SEUIL, seuil); } catch { /* stockage indisponible */ }
-}
-
-function texteDecalage({ x, y }) {
-  const parts = [];
-  if (x > 0.05) parts.push("à droite"); else if (x < -0.05) parts.push("à gauche");
-  if (y > 0.05) parts.push("en bas"); else if (y < -0.05) parts.push("en haut");
-  return parts.length ? parts.join(" et ") : "aucun (centré)";
 }
 
 export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTermine, onAnnuler }) {
@@ -125,7 +118,7 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
 
   const resume   = useMemo(() => resumeTir(volees, reglages), [volees, reglages]);
   const position = useMemo(() => positionEpreuve(volees.length, voleeEnCours.length, reglages), [volees.length, voleeEnCours.length, reglages]);
-  const dispersionImpacts = useMemo(() => dispersion(impacts), [impacts]);
+  const groupementImpacts = useMemo(() => groupement(impacts.flat()), [impacts]);
   const zone = useMemo(() => reussite(volees, seuil, reglages.voleesParSerie), [volees, seuil, reglages.voleesParSerie]);
 
   const serieEnCours = reglages.voleesParSerie ? resume.series[Math.min(position.serie, resume.series.length) - 1] : null;
@@ -424,10 +417,10 @@ export default function ExerciceTirCompte({ seanceInfo, seanceId, existant, onTe
         </div>
       )}
 
-      {dispersionImpacts && (
+      {groupementImpacts && (
         <p style={s.dispersionTexte}>
-          Dispersion : {dispersionImpacts.n} impact{dispersionImpacts.n > 1 ? "s" : ""} positionné{dispersionImpacts.n > 1 ? "s" : ""} ·
-          {" "}décalage {texteDecalage(dispersionImpacts.centre)} · rayon moyen ≈ {(modeSaisie === "trispot" ? dispersionImpacts.rayonMoyen / 2 : dispersionImpacts.rayonMoyen).toFixed(1)} largeur de zone
+          {/* Sur un trispot, une zone est deux fois plus large (5 anneaux au lieu de 10). */}
+          Groupement ({groupementImpacts.n} impacts) : {texteGroupement(groupementImpacts, modeSaisie === "trispot" ? 0.2 : 0.1)}
         </p>
       )}
 

@@ -1,4 +1,4 @@
-// Domaine du Tir compté : épreuve standard (séries), score, dispersion des
+// Domaine du Tir compté : épreuve standard (séries), score, groupement des
 // impacts. Les volées sont un tableau de codes déjà validés (exactement
 // `flechesParVolee` codes chacune) ; la volée en cours de saisie est gérée à
 // part par l'écran (pas incluse ici), contrairement à RTrainer qui la garde
@@ -90,13 +90,33 @@ export function positionEpreuve(nbVoleesValidees, voleeEnCoursLength, { voleesPa
   return { serie, volee, terminee };
 }
 
-/** Dispersion des impacts (position normalisée [-1,1] par flèche) : centre et rayon moyen,
- *  exprimés en largeur de zone (1 = la largeur d'un anneau de score). */
-export function dispersion(impacts) {
-  const pts = impacts.flat().filter(Boolean);
-  if (!pts.length) return null;
+/** Groupement d'impacts (positions normalisées au blason ou au spot, [-1,1]) : centre
+ *  moyen et rayon du cercle, autour de ce centre, qui contient 80 % des flèches.
+ *  null sous 3 impacts (pas de groupement significatif). */
+export function groupement(points) {
+  const pts = points.filter(Boolean);
+  if (pts.length < 3) return null;
   const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
   const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-  const rayonMoyen = pts.reduce((s, p) => s + Math.hypot(p.x - cx, p.y - cy), 0) / pts.length;
-  return { centre: { x: cx, y: cy }, rayonMoyen: rayonMoyen * 10, n: pts.length };
+  const distances = pts.map((p) => Math.hypot(p.x - cx, p.y - cy)).sort((x, y) => x - y);
+  const r80 = distances[Math.ceil(distances.length * 0.8) - 1];
+  return { centre: { x: cx, y: cy }, r80, n: pts.length };
+}
+
+/** « en haut à droite », « à gauche »… ou null si le groupement est centré. */
+export function directionDecalage({ x, y }) {
+  const parts = [];
+  if (y < -0.05) parts.push("en haut"); else if (y > 0.05) parts.push("en bas");
+  if (x > 0.05) parts.push("à droite"); else if (x < -0.05) parts.push("à gauche");
+  return parts.length ? parts.join(" ") : null;
+}
+
+/** Taille du groupement en zones (largeur d'un anneau : 0,1 sur le blason, 0,2 sur un spot de trispot). */
+export const rayonEnZones = (g, largeurZone) => g.r80 / largeurZone;
+
+/** « 80 % des flèches dans un rayon de 1,6 zone · décalé en haut à droite » */
+export function texteGroupement(g, largeurZone) {
+  const zones = rayonEnZones(g, largeurZone);
+  const dir = directionDecalage(g.centre);
+  return `80 % des flèches dans un rayon de ${zones.toFixed(1).replace(".", ",")} zone${zones >= 2 ? "s" : ""} · ${dir ? `décalé ${dir}` : "bien centré"}`;
 }

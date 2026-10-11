@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { pointsZone } from "./blason";
 import { slug } from "./slug";
-import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume, parOrdreDeTir } from "./seances";
+import { getSaison, nbSeances, retoursNonLus, fmtDateLongue, fmtDateCourte, jourDate, couleurJaugeVolume, avancementMois, parOrdreDeTir } from "./seances";
 import { scoreEpreuve, scoreSerie, niveauEpreuves } from "./records";
 import { resumeTir, epreuveStandard, positionEpreuve, reussite, groupement, directionDecalage, texteGroupement } from "./tirCompte";
 import { protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
@@ -46,10 +46,14 @@ describe("dates et jauges", () => {
     expect(jourDate("2026-10-10")).toEqual({ semaine: "sam.", num: 10 });
   });
   it("couleur de la jauge de volume selon l'avancement", () => {
-    expect(couleurJaugeVolume(100)).toBe("#FF007A");
-    expect(couleurJaugeVolume(85)).toBe("var(--ok)");
-    expect(couleurJaugeVolume(60)).toBe("var(--warn)");
-    expect(couleurJaugeVolume(29)).toBe("var(--bad)");
+    // Le 11 octobre (35 % du mois écoulé) : 43 % de l'objectif, c'est dans le rythme.
+    expect(avancementMois(new Date(2026, 9, 11))).toBe(35);
+    expect(couleurJaugeVolume(100, 35)).toBe("#FF007A");
+    expect(couleurJaugeVolume(43, 35)).toBe("var(--ok)");
+    expect(couleurJaugeVolume(30, 35)).toBe("var(--warn)");
+    expect(couleurJaugeVolume(20, 35)).toBe("var(--bad)");
+    // Fin de mois (ou mois passé) : il faut avoir atteint l'objectif.
+    expect(couleurJaugeVolume(85)).toBe("var(--warn)");
   });
 });
 

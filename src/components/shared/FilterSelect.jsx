@@ -11,10 +11,7 @@ export default function FilterSelect({ label, value, options, onChange }) {
 
 const s = {
   label: { display: "flex", alignItems: "center", gap: "8px" },
-  labelText: {
-    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
-  },
+  labelText: { fontSize: "13px", fontWeight: "600", color: "var(--text-muted)", whiteSpace: "nowrap" },
   select: {
     padding: "8px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
     fontSize: "13px", fontWeight: "600", color: "var(--text-2)", outline: "none",

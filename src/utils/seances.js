@@ -24,10 +24,18 @@ export const nbSeances = (docs) => new Set(docs.map(cleSeance)).size;
 const instant = (d) => d.createdAt?.toMillis?.() ?? 0;
 export const parOrdreDeTir = (a, b) => instant(a) - instant(b);
 
-// Couleur d'une jauge de volume mensuel selon l'avancement (Accueil de l'archer et
-// tableau de bord coach) : rose = objectif atteint, vert ≥ 80 %, orange ≥ 50 %, rouge en dessous.
-export const couleurJaugeVolume = (pct) =>
-  pct >= 100 ? PRIMARY : pct >= 80 ? "var(--ok)" : pct >= 50 ? "var(--warn)" : "var(--bad)";
+/** Avancement du mois (0–100) : part des jours écoulés, aujourd'hui compris. */
+export const avancementMois = (d = new Date()) => {
+  const joursDansLeMois = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return Math.round((d.getDate() / joursDansLeMois) * 100);
+};
+
+// Couleur d'une jauge de volume mensuel (Accueil de l'archer et tableau de bord
+// coach), selon le rythme : être à 43 % le 11 du mois, c'est être en avance.
+// Rose = objectif atteint ; vert = dans le rythme (au moins l'avancement du mois) ;
+// orange = un peu en retard (au moins 80 % du rythme) ; rouge = en retard.
+export const couleurJaugeVolume = (pct, rythme = 100) =>
+  pct >= 100 ? PRIMARY : pct >= rythme ? "var(--ok)" : pct >= rythme * 0.8 ? "var(--warn)" : "var(--bad)";
 
 // Retour du coach pas encore lu par l'archer. Seuls les retours écrits depuis la
 // notification portent `retourCoachLu: false` ; les plus anciens comptent comme lus.

@@ -18,6 +18,7 @@ const nouveauSeanceId = () => `s_${Date.now()}_${Math.random().toString(36).slic
 import { COMPOSANTS_EXERCICE } from "./exercices/index.js";
 import BoutonSupprimer from "./exercices/BoutonSupprimer";
 import FilterSelect from "../shared/FilterSelect";
+import * as ui from "./styleArcher";
 
 export default function Journal({ seanceInitiale = null }) {
   const { user } = useAuth();
@@ -598,7 +599,7 @@ function CommentaireSeance({ initial, onEnregistrer }) {
 }
 
 const s = {
-  page: { display: "flex", flexDirection: "column", gap: "14px", width: "100%", maxWidth: "780px", margin: "0 auto" },
+  page: { ...ui.page, gap: "14px" },
 
   liste: { display: "flex", flexDirection: "column", gap: "10px" },
 

@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSeances } from "../../hooks/useSeances";
 import { useObjectif } from "../../hooks/useObjectif";
-import { PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, fmtYM, CURRENT_SAISON, cleSeance, nbSeances, retoursNonLus, fmtDateLongue, couleurJaugeVolume } from "../../utils/seances";
+import {
+  PRIMARY as PINK, BLUE, getPaille, getBlason, getCompte, getSaison, fmtYM, CURRENT_SAISON,
+  cleSeance, nbSeances, retoursNonLus, fmtDateLongue, couleurJaugeVolume, avancementMois, parOrdreDeTir,
+} from "../../utils/seances";
+import { PROTOCOLE_PAR_ID, protocoleDe } from "../../utils/exercices";
 import { lireSeanceEnCours } from "../../utils/seanceEnCours";
 import { lireBrouillon } from "../../utils/brouillonExercice";
-import FilterSelect from "../shared/FilterSelect";
-
-const DIST_ORDER = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
+import * as ui from "./styleArcher";
 
 // Phrase d'encouragement de l'accueil : tirée au hasard à chaque ouverture de
 // l'appli (pas à chaque retour sur l'onglet), jamais la même qu'à l'ouverture précédente.
@@ -48,6 +50,8 @@ const todayYM = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
+const nomExercice = (d) => PROTOCOLE_PAR_ID[protocoleDe(d)]?.nom ?? d.protocole;
+
 export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuelle, onOuvrirSeance }) {
   const { user } = useAuth();
   const { seances, loading, error } = useSeances();
@@ -73,8 +77,13 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
     [seances, currentYM]
   );
 
+  // Jauge de volume jugée au rythme du mois : au 11, 35 % du mois est écoulé.
+  const rythme = avancementMois();
   const pctVolume = volEntr > 0 ? Math.min(100, Math.round((volumeMois / volEntr) * 100)) : 0;
-  const gaugeColor = couleurJaugeVolume(pctVolume);
+  const gaugeColor = couleurJaugeVolume(pctVolume, rythme);
+  const messageRythme = pctVolume >= 100 ? "Objectif du mois atteint !"
+    : pctVolume >= rythme ? "Dans le rythme du mois"
+    : `Un peu en retard sur le rythme (${rythme} % attendus à ce jour)`;
 
   const { nbSeancesSaison, flechesSaison } = useMemo(() => {
     const src = seances.filter((s) => s.date && getSaison(s.date) === CURRENT_SAISON);
@@ -84,49 +93,34 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
     };
   }, [seances]);
 
-  const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
-
-  const saisonOptions = useMemo(() => {
-    const set = new Set(seances.filter((s) => s.date).map((s) => getSaison(s.date)));
-    set.add(CURRENT_SAISON);
-    return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
-  }, [seances]);
-
-  const parDistance = useMemo(() => {
-    const vide = () => ({ seances: new Set(), fleches: 0, scoreSum: 0, compteSum: 0 });
-    const finalise = (g, d) => {
-      const moyenne = g.compteSum > 0 ? g.scoreSum / g.compteSum : null;
-      return {
-        nbSeances: g.seances.size, fleches: g.fleches,
-        moyenne, scoreMoyen: moyenne != null ? Math.round(moyenne * normFactor(d)) : null,
-      };
+  // Dernière séance : raccourci vers son détail dans le journal.
+  const derniere = useMemo(() => {
+    if (!seances.length) return null;
+    const recent = [...seances].filter((s) => s.date)
+      .sort((a, b) => b.date.localeCompare(a.date) || parOrdreDeTir(b, a))[0];
+    if (!recent) return null;
+    const docs = seances.filter((s) => cleSeance(s) === cleSeance(recent)).sort(parOrdreDeTir);
+    const fleches = docs.reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0);
+    const comptes = docs.filter((s) => getCompte(s) > 0 && (s.score ?? 0) > 0);
+    const nbParExo = new Map();
+    for (const d of docs) nbParExo.set(nomExercice(d), (nbParExo.get(nomExercice(d)) ?? 0) + 1);
+    return {
+      cle: cleSeance(recent), date: recent.date, type: recent.type, distance: recent.distance, lieu: recent.lieu,
+      exercices: [...nbParExo].map(([nom, n]) => (n > 1 ? `${nom} ×${n}` : nom)).join(" · "),
+      fleches,
+      score: comptes.length === 1 ? comptes[0].score : null,
     };
-
-    const saisonSeances = seances.filter((s) => s.date && (filterSaison === "Toutes" || getSaison(s.date) === filterSaison));
-    const map = {};
-    for (const s of saisonSeances) {
-      if (!s.distance) continue;
-      if (!map[s.distance]) map[s.distance] = { entr: vide(), comp: vide() };
-      const g = s.type === "Compétition" ? map[s.distance].comp : map[s.distance].entr;
-      g.seances.add(cleSeance(s));
-      g.fleches += getPaille(s) + getBlason(s) + getCompte(s);
-      const c = getCompte(s);
-      if (c > 0 && (s.score ?? 0) > 0) { g.scoreSum += s.score; g.compteSum += c; }
-    }
-    return DIST_ORDER.filter((d) => map[d]).map((d) => ({
-      distance: d,
-      entr: finalise(map[d].entr, d),
-      comp: finalise(map[d].comp, d),
-    }));
-  }, [seances, filterSaison]);
+  }, [seances]);
 
   const retours = retoursNonLus(seances);
 
-  if (loading) return <div style={s.info}>Chargement…</div>;
-  if (error)   return <div style={s.errMsg}>{error}</div>;
+  if (loading) return <div style={ui.info}>Chargement…</div>;
+  if (error)   return <div style={ui.erreur}>{error}</div>;
+
+  const couleurDerniere = derniere?.type === "Compétition" ? BLUE : PINK;
 
   return (
-    <div style={s.page}>
+    <div style={{ ...ui.page, gap: "26px" }}>
       {enCours ? (
         <div style={s.carteEnCours}>
           <div style={s.glow} />
@@ -150,9 +144,9 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
 
       {retours.length > 0 && (
         <section style={s.section}>
-          <p style={s.sectionLabel}>
+          <h3 style={ui.titreSection}>
             💬 {retours.length > 1 ? `${retours.length} nouveaux retours` : "Nouveau retour"} du coach
-          </p>
+          </h3>
           {retours.map((r) => (
             <button key={r.cle} style={s.retourCarte} onClick={() => onOuvrirSeance?.(r.cle)}>
               <span style={s.retourTete}>
@@ -167,85 +161,64 @@ export default function Accueil({ onReprendre, onNouvelleSeance, onSaisieManuell
 
       {volEntr > 0 && (
         <section style={s.section}>
-          <p style={s.sectionLabel}>Volume d'entraînement — {fmtYM(currentYM)}</p>
-          <div style={s.gaugeBox}>
+          <div style={s.sectionTete}>
+            <h3 style={ui.titreSection}>Volume d'entraînement</h3>
+            <span style={ui.sousTitre}>{fmtYM(currentYM)}</span>
+          </div>
+          <div style={{ ...ui.carte, ...s.gaugeBox }}>
             <div style={s.gaugeRow}>
-              <span className="num" style={s.gaugeFigures}>{volumeMois} / {volEntr} flèches</span>
-              <span className="num" style={{ ...s.gaugePct, color: gaugeColor }}>{pctVolume}%</span>
+              <span style={ui.sousTitre}><strong style={s.fort}>{volumeMois}</strong> / {volEntr} flèches</span>
+              <span style={{ ...s.gaugePct, color: gaugeColor }}>{pctVolume} %</span>
             </div>
             <div style={s.gaugeTrack}>
               <div style={{ ...s.gaugeBar, width: `${pctVolume}%`, backgroundColor: gaugeColor }} />
+              {/* Repère : où il faudrait en être à ce jour. */}
+              {pctVolume < 100 && <div style={{ ...s.repereRythme, left: `${rythme}%` }} title={`${rythme} % attendus à ce jour`} />}
             </div>
+            <span style={ui.sousTitre}>{messageRythme}</span>
           </div>
         </section>
       )}
 
       <section style={s.section}>
-        <p style={s.sectionLabel}>Saison {CURRENT_SAISON}</p>
+        <h3 style={ui.titreSection}>Saison {CURRENT_SAISON}</h3>
         <div style={s.kpis}>
           <Kpi valeur={nbSeancesSaison} label={nbSeancesSaison > 1 ? "séances" : "séance"} />
           <Kpi valeur={flechesSaison.toLocaleString("fr-FR")} label="flèches tirées" />
         </div>
       </section>
 
-      <section style={s.section}>
-        <div style={s.sectionHead}>
-          <p style={s.sectionLabel}>Par distance</p>
-          <FilterSelect label="Saison" value={filterSaison} options={saisonOptions} onChange={setFilterSaison} />
-        </div>
-        {parDistance.length === 0 ? (
-          <div style={s.distEmpty}>{filterSaison === "Toutes" ? "Aucune séance enregistrée." : "Aucune séance cette saison."}</div>
-        ) : (
-          <div style={s.distListe}>
-            {parDistance.map((d) => (
-              <div key={d.distance} style={s.distGroup}>
-                <span style={s.distBadge}>{d.distance}</span>
-                <TypeRow label="Entraînement" color={PINK} bg="var(--pink-soft)" data={d.entr} />
-                <TypeRow label="Compétition"  color={BLUE} bg="var(--blue-soft)" data={d.comp} />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {derniere && (
+        <section style={s.section}>
+          <h3 style={ui.titreSection}>Dernière séance</h3>
+          <button style={{ ...ui.carte, ...s.derniere }} onClick={() => onOuvrirSeance?.(derniere.cle)}>
+            <span style={s.derniereCorps}>
+              <span style={s.derniereTitre}>{fmtDateLongue(derniere.date)}</span>
+              <span style={ui.sousTitre}>{derniere.lieu ? `${derniere.lieu} · ${derniere.distance}` : derniere.distance} · {derniere.type}</span>
+              <span style={s.derniereExos}>{derniere.exercices}</span>
+            </span>
+            <span style={s.derniereChiffres}>
+              {derniere.score != null && <span style={{ ...s.derniereValeur, color: couleurDerniere }}>{derniere.score} <small style={s.derniereUnite}>pts</small></span>}
+              <span style={s.derniereValeur}>{derniere.fleches} <small style={s.derniereUnite}>flèches</small></span>
+              <span style={s.derniereLien}>Voir →</span>
+            </span>
+          </button>
+        </section>
+      )}
     </div>
   );
 }
 
 function Kpi({ valeur, label }) {
   return (
-    <div style={s.kpi}>
-      <div className="num" style={s.kpiValeur}>{valeur}</div>
-      <div style={s.kpiLabel}>{label}</div>
-    </div>
-  );
-}
-
-function TypeRow({ label, color, bg, data }) {
-  return (
-    <div style={s.typeRow}>
-      <span style={{ ...s.typeTag, color, backgroundColor: bg }}>{label}</span>
-      <div style={s.distStats}>
-        <DistStat valeur={data.nbSeances} label={data.nbSeances > 1 ? "séances" : "séance"} />
-        <DistStat valeur={data.fleches.toLocaleString("fr-FR")} label="flèches" />
-        <DistStat valeur={data.moyenne != null ? data.moyenne.toFixed(2) : "—"} label="moy./fl." accent={data.moyenne != null} color={color} />
-        <DistStat valeur={data.scoreMoyen ?? "—"} label="score moy." accent={data.scoreMoyen != null} color={color} />
-      </div>
-    </div>
-  );
-}
-
-function DistStat({ valeur, label, accent, color = PINK }) {
-  return (
-    <div style={s.distStat}>
-      <div className="num" style={{ ...s.distStatValeur, color: accent ? color : "var(--text)" }}>{valeur}</div>
-      <div style={s.distStatLabel}>{label}</div>
+    <div style={{ ...ui.carte, ...s.kpi }}>
+      <div style={s.kpiValeur}>{valeur}</div>
+      <div style={ui.sousTitre}>{label}</div>
     </div>
   );
 }
 
 const s = {
-  page: { display: "flex", flexDirection: "column", gap: "26px" },
-
   retourCarte: {
     display: "flex", flexDirection: "column", gap: "6px", textAlign: "left",
     backgroundColor: "var(--pink-soft)", border: `1px solid ${PINK}`, borderRadius: "12px",
@@ -276,12 +249,9 @@ const s = {
     borderRadius: "50%", background: "radial-gradient(circle, var(--pink-soft) 0%, transparent 72%)",
     pointerEvents: "none",
   },
-  heroEyebrow: {
-    fontFamily: "var(--mono)", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase",
-    color: PINK, fontWeight: "600", margin: "0 0 6px",
-  },
+  heroEyebrow: { fontSize: "13px", fontWeight: "700", color: PINK, margin: "0 0 4px" },
   heroTitre: { fontFamily: "var(--display)", fontSize: "26px", fontWeight: "600", color: "var(--text)", margin: "0 0 6px" },
-  heroSous:  { fontSize: "13.5px", color: "var(--text-muted)", margin: "0 0 18px", maxWidth: "48ch", lineHeight: 1.55 },
+  heroSous:  { fontSize: "14px", color: "var(--text-muted)", margin: "0 0 18px", maxWidth: "48ch", lineHeight: 1.55 },
   cta: {
     position: "relative", backgroundColor: PINK, color: "#fff", border: "none",
     borderRadius: "10px", padding: "12px 22px", fontSize: "14px", fontWeight: "700",
@@ -295,59 +265,33 @@ const s = {
     cursor: "pointer", fontFamily: "inherit",
   },
 
-  section: { display: "flex", flexDirection: "column", gap: "12px" },
-  sectionHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" },
-  sectionLabel: {
-    fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase",
-    color: "var(--text-dim)", fontWeight: "600", margin: 0,
-  },
+  section: { display: "flex", flexDirection: "column", gap: "10px" },
+  sectionTete: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" },
+  fort: { fontWeight: "700", color: "var(--text)" },
 
-  gaugeBox: {
-    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
-    boxShadow: "var(--shadow-card)", padding: "16px 18px",
-    display: "flex", flexDirection: "column", gap: "10px",
-  },
+  gaugeBox: { padding: "16px 18px", display: "flex", flexDirection: "column", gap: "10px" },
   gaugeRow: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px" },
-  gaugeFigures: { fontSize: "13px", color: "var(--text-2)", fontWeight: "600" },
-  gaugePct: { fontSize: "15px", fontWeight: "700" },
-  gaugeTrack: { height: "8px", borderRadius: "4px", backgroundColor: "var(--border)", overflow: "hidden" },
+  gaugePct: { fontFamily: "var(--display)", fontSize: "20px", fontWeight: "600" },
+  gaugeTrack: { position: "relative", height: "8px", borderRadius: "4px", backgroundColor: "var(--border)" },
   gaugeBar: { height: "100%", borderRadius: "4px", transition: "width 0.4s ease" },
+  repereRythme: {
+    position: "absolute", top: "-4px", width: "2px", height: "16px", borderRadius: "1px",
+    backgroundColor: "var(--text-muted)", transform: "translateX(-1px)",
+  },
 
   kpis: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" },
-  kpi: {
-    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
-    boxShadow: "var(--shadow-card)", padding: "16px", textAlign: "center",
-    display: "flex", flexDirection: "column", gap: "4px",
-  },
-  kpiValeur: { fontSize: "26px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
-  kpiLabel:  { fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" },
+  kpi: { padding: "16px", textAlign: "center", display: "flex", flexDirection: "column", gap: "2px" },
+  kpiValeur: { fontFamily: "var(--display)", fontSize: "28px", fontWeight: "600", color: "var(--text)" },
 
-  distListe: { display: "flex", flexDirection: "column", gap: "1px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" },
-  distGroup: {
-    backgroundColor: "var(--surface)", padding: "14px 16px",
-    display: "flex", flexDirection: "column", gap: "10px",
+  derniere: {
+    display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px",
+    padding: "14px 16px", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "inherit", width: "100%",
   },
-  distBadge: {
-    fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text)",
-    backgroundColor: "var(--surface-raised)", borderRadius: "8px", padding: "4px 10px", alignSelf: "flex-start",
-  },
-  typeRow: { display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" },
-  typeTag: {
-    fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em",
-    borderRadius: "5px", padding: "3px 8px", flexShrink: 0, width: "88px", textAlign: "center",
-  },
-  distStats: { display: "flex", gap: "20px", flexWrap: "wrap", marginLeft: "auto" },
-  distStat: { textAlign: "right" },
-  distStatValeur: { fontSize: "15px", fontWeight: "700", letterSpacing: "-0.01em" },
-  distStatLabel: { fontSize: "10px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" },
-  distEmpty: {
-    backgroundColor: "var(--surface)", borderRadius: "12px", border: "1px solid var(--border)",
-    boxShadow: "var(--shadow-card)", padding: "24px", textAlign: "center", color: "var(--text-dim)", fontSize: "13px",
-  },
-
-  info:   { color: "var(--text-muted)", fontSize: "14px" },
-  errMsg: {
-    color: PINK, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PINK}`,
-  },
+  derniereCorps: { display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 },
+  derniereTitre: { fontFamily: "var(--display)", fontSize: "17px", fontWeight: "600", color: "var(--text)" },
+  derniereExos: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
+  derniereChiffres: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flex: "0 0 auto" },
+  derniereValeur: { fontFamily: "var(--display)", fontSize: "19px", fontWeight: "600", color: "var(--text)", whiteSpace: "nowrap" },
+  derniereUnite: { fontFamily: "var(--sans)", fontSize: "11px", fontWeight: "600", color: "var(--text-muted)" },
+  derniereLien: { fontSize: "12px", fontWeight: "700", color: "var(--text-muted)" },
 };

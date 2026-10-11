@@ -19,6 +19,7 @@ import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, nbSean
 import { scoreEpreuve } from "../../../utils/records";
 import { DIST_ORDER } from "../../../utils/statsCalc";
 import FilterSelect from "../../shared/FilterSelect";
+import * as ui from "../styleArcher";
 
 // Dessine une ligne horizontale en pointillé sur le canvas via afterDraw
 const horizontalLinePlugin = {
@@ -303,19 +304,19 @@ export default function Courbes() {
 }
 
 const s = {
-  page: { display: "flex", flexDirection: "column", gap: "20px" },
-  filters: { display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
-  card: { backgroundColor: "var(--surface)", borderRadius: "12px", boxShadow: "var(--shadow-card)", padding: "20px 24px 24px" },
-  cardHeader: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
-  cardTitle: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text-2)" },
-  distBadge: { backgroundColor: "var(--border)", borderRadius: "5px", padding: "2px 8px", fontSize: "12px", fontWeight: "600", color: "var(--text-3)" },
-  hint: { fontSize: "11px", color: "var(--text-dim)", fontStyle: "italic", marginLeft: "auto" },
-  sectionCard: { backgroundColor: "var(--surface)", borderRadius: "12px", boxShadow: "var(--shadow-card)", padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: "20px" },
-  sectionCardHeader: { display: "flex", alignItems: "center", gap: "10px", paddingBottom: "16px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" },
-  sectionCardTitle: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text-2)" },
-  distGrid: { display: "flex", flexDirection: "column", gap: "16px" },
-  distCard: { backgroundColor: "var(--surface-sub)", borderRadius: "10px", border: "1px solid var(--border)", padding: "16px 20px 20px" },
-  empty: { textAlign: "center", color: "var(--text-dim)", fontSize: "14px", padding: "52px 0" },
-  info: { color: "var(--text-muted)", fontSize: "14px" },
-  errMsg: { color: PRIMARY, fontSize: "13px", padding: "10px 14px", backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}` },
+  page: { display: "flex", flexDirection: "column", gap: "18px" },
+  filters: ui.filtres,
+  card: { ...ui.carte, padding: "18px 20px 20px" },
+  cardHeader: { display: "flex", alignItems: "baseline", gap: "6px 12px", marginBottom: "16px", flexWrap: "wrap" },
+  cardTitle: { ...ui.titreSection, fontSize: "17px" },
+  distBadge: { fontSize: "13px", fontWeight: "600", color: "var(--text-muted)" },
+  hint: { ...ui.sousTitre, fontSize: "12px", marginLeft: "auto" },
+  sectionCard: { ...ui.carte, padding: "18px 20px 20px", display: "flex", flexDirection: "column", gap: "16px" },
+  sectionCardHeader: { display: "flex", alignItems: "baseline", gap: "6px 12px", flexWrap: "wrap" },
+  sectionCardTitle: { ...ui.titreSection, fontSize: "17px" },
+  distGrid: { display: "flex", flexDirection: "column", gap: "14px" },
+  distCard: { backgroundColor: "var(--surface-sub)", borderRadius: "10px", border: "1px solid var(--border)", padding: "14px 16px 16px" },
+  empty: { textAlign: "center", color: "var(--text-dim)", fontSize: "14px", padding: "48px 0" },
+  info: ui.info,
+  errMsg: ui.erreur,
 };

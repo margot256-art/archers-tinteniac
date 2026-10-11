@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { PRIMARY, fmtDateCourte, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume } from "../../utils/seances";
+import { PRIMARY, fmtDateCourte, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume, avancementMois } from "../../utils/seances";
 
 const GREEN   = "var(--ok)";   // vert : activité récente, progression positive
 const RED     = "var(--bad)";
@@ -255,7 +255,7 @@ export default function Dashboard() {
                 </div>
                 {a.hasObj && (
                   <div style={s.barTrack}>
-                    <div style={{ ...s.barFill, width: `${a.barPct}%`, backgroundColor: couleurJaugeVolume(a.rawPct) }} />
+                    <div style={{ ...s.barFill, width: `${a.barPct}%`, backgroundColor: couleurJaugeVolume(a.rawPct, avancementMois()) }} />
                   </div>
                 )}
               </div>

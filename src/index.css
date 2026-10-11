@@ -193,3 +193,11 @@ p { margin: 0; }
 @media (max-width: 600px) {
   .coach-cards-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── En-tête sur téléphone : nom masqué (le badge Coach reste), lien raccourci ── */
+.texte-court { display: none; }
+@media (max-width: 600px) {
+  .layout-nav-nom { display: none; }
+  .texte-long { display: none; }
+  .texte-court { display: inline; }
+}

@@ -118,7 +118,7 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span className="layout-nav-username">
-              {user.prenom} {user.nom}
+              <span className="layout-nav-nom">{user.prenom} {user.nom}</span>
               {isCoach && (
                 <span style={{
                   color: PINK, marginLeft: "8px",
@@ -180,7 +180,7 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
                   textDecoration: "none", whiteSpace: "nowrap", fontFamily: "inherit",
                 }}
               >
-                <ExternalLinkIcon /> Inscription concours
+                <ExternalLinkIcon /> <span className="texte-long">Inscription concours</span><span className="texte-court">Concours</span>
               </a>
             </div>
 

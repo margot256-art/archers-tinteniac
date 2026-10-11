@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { useAuth } from "../../hooks/useAuth";
 import { PRIMARY, BLUE, fmtDateLongue, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume, avancementMois, getPaille, getBlason, getCompte } from "../../utils/seances";
 import { regrouperParJour } from "../../utils/journalCoach";
 import { commentaireSeanceDe } from "../../utils/exercices";
@@ -61,7 +60,6 @@ function useObjectifs() {
  *  archer, ou directement sur une séance. */
 export default function Dashboard({ onOuvrirJournal }) {
   const { seances, loading, error, updateRetourCoach } = useAllSeances();
-  const { user } = useAuth();
   const objectifs = useObjectifs();
   const [ouverte,      setOuverte]      = useState(null);  // archer dont la dernière séance est dépliée
   const [voirInactifs, setVoirInactifs] = useState(false);
@@ -175,7 +173,6 @@ export default function Dashboard({ onOuvrirJournal }) {
                 key={a.name} a={a} ligne={dernieres[a.name]}
                 ouverte={ouverte === a.name}
                 onBasculer={() => setOuverte(ouverte === a.name ? null : a.name)}
-                estMoi={!!user?.id && a.id === user.id}
                 onEnregistrerRetour={(ligne, texte) => updateRetourCoach(ligne.docs.map((d) => d.id), texte)}
                 onDetail={(ligne) => onOuvrirJournal?.({ ouvrir: ligne.id })}
                 onJournal={() => ouvrirArcher(a.name)}
@@ -249,7 +246,7 @@ function Section({ title, sous, action, children }) {
 
 // Une ligne par archer : sa dernière séance, repliée. Dépliée, on voit les
 // exercices et les commentaires de l'archer, et on peut écrire le retour du coach.
-function DerniereSeance({ a, ligne, ouverte, onBasculer, estMoi, onEnregistrerRetour, onDetail, onJournal }) {
+function DerniereSeance({ a, ligne, ouverte, onBasculer, onEnregistrerRetour, onDetail, onJournal }) {
   const col   = a.days < 7 ? GREEN : a.days <= 14 ? ORANGE : RED;
   const label = a.days === 0 ? "Auj." : a.days === 1 ? "Hier" : `${a.days} j.`;
   if (!ligne) return null;
@@ -264,8 +261,8 @@ function DerniereSeance({ a, ligne, ouverte, onBasculer, estMoi, onEnregistrerRe
         <span style={s.ligneTexte}>
           <span style={s.ligneNom}>
             {a.name}
-            {!estMoi && ligne.retourCoach && <span style={s.repondu}>✓ Retour envoyé</span>}
-            {!estMoi && !ligne.retourCoach && ligne.commentaire && <span style={s.attente}>Commentaire de l'archer</span>}
+            {ligne.retourCoach && <span style={s.repondu}>✓ Retour envoyé</span>}
+            {!ligne.retourCoach && ligne.commentaire && <span style={s.attente}>Commentaire de l'archer</span>}
           </span>
           <span style={s.ligneMeta}>
             <span style={ui.point(couleur)} />
@@ -280,13 +277,11 @@ function DerniereSeance({ a, ligne, ouverte, onBasculer, estMoi, onEnregistrerRe
         <div style={s.depli}>
           {commentairesSeance.map((c, i) => <p key={i} style={s.commentaire}>« {c} »</p>)}
           {ligne.docs.map((d) => <CarteExercice key={d.id} doc={d} compact />)}
-          {!estMoi && (
-            <RetourCoach
-              key={ligne.id}
-              initial={ligne.retourCoach}
-              onEnregistrer={(texte) => onEnregistrerRetour(ligne, texte)}
-            />
-          )}
+          <RetourCoach
+            key={ligne.id}
+            initial={ligne.retourCoach}
+            onEnregistrer={(texte) => onEnregistrerRetour(ligne, texte)}
+          />
           <div style={s.liens}>
             <button type="button" style={ui.boutonSecondaire} onClick={() => onDetail(ligne)}>Séance en détail →</button>
             <button type="button" style={ui.boutonSecondaire} onClick={onJournal}>Journal de {a.name.split(" ")[0]} →</button>

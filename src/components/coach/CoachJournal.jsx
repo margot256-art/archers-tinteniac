@@ -1,6 +1,5 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { useAuth } from "../../hooks/useAuth";
 import { chargerExport } from "../../utils/exportLibs";
 import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir, libelleSaison } from "../../utils/seances";
 import { regrouperParJour, statsTir, somme, aCommenter, debutACommenter, JOURS_A_COMMENTER } from "../../utils/journalCoach";
@@ -27,7 +26,6 @@ const VUES = [
 /** initial : { archer?, filtre?, ouvrir? } quand le Journal est ouvert depuis le tableau de bord. */
 export default function CoachJournal({ initial }) {
   const { seances, loading, error, updateRetourCoach } = useAllSeances();
-  const { user } = useAuth();
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
   const [filterArcher, setFilterArcher] = useState(initial?.archer ?? "Tous");
   const [filterType,   setFilterType]   = useState("Tous");
@@ -67,11 +65,11 @@ export default function CoachJournal({ initial }) {
     const cherche = sansAccents(recherche.trim());
     return regrouperParJour(filtered).filter((l) => {
       if (vue === "commentees" && !l.commentaire) return false;
-      if (vue === "aCommenter" && !aCommenter(l, user?.id)) return false;
+      if (vue === "aCommenter" && !aCommenter(l)) return false;
       if (cherche && !sansAccents(`${l.commentaire}\n${l.retourCoach}`).includes(cherche)) return false;
       return true;
     });
-  }, [filtered, vue, recherche, user?.id]);
+  }, [filtered, vue, recherche]);
   const nbJoursSaison = useMemo(() => regrouperParJour(saisonSeances).length, [saisonSeances]);
 
   const groupedByMonth = useMemo(() => {
@@ -314,7 +312,7 @@ export default function CoachJournal({ initial }) {
     // Enchaîner les réponses : le commentaire suivant sans réponse, s'il y en a un.
     const debut = debutACommenter();
     const suivante = regrouperParJour(seances.filter((s) => s.date >= debut))
-      .filter((l) => l.id !== ligneOuverte.id && aCommenter(l, user?.id))
+      .filter((l) => l.id !== ligneOuverte.id && aCommenter(l))
       .sort((a, b) => b.date.localeCompare(a.date) || (a.archer ?? "").localeCompare(b.archer ?? ""))[0];
     return (
       <DetailJour
@@ -371,7 +369,7 @@ export default function CoachJournal({ initial }) {
       </div>
       {vue === "aCommenter" && (
         <p style={ui.sousTitre}>
-          Commentaires des archers des {JOURS_A_COMMENTER} derniers jours auxquels vous n'avez pas encore répondu (les vôtres n'y sont pas).
+          Commentaires des archers des {JOURS_A_COMMENTER} derniers jours auxquels vous n'avez pas encore répondu.
         </p>
       )}
 

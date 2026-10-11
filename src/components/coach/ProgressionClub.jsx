@@ -521,12 +521,12 @@ export default function ProgressionClub() {
 
       {vue === "courbes" && <>
       {filterArcher === "Tous" && (
-        <p style={ui.sousTitre}>Tout le club : chaque point est une séance d’un archer. Choisissez un archer pour voir ses courbes et ses objectifs.</p>
+        <p style={ui.sousTitre}>Tout le club : une courbe par archer. Choisissez un archer pour voir ses courbes comme il les voit, avec ses objectifs.</p>
       )}
       <CourbesGraphiques
         seances={seancesCourbes} rawObjectif={objectifArcher}
         filterSaison={filterSaison} filterDist={filterDist === "Toutes" ? "Toutes" : filterDist}
-        avecArcher={filterArcher === "Tous"}
+        parArcher={filterArcher === "Tous"}
       />
       </>}
     </div>

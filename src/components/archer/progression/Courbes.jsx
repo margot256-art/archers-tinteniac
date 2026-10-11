@@ -65,6 +65,13 @@ const fmtMonth = (ym) => {
 
 const fmtSaison = (s) => "S" + libelleSaison(s);
 
+// Une couleur par archer (vue club du coach).
+const ARCHER_COLORS = [
+  "#6366f1", "#22d3ee", "#a3e635", "#fb923c", "#e879f9",
+  "#34d399", "#f472b6", "#60a5fa", "#fbbf24", "#a78bfa",
+  "#f43f5e", "#0ea5e9", "#84cc16",
+];
+
 const makeDistBarOpts = (nf, colors) => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -124,10 +131,10 @@ export default function Courbes() {
   );
 }
 
-// Les graphiques eux-mêmes, partagés avec la Progression club du coach (mêmes
-// courbes pour un archer choisi, ou pour tout le club). `avecArcher` : le nom de
-// l’archer apparaît dans l info-bulle de chaque séance.
-export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDist, avecArcher = false }) {
+// Les graphiques eux-mêmes, partagés avec la Progression club du coach : pour un
+// archer, exactement les courbes qu’il voit ; pour tout le club (`parArcher`), les
+// mêmes graphiques avec une courbe (ou une barre) par archer, pour les comparer.
+export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDist, parArcher = false }) {
   const colors = useChartColors();
 
   const objectives = useMemo(() => {
@@ -178,7 +185,7 @@ export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDi
               const seance = src[ctx.dataIndex];
               if (!seance) return null;
               const c = getCompte(seance);
-              return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `${avecArcher && seance.archer ? `${seance.archer}  ·  ` : ""}Score ${seance.score}  ·  ${c} fl. comptées  ·  ${seance.distance}`];
+              return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `Score ${seance.score}  ·  ${c} fl. comptées  ·  ${seance.distance}`];
             },
           },
         },
@@ -186,7 +193,7 @@ export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDi
     };
 
     return { lineData: { labels, datasets }, lineOpts, hasLineData: entraData.some((v) => v !== null) || compData.some((v) => v !== null) };
-  }, [seances, filterDist, filterSaison, objectives, avecArcher, colors.theme]);
+  }, [seances, filterDist, filterSaison, objectives, colors.theme]);
 
   const { monthlyData, monthlyOpts, hasMonthlyData } = useMemo(() => {
     const src = seances
@@ -273,6 +280,73 @@ export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDi
       .filter(Boolean);
   }, [seances, objectives, colors.theme]);
 
+  // ── Club : une courbe par archer ──────────────────────────────────────────
+  const club = useMemo(() => {
+    if (!parArcher) return null;
+    const tires = seances.filter((s) => s.date && s.archer && getCompte(s) > 0 && (s.score ?? 0) > 0);
+    const src = tires
+      .filter((s) => (filterSaison === "Toutes" || getSaison(s.date) === filterSaison) && (filterDist === "Toutes" || s.distance === filterDist))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    const archers = [...new Set(tires.map((s) => s.archer))].sort();
+    const couleur = (i) => ARCHER_COLORS[i % ARCHER_COLORS.length];
+    const moy = (group) => {
+      const vol = group.reduce((n, s) => n + getCompte(s), 0);
+      return vol > 0 ? parseFloat((group.reduce((n, s) => n + s.score, 0) / vol).toFixed(2)) : null;
+    };
+    const courbe = (archer, i, data) => ({
+      label: archer, data, borderColor: couleur(i), backgroundColor: couleur(i) + "22", pointBackgroundColor: couleur(i),
+      pointRadius: 4, pointHoverRadius: 6, tension: 0.3, spanGaps: true,
+    });
+    const dates = [...new Set(src.map((s) => s.date))];
+    const months = [...new Set(src.map((s) => s.date.slice(0, 7)))].sort();
+    const ligne = archers.map((a, i) => courbe(a, i, dates.map((d) => moy(src.filter((s) => s.archer === a && s.date === d)))))
+      .filter((ds) => ds.data.some((v) => v != null));
+    const mois = archers.map((a, i) => courbe(a, i, months.map((ym) => moy(src.filter((s) => s.archer === a && s.date.startsWith(ym))))))
+      .filter((ds) => ds.data.some((v) => v != null));
+    const opts = (titreY) => ({
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { font: { size: 11 }, color: colors.dim, maxRotation: 45, autoSkip: true, maxTicksLimit: 18 }, grid: { color: colors.grid } },
+        y: { beginAtZero: false, ticks: { font: { size: 11 }, color: colors.dim }, grid: { color: colors.grid }, title: { display: true, text: titreY, color: colors.dim, font: { size: 11 } } },
+      },
+      plugins: {
+        legend: { position: "bottom", labels: { font: { size: 12 }, color: colors.text, boxWidth: 14, padding: 16 } },
+        tooltip: { callbacks: { label: (ctx) => (ctx.parsed.y != null ? `${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl` : null) } },
+      },
+    });
+
+    // Meilleur score moyen par distance et par saison : une barre par archer.
+    const allSaisons = [...new Set(tires.map((s) => getSaison(s.date)))].sort();
+    const barres = DIST_ORDER.map((dist) => {
+      const d = tires.filter((s) => s.distance === dist);
+      if (!d.length) return null;
+      const nf = normFactor(dist);
+      const datasets = archers.map((a, i) => ({
+        type: "bar", label: a, backgroundColor: couleur(i), borderRadius: 4,
+        data: allSaisons.map((sn) => {
+          const sc = d.filter((s) => s.archer === a && getSaison(s.date) === sn).map(scoreEpreuve)
+            .filter((v) => v != null).sort((x, y) => y - x).slice(0, 3);
+          return sc.length ? Math.round(sc.reduce((x, y) => x + y, 0) / sc.length) : null;
+        }),
+      })).filter((ds) => ds.data.some((v) => v != null));
+      if (!datasets.length) return null;
+      const base = makeDistBarOpts(nf, colors);
+      const barOpts = { ...base, plugins: { ...base.plugins, legend: { position: "bottom", labels: { font: { size: 12 }, color: colors.text, boxWidth: 12, padding: 14 } } } };
+      return { dist, nf, data: { labels: allSaisons.map(fmtSaison), datasets }, opts: barOpts, objVal: null };
+    }).filter(Boolean);
+
+    return {
+      ligne: { data: { labels: dates.map(fmtDate), datasets: ligne }, opts: opts("Moy. / flèche"), ok: ligne.length > 0 },
+      mois:  { data: { labels: months.map(fmtMonth), datasets: mois }, opts: opts("Moy. / flèche"), ok: mois.length > 0 },
+      barres,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parArcher, seances, filterSaison, filterDist, colors.theme]);
+
+  const g1 = club ? club.ligne : { data: lineData, opts: lineOpts, ok: hasLineData };
+  const g2 = club ? club.mois : { data: monthlyData, opts: monthlyOpts, ok: hasMonthlyData };
+  const barresAffichees = club ? club.barres : distBarCharts;
+
   return (
     <>
       <div style={s.card}>
@@ -281,7 +355,7 @@ export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDi
           {filterDist !== "Toutes" && <span style={s.distBadge}>{filterDist}</span>}
           <span style={s.hint}>1 point = 1 séance avec tir compté</span>
         </div>
-        {!hasLineData ? <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div> : <div style={{ height: 320 }}><Line data={lineData} options={lineOpts} /></div>}
+        {!g1.ok ? <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div> : <div style={{ height: 320 }}><Line data={g1.data} options={g1.opts} /></div>}
       </div>
 
       <div style={s.card}>
@@ -290,7 +364,7 @@ export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDi
           {filterDist !== "Toutes" && <span style={s.distBadge}>{filterDist}</span>}
           <span style={s.hint}>Moy./flèche agrégée par mois</span>
         </div>
-        {!hasMonthlyData ? <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div> : <div style={{ height: 320 }}><Line data={monthlyData} options={monthlyOpts} /></div>}
+        {!g2.ok ? <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div> : <div style={{ height: 320 }}><Line data={g2.data} options={g2.opts} /></div>}
       </div>
 
       <div style={s.sectionCard}>
@@ -298,9 +372,9 @@ export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDi
           <span style={s.sectionCardTitle}>Meilleur score moy. par distance — toutes saisons</span>
           <span style={s.hint}>Moyenne top 3 · ×60 (5m/18m) · ×72 autres</span>
         </div>
-        {distBarCharts.length === 0 ? <div style={s.empty}>Aucune séance avec tir compté enregistrée.</div> : (
+        {barresAffichees.length === 0 ? <div style={s.empty}>Aucune séance avec tir compté enregistrée.</div> : (
           <div style={s.distGrid}>
-            {distBarCharts.map(({ dist, nf, data, opts, objVal }) => (
+            {barresAffichees.map(({ dist, nf, data, opts, objVal }) => (
               <div key={dist} style={s.distCard}>
                 <div style={s.cardHeader}>
                   <span style={s.cardTitle}>{dist} <span style={{ color: "var(--text-dim)", fontWeight: "400", fontSize: "12px" }}>(max {nf * 10} pts / {nf} fl.)</span></span>

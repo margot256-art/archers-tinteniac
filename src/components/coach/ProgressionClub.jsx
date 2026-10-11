@@ -1,39 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { useChartColors } from "../../hooks/useChartColors";
 import { chargerExport } from "../../utils/exportLibs";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  LineController,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtDate, fmtYM, nbSeances, cleSeance, libelleSaison } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtYM, nbSeances, cleSeance, libelleSaison } from "../../utils/seances";
 import { scoreEpreuve } from "../../utils/records";
 import FilterSelect from "../shared/FilterSelect";
+import { CourbesGraphiques } from "../archer/progression/Courbes";
 import * as ui from "../archer/styleArcher";
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Tooltip, Legend);
 
 const DIST_ONLY  = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const DIST_ORDER = DIST_ONLY;
 const DISTANCES  = ["Toutes", ...DIST_ONLY];
 const TYPES      = ["Tous", "Entraînement", "Compétition"];
 
-const ARCHER_COLORS = [
-  "#6366f1", "#22d3ee", "#a3e635", "#fb923c", "#e879f9",
-  "#34d399", "#f472b6", "#60a5fa", "#fbbf24", "#a78bfa",
-  "#f43f5e", "#0ea5e9", "#84cc16",
-];
-
 const fmtDec    = (v) => (v != null ? v.toFixed(2) : "—");
 const fmtInt    = (v) => (v != null ? String(v) : "—");
-const fmtSaison = (sn) => "S" + libelleSaison(sn);
 
 function stdDev(vals) {
   if (vals.length < 2) return null;
@@ -59,7 +41,10 @@ const RANK_STYLE = {
 
 export default function ProgressionClub() {
   const { seances, loading, error } = useAllSeances();
-  const colors = useChartColors();
+  // Objectifs des archers : ligne d’objectif sur les courbes de l’archer choisi.
+  const [objectifs, setObjectifs] = useState([]);
+  useEffect(() => onSnapshot(collection(db, "objectifs"),
+    (snap) => setObjectifs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))), []);
 
   // Un seul jeu de filtres pour toute la page. Le classement compare toujours tous
   // les archers (l'archer choisi y est surligné) ; l'évolution des records couvre
@@ -361,68 +346,13 @@ export default function ProgressionClub() {
     `stats-club-saison-${libelleSaison(filterSaison)}.pdf`
   );
 
-  // ── Graphiques ─────────────────────────────────────────────────────────────
-
-  // Moyenne par flèche à chaque séance avec tir compté, une courbe par archer.
-  const { g1Labels, g1Datasets } = useMemo(() => {
-    const src = selection.filter(s => s.archer && getCompte(s) > 0 && s.score > 0);
-    const sortedDates = [...new Set(src.map(s => s.date))].sort();
-    const archers     = [...new Set(src.map(s => s.archer))].sort();
-    const datasets = archers.map((archer, i) => {
-      const color    = ARCHER_COLORS[i % ARCHER_COLORS.length];
-      const byArcher = src.filter(s => s.archer === archer);
-      const data = sortedDates.map(d => {
-        const vals = byArcher.filter(s => s.date === d).map(s => s.score / getCompte(s)).filter(v => isFinite(v));
-        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-      });
-      return { label: archer, data, borderColor: color, backgroundColor: color + "22", pointBackgroundColor: color, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, spanGaps: true };
-    });
-    return { g1Labels: sortedDates.map(fmtDate), g1Datasets: datasets };
-  }, [selection]);
-  const hasG1 = g1Datasets.some(d => d.data.some(v => v !== null));
-
-  // Meilleure épreuve de chaque saison (toutes saisons), une courbe par archer.
-  const { g2Labels, g2Datasets } = useMemo(() => {
-    const src = seances.filter(s => s.date && s.archer && getCompte(s) > 0 && s.score > 0 && okDistType(s) && okArcher(s));
-    const saisons = [...new Set(src.map(s => getSaison(s.date)))].sort();
-    const archers = [...new Set(src.map(s => s.archer))].sort();
-    const datasets = archers.map((archer, i) => {
-      const color = ARCHER_COLORS[i % ARCHER_COLORS.length];
-      const data  = saisons.map(saison => {
-        let best = null;
-        for (const s of src) {
-          if (s.archer !== archer || getSaison(s.date) !== saison) continue;
-          const n = scoreEpreuve(s);
-          if (n != null && (best === null || n > best)) best = n;
-        }
-        return best;
-      });
-      return { label: archer, data, borderColor: color, backgroundColor: color + "22", pointBackgroundColor: color, pointRadius: 5, pointHoverRadius: 7, tension: 0.3, spanGaps: true };
-    });
-    return { g2Labels: saisons.map(fmtSaison), g2Datasets: datasets };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seances, filterArcher, filterDist, filterType]);
-  const hasG2 = g2Datasets.some(d => d.data.some(v => v !== null));
-
-  const g1Opts = useMemo(() => ({
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: "bottom", labels: { font: { size: 12 }, color: colors.text2, boxWidth: 14, padding: 18 } }, tooltip: { callbacks: { label: ctx => ctx.parsed.y != null ? `${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl.` : null } } },
-    scales: {
-      x: { ticks: { font: { size: 10 }, color: colors.dim, maxRotation: 45, maxTicksLimit: 18 }, grid: { color: colors.grid } },
-      y: { beginAtZero: false, ticks: { font: { size: 11 }, color: colors.dim }, grid: { color: colors.grid }, title: { display: true, text: "Moy. / flèche", color: colors.dim, font: { size: 11 } } },
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [colors.theme]);
-
-  const g2Opts = useMemo(() => ({
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: "bottom", labels: { font: { size: 12 }, color: colors.text2, boxWidth: 14, padding: 18 } }, tooltip: { callbacks: { label: ctx => ctx.parsed.y != null ? `${ctx.dataset.label} : ${ctx.parsed.y} pts` : null } } },
-    scales: {
-      x: { ticks: { font: { size: 12 }, color: colors.muted }, grid: { color: colors.grid } },
-      y: { beginAtZero: false, ticks: { font: { size: 11 }, color: colors.dim }, grid: { color: colors.grid }, title: { display: true, text: "Meilleur score (sur 600 ou 720)", color: colors.dim, font: { size: 11 } } },
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [colors.theme]);
+  // ── Courbes : les mêmes graphiques que la Progression de l’archer ─────────
+  // Séances de l’archer choisi (ou de tout le club) au type choisi ; la saison et la
+  // distance sont appliquées par les graphiques eux-mêmes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const seancesCourbes = useMemo(() => seances.filter((s) => okArcher(s) && (filterType === "Tous" || s.type === filterType)), [seances, filterArcher, filterType]);
+  const objectifArcher = filterArcher === "Tous" ? null
+    : objectifs.find((o) => o.archer === filterArcher || o.id === seances.find((s) => s.archer === filterArcher)?.archerId) ?? null;
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
@@ -590,22 +520,14 @@ export default function ProgressionClub() {
       </>}
 
       {vue === "courbes" && <>
-      {/* ── Graphiques ── */}
-      <section style={s.carteGraph}>
-        <h3 style={ui.titreSection}>Moyenne par flèche, séance après séance</h3>
-        <p style={{ ...ui.sousTitre, marginTop: "2px" }}>Séances avec tir compté de la saison choisie</p>
-        {hasG1
-          ? <div style={{ height: 320, marginTop: "16px" }}><Line data={{ labels: g1Labels, datasets: g1Datasets }} options={g1Opts} /></div>
-          : <div style={s.empty}>Aucune séance avec tir compté pour cette sélection.</div>}
-      </section>
-
-      <section style={s.carteGraph}>
-        <h3 style={ui.titreSection}>Évolution des records par saison</h3>
-        <p style={{ ...ui.sousTitre, marginTop: "2px" }}>Meilleure épreuve de chaque saison, toutes saisons confondues</p>
-        {hasG2
-          ? <div style={{ height: 320, marginTop: "16px" }}><Line data={{ labels: g2Labels, datasets: g2Datasets }} options={g2Opts} /></div>
-          : <div style={s.empty}>Aucune donnée pour cette sélection.</div>}
-      </section>
+      {filterArcher === "Tous" && (
+        <p style={ui.sousTitre}>Tout le club : chaque point est une séance d’un archer. Choisissez un archer pour voir ses courbes et ses objectifs.</p>
+      )}
+      <CourbesGraphiques
+        seances={seancesCourbes} rawObjectif={objectifArcher}
+        filterSaison={filterSaison} filterDist={filterDist === "Toutes" ? "Toutes" : filterDist}
+        avecArcher={filterArcher === "Tous"}
+      />
       </>}
     </div>
   );

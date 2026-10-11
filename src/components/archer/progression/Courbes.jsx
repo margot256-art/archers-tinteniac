@@ -98,12 +98,37 @@ const makeDistBarOpts = (nf, colors) => ({
   },
 });
 
+// Courbes de l’archer connecté (onglet Progression), avec ses propres filtres.
 export default function Courbes() {
   const { seances, loading, error } = useSeances();
   const rawObjectif = useObjectif();
-  const colors = useChartColors();
   const [filterDist, setFilterDist] = useState("Toutes");
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
+
+  const saisons = useMemo(() => {
+    const set = new Set(seances.map((s) => (s.date ? getSaison(s.date) : null)).filter(Boolean));
+    return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
+  }, [seances]);
+
+  if (loading) return <div style={s.info}>Chargement…</div>;
+  if (error) return <div style={s.errMsg}>{error}</div>;
+
+  return (
+    <div style={s.page}>
+      <div style={s.filters}>
+        <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
+        <FilterSelect label="Distance" value={filterDist} options={DISTANCES} onChange={setFilterDist} />
+      </div>
+      <CourbesGraphiques seances={seances} rawObjectif={rawObjectif} filterSaison={filterSaison} filterDist={filterDist} />
+    </div>
+  );
+}
+
+// Les graphiques eux-mêmes, partagés avec la Progression club du coach (mêmes
+// courbes pour un archer choisi, ou pour tout le club). `avecArcher` : le nom de
+// l’archer apparaît dans l info-bulle de chaque séance.
+export function CourbesGraphiques({ seances, rawObjectif, filterSaison, filterDist, avecArcher = false }) {
+  const colors = useChartColors();
 
   const objectives = useMemo(() => {
     if (!rawObjectif) return {};
@@ -112,11 +137,6 @@ export default function Courbes() {
     if (rawObjectif.distances) return rawObjectif.distances;
     return {};
   }, [rawObjectif, filterSaison]);
-
-  const saisons = useMemo(() => {
-    const set = new Set(seances.map((s) => (s.date ? getSaison(s.date) : null)).filter(Boolean));
-    return ["Toutes", ...[...set].sort((a, b) => b.localeCompare(a))];
-  }, [seances]);
 
   const { lineData, lineOpts, hasLineData } = useMemo(() => {
     const src = seances
@@ -158,7 +178,7 @@ export default function Courbes() {
               const seance = src[ctx.dataIndex];
               if (!seance) return null;
               const c = getCompte(seance);
-              return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `Score ${seance.score}  ·  ${c} fl. comptées  ·  ${seance.distance}`];
+              return [`${ctx.dataset.label} : ${ctx.parsed.y.toFixed(2)} moy/fl`, `${avecArcher && seance.archer ? `${seance.archer}  ·  ` : ""}Score ${seance.score}  ·  ${c} fl. comptées  ·  ${seance.distance}`];
             },
           },
         },
@@ -166,7 +186,7 @@ export default function Courbes() {
     };
 
     return { lineData: { labels, datasets }, lineOpts, hasLineData: entraData.some((v) => v !== null) || compData.some((v) => v !== null) };
-  }, [seances, filterDist, filterSaison, objectives, colors.theme]);
+  }, [seances, filterDist, filterSaison, objectives, avecArcher, colors.theme]);
 
   const { monthlyData, monthlyOpts, hasMonthlyData } = useMemo(() => {
     const src = seances
@@ -253,16 +273,8 @@ export default function Courbes() {
       .filter(Boolean);
   }, [seances, objectives, colors.theme]);
 
-  if (loading) return <div style={s.info}>Chargement…</div>;
-  if (error) return <div style={s.errMsg}>{error}</div>;
-
   return (
-    <div style={s.page}>
-      <div style={s.filters}>
-        <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
-        <FilterSelect label="Distance" value={filterDist} options={DISTANCES} onChange={setFilterDist} />
-      </div>
-
+    <>
       <div style={s.card}>
         <div style={s.cardHeader}>
           <span style={s.cardTitle}>Évolution de la moyenne / flèche</span>
@@ -299,7 +311,7 @@ export default function Courbes() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 

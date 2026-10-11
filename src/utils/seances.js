@@ -77,6 +77,19 @@ export const periodeSaison = (sn) => {
   return `1er sept. ${y1} – 31 août ${y2}`;
 };
 
+// Ordre d'affichage des distances.
+export const DISTANCES_ORDRE = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
+
+/** Options d'un filtre Distance : « Toutes » puis les seules distances qui ont des
+ *  séances (dans la saison choisie). La distance déjà choisie reste dans la liste. */
+export function optionsDistances(docs, saison = "Toutes", choisie = "Toutes") {
+  const presentes = new Set(
+    docs.filter((s) => s.date && (saison === "Toutes" || getSaison(s.date) === saison)).map((s) => s.distance)
+  );
+  if (choisie !== "Toutes") presentes.add(choisie);
+  return ["Toutes", ...DISTANCES_ORDRE.filter((d) => presentes.has(d))];
+}
+
 export const fmtDate = (iso) => {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");

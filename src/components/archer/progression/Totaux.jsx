@@ -3,14 +3,13 @@ import { useAuth } from "../../../hooks/useAuth";
 import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
 import { useEcranEtroit } from "../../../hooks/useEcranEtroit";
-import { PRIMARY, BLUE, getSaison, CURRENT_SAISON, fmtYM, normFactor, libelleSaison } from "../../../utils/seances";
+import { PRIMARY, BLUE, getSaison, CURRENT_SAISON, fmtYM, normFactor, libelleSaison, optionsDistances } from "../../../utils/seances";
 import { filtrerSeances, agregerParMoisDistance, trierParMoisPuisDistance, DIST_ORDER } from "../../../utils/statsCalc";
 import { niveauEpreuves } from "../../../utils/records";
 import { exporterExcel, exporterPDF } from "../../../utils/export";
 import FilterSelect from "../../shared/FilterSelect";
 import * as ui from "../styleArcher";
 
-const DISTANCES = ["Toutes", ...DIST_ORDER];
 
 const fmtDec = (v) => (v != null ? v.toFixed(2) : "—");
 const fmtInt = (v) => (v != null ? String(v) : "—");
@@ -136,7 +135,7 @@ export default function Totaux() {
       <div style={ui.barre}>
         <div style={ui.filtres}>
           <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
-          <FilterSelect label="Distance" value={filterDist} options={DISTANCES} onChange={setFilterDist} />
+          <FilterSelect label="Distance" value={filterDist} options={optionsDistances(seances, filterSaison, filterDist)} onChange={setFilterDist} />
         </div>
         <div style={ui.filtres}>
           <button style={{ ...ui.boutonSecondaire, ...(rows.length === 0 ? s.off : {}) }} onClick={handleExportExcel} disabled={rows.length === 0}>↓ Excel</button>

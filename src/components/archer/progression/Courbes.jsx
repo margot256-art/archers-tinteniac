@@ -15,7 +15,7 @@ import {
 import { Line, Chart as ChartMixed } from "react-chartjs-2";
 import { useSeances } from "../../../hooks/useSeances";
 import { useObjectif } from "../../../hooks/useObjectif";
-import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, nbSeances, libelleSaison } from "../../../utils/seances";
+import { PRIMARY, BLUE, getCompte, normFactor, getSaison, CURRENT_SAISON, nbSeances, libelleSaison, optionsDistances } from "../../../utils/seances";
 import { scoreEpreuve } from "../../../utils/records";
 import { DIST_ORDER } from "../../../utils/statsCalc";
 import FilterSelect from "../../shared/FilterSelect";
@@ -49,7 +49,6 @@ ChartJS.register(
 );
 
 const OBJ_COLOR = "#d99a2b"; // ≈ var(--warn), littéral car dessiné sur canvas
-const DISTANCES = ["Toutes", ...DIST_ORDER];
 
 const fmtDate = (iso) => {
   if (!iso) return "";
@@ -124,7 +123,7 @@ export default function Courbes() {
     <div style={s.page}>
       <div style={s.filters}>
         <FilterSelect label="Saison" value={filterSaison} options={saisons} onChange={setFilterSaison} libelle={libelleSaison} />
-        <FilterSelect label="Distance" value={filterDist} options={DISTANCES} onChange={setFilterDist} />
+        <FilterSelect label="Distance" value={filterDist} options={optionsDistances(seances, filterSaison, filterDist)} onChange={setFilterDist} />
       </div>
       <CourbesGraphiques seances={seances} rawObjectif={rawObjectif} filterSaison={filterSaison} filterDist={filterDist} />
     </div>

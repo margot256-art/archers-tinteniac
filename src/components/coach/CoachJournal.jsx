@@ -1,7 +1,7 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { chargerExport } from "../../utils/exportLibs";
-import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir, libelleSaison } from "../../utils/seances";
+import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir, libelleSaison, optionsDistances } from "../../utils/seances";
 import { regrouperParJour, statsTir, somme, aCommenter, debutACommenter, JOURS_A_COMMENTER } from "../../utils/journalCoach";
 import FilterSelect from "../shared/FilterSelect";
 import DetailJour from "./DetailJour";
@@ -11,7 +11,6 @@ const fmtMoyenne = (st) => (st.moyenne != null ? st.moyenne.toFixed(2) : "");
 const fmtRamene  = (st) => (st.ramene != null ? st.ramene : "");
 const sansAccents = (txt) => txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
 // Vues du journal : toutes les séances, celles que l'archer a commentées, et parmi
 // elles les récentes qui n'ont pas encore de réponse du coach.
@@ -335,7 +334,7 @@ export default function CoachJournal({ initial }) {
             onChange={(v) => { setFilterSaison(v); setFilterArcher("Tous"); }} />
           <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
-          <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
+          <FilterSelect label="Distance" value={filterDist}   options={optionsDistances(saisonSeances.filter((s) => filterArcher === "Tous" || s.archer === filterArcher), "Toutes", filterDist)} onChange={setFilterDist} />
         </div>
         <div style={{ display: "flex", gap: "6px" }}>
           <button

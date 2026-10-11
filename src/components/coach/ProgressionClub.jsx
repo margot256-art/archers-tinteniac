@@ -3,7 +3,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { chargerExport } from "../../utils/exportLibs";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtYM, nbSeances, cleSeance, libelleSaison } from "../../utils/seances";
+import { PRIMARY, BLUE, getPaille, getBlason, getCompte, normFactor, getSaison, CURRENT_SAISON, MOIS, fmtYM, nbSeances, cleSeance, libelleSaison, optionsDistances } from "../../utils/seances";
 import { scoreEpreuve } from "../../utils/records";
 import FilterSelect from "../shared/FilterSelect";
 import { CourbesGraphiques } from "../archer/progression/Courbes";
@@ -11,7 +11,6 @@ import * as ui from "../archer/styleArcher";
 
 const DIST_ONLY  = ["5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const DIST_ORDER = DIST_ONLY;
-const DISTANCES  = ["Toutes", ...DIST_ONLY];
 const TYPES      = ["Tous", "Entraînement", "Compétition"];
 
 const fmtDec    = (v) => (v != null ? v.toFixed(2) : "—");
@@ -378,7 +377,7 @@ export default function ProgressionClub() {
       <div style={ui.filtres}>
         <FilterSelect label="Saison"   value={filterSaison} options={saisonOptions} onChange={setFilterSaison} libelle={libelleSaison} />
         <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
-        <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
+        <FilterSelect label="Distance" value={filterDist}   options={optionsDistances(seances.filter(okArcher), filterSaison, filterDist)} onChange={setFilterDist} />
         <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
       </div>
 

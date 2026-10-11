@@ -1,6 +1,6 @@
-// Styles communs aux écrans de la partie Archer (Accueil, Journal, Progression,
-// Records) : même largeur, mêmes titres, mêmes chiffres, mêmes bascules et points
-// de couleur, pour que les onglets se ressemblent.
+// Styles communs aux écrans de l’appli (partie Archer et partie Coach) : même
+// largeur, mêmes titres, mêmes chiffres, mêmes bascules et points de couleur,
+// pour que les onglets se ressemblent.
 // Règles : libellés en texte simple (pas de MAJUSCULES), chiffres dans la police du
 // texte (pas de police « machine à écrire »), rose / bleu réservés aux scores et
 // aux repères Entraînement / Compétition.
@@ -10,6 +10,9 @@ export const page = {
   display: "flex", flexDirection: "column", gap: "16px",
   width: "100%", maxWidth: "820px", margin: "0 auto",
 };
+
+// Pages à tableaux larges (Journal coach, Progression club) : même centrage, plus de place.
+export const pageLarge = { ...page, maxWidth: "1180px" };
 
 export const carte = {
   backgroundColor: "var(--surface)", borderRadius: "14px", border: "1px solid var(--border)",
@@ -56,3 +59,19 @@ export const erreur = {
   color: PINK, fontSize: "13px", padding: "10px 14px",
   backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PINK}`,
 };
+
+// Chiffre clé en tête de page (tableau de bord, progression club).
+export const kpi = { ...carte, padding: "16px 18px", display: "flex", flexDirection: "column", gap: "4px" };
+export const kpiValeur = { fontFamily: "var(--display)", fontSize: "26px", fontWeight: "600", color: "var(--text)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" };
+export const kpiLabel = { fontSize: "13px", color: "var(--text-muted)" };
+
+// Tableaux (pages coach) : en-têtes en texte simple, chiffres alignés.
+export const tableauCadre = { ...carte, overflowX: "auto" };
+export const tableau = { width: "100%", borderCollapse: "collapse", fontSize: "13px" };
+export const th = {
+  padding: "10px 12px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
+  borderBottom: "1px solid var(--border)", whiteSpace: "nowrap", backgroundColor: "var(--surface-raised)",
+};
+export const thNum = { ...th, textAlign: "right" };
+export const td = { padding: "10px 12px", color: "var(--text-2)", whiteSpace: "nowrap", borderBottom: "1px solid var(--border)" };
+export const tdNum = { ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" };

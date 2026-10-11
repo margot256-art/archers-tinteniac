@@ -196,7 +196,7 @@ const sModal = {
   header:       { display: "flex", alignItems: "center", justifyContent: "space-between" },
   title:        { fontFamily: "var(--display)", fontSize: "16px", fontWeight: "600", color: "var(--text)" },
   close:        { background: "none", border: "none", color: "var(--text-dim)", fontSize: "16px", cursor: "pointer", padding: "2px 6px", fontFamily: "inherit" },
-  label:        { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em" },
+  label:        { fontSize: "13px", fontWeight: "600", color: "var(--text-muted)" },
   error:        { backgroundColor: "var(--bad-soft)", border: "1px solid var(--bad)", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "var(--bad)" },
   success:      { backgroundColor: "var(--good-soft)", border: "1px solid var(--good)", borderRadius: "8px", padding: "14px", fontSize: "13px", color: "var(--good)", display: "flex", flexDirection: "column", gap: "12px" },
   primaryBtn:   { backgroundColor: PRIMARY, color: "#fff", border: "none", borderRadius: "7px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
@@ -209,7 +209,7 @@ const s = {
     padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px", boxShadow: "var(--shadow-card)",
   },
   entete: { display: "flex", alignItems: "center", gap: "10px" },
-  titre:  { fontSize: "13px", fontWeight: "700", color: "var(--text)", textTransform: "uppercase", letterSpacing: "0.06em" },
+  titre:  { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
   badge:  { backgroundColor: "var(--warn)", color: "#fff", borderRadius: "10px", padding: "1px 7px", fontSize: "11px", fontWeight: "700" },
   ligne: {
     display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px",

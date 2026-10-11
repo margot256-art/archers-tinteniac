@@ -6,6 +6,7 @@ import { useAllSeances } from "../../hooks/useAllSeances";
 import { callAdminFunction } from "../../utils/adminApi";
 import { PRIMARY as PINK } from "../../utils/seances";
 import { NouvelArcherModal, DemandesMotDePasse } from "./GestionComptes";
+import * as ui from "../archer/styleArcher";
 
 // Onglet Archers, réservé aux coachs : création d'un archer, demandes de nouveau
 // mot de passe, et liste des comptes (collection `users`) où l'on nomme un archer
@@ -19,6 +20,7 @@ export default function ListeArchers() {
   const [erreur,   setErreur]   = useState("");
   const [enCours,  setEnCours]  = useState(null);  // uid en cours de modification
   const [ajout,    setAjout]    = useState(false); // fenêtre « Nouvel archer » ouverte
+  const [menu,     setMenu]     = useState(null);  // uid dont les actions (« ⋯ ») sont dépliées
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -99,27 +101,23 @@ export default function ListeArchers() {
     }
   };
 
-  if (!comptes && !erreur) return <div style={s.info}>Chargement…</div>;
+  if (!comptes && !erreur) return <div style={ui.info}>Chargement…</div>;
 
   return (
-    <div style={s.page}>
-      <div style={s.header}>
+    <div style={ui.page}>
+      <div style={ui.barre}>
+        <div>
+          <h3 style={ui.titreSection}>Liste des archers</h3>
+          <p style={{ ...ui.sousTitre, marginTop: "2px" }}>
+            {tries.length} compte{tries.length > 1 ? "s" : ""}
+            {coachs && ` · ${coachs.size} coach${coachs.size > 1 ? "s" : ""}`}
+          </p>
+        </div>
         <button style={s.btnAjouter} onClick={() => setAjout(true)}>+ Ajouter un archer</button>
-        <span style={s.sousTitre}>
-          {tries.length} compte{tries.length > 1 ? "s" : ""}
-          {coachs && ` · ${coachs.size} coach${coachs.size > 1 ? "s" : ""}`}
-        </span>
       </div>
       {ajout && <NouvelArcherModal onClose={() => setAjout(false)} />}
 
       <DemandesMotDePasse />
-
-      <h2 style={s.titre}>Liste des archers</h2>
-
-      <p style={s.aide}>
-        Un coach voit la partie coach et les séances de tous les archers. Le changement est pris en
-        compte à la prochaine ouverture de l'appli par la personne concernée.
-      </p>
 
       {erreur && <div style={s.erreur}>{erreur}</div>}
 
@@ -134,7 +132,13 @@ export default function ListeArchers() {
                 {estMoi && <span style={s.moi}> (vous)</span>}
               </span>
               {estCoach && <span style={s.badgeCoach}>Coach</span>}
-              {coachs && !estMoi && (
+              {coachs && !estMoi && menu !== c.id && (
+                <button
+                  type="button" style={s.btnMenu} onClick={() => setMenu(c.id)}
+                  title="Actions" aria-label={`Actions pour ${c.prenom} ${c.nom}`}
+                >⋯</button>
+              )}
+              {coachs && !estMoi && menu === c.id && (
                 <button
                   style={{ ...(estCoach ? s.btnRetirer : s.btnNommer), ...(enCours === c.id ? { opacity: 0.6 } : {}) }}
                   disabled={enCours !== null}
@@ -143,7 +147,7 @@ export default function ListeArchers() {
                   {enCours === c.id ? "…" : estCoach ? "Retirer le droit coach" : "Nommer coach"}
                 </button>
               )}
-              {coachs && !estMoi && !estCoach && (
+              {coachs && !estMoi && !estCoach && menu === c.id && (
                 <button
                   style={s.btnSupprimer}
                   disabled={enCours !== null}
@@ -152,21 +156,29 @@ export default function ListeArchers() {
                   aria-label={`Supprimer le compte de ${c.prenom} ${c.nom}`}
                 >Supprimer</button>
               )}
+              {menu === c.id && (
+                <button type="button" style={s.btnMenu} onClick={() => setMenu(null)} aria-label="Fermer les actions">✕</button>
+              )}
             </div>
           );
         })}
       </div>
+
+      <p style={s.aide}>
+        « ⋯ » : nommer coach, retirer le droit coach ou supprimer un compte. Un coach voit la partie coach
+        et les séances de tous les archers ; le changement est pris en compte à la prochaine ouverture de
+        l'appli par la personne concernée.
+      </p>
     </div>
   );
 }
 
 const s = {
-  page:      { display: "flex", flexDirection: "column", gap: "16px" },
-  header:    { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" },
-  titre:     { fontFamily: "var(--display)", fontSize: "21px", fontWeight: "600", color: "var(--text)", margin: 0 },
-  sousTitre: { fontSize: "13px", color: "var(--text-dim)" },
   aide:      { fontSize: "13px", color: "var(--text-muted)", margin: 0, lineHeight: 1.5 },
-  info:      { color: "var(--text-muted)", fontSize: "14px" },
+  btnMenu: {
+    backgroundColor: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-3)", borderRadius: "7px",
+    padding: "4px 10px", fontSize: "14px", fontWeight: "700", cursor: "pointer", fontFamily: "inherit", lineHeight: 1.2,
+  },
   erreur: {
     color: PINK, fontSize: "13px", padding: "10px 14px",
     backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PINK}`,
@@ -182,8 +194,8 @@ const s = {
   nom:        { fontSize: "14px", fontWeight: "700", color: "var(--text)", flex: "1 1 auto" },
   moi:        { fontWeight: "400", color: "var(--text-dim)" },
   badgeCoach: {
-    fontSize: "10px", fontWeight: "700", color: PINK, border: `1px solid ${PINK}`, borderRadius: "4px",
-    padding: "1px 6px", textTransform: "uppercase", letterSpacing: "0.08em",
+    fontSize: "12px", fontWeight: "600", color: PINK, border: `1px solid ${PINK}`, borderRadius: "5px",
+    padding: "1px 7px",
   },
   btnAjouter: {
     backgroundColor: PINK, color: "#fff", border: "none", borderRadius: "8px",

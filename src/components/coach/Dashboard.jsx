@@ -2,34 +2,36 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
-import { PRIMARY, fmtDateCourte, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume, avancementMois } from "../../utils/seances";
+import { useAuth } from "../../hooks/useAuth";
+import { PRIMARY, BLUE, fmtDateCourte, fmtDateLongue, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume, avancementMois, getPaille, getBlason, getCompte } from "../../utils/seances";
+import { regrouperParJour, aCommenter, JOURS_A_COMMENTER } from "../../utils/journalCoach";
+import * as ui from "../archer/styleArcher";
 
-const GREEN   = "var(--ok)";   // vert : activité récente, progression positive
-const RED     = "var(--bad)";
-const ORANGE  = "var(--warn)";
+const GREEN  = "var(--ok)";   // vert : activité récente
+const RED    = "var(--bad)";
+const ORANGE = "var(--warn)";
+
+// Un archer sans séance depuis plus de 2 mois est rangé dans « Inactifs ».
+const JOURS_INACTIF = 60;
+// Séances à commenter affichées sur le tableau de bord (la suite dans le Journal).
+const NB_A_COMMENTER = 6;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
+
+const isoLocal = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 function getWeekBounds() {
   const today = new Date();
   const dow   = today.getDay();
-  const toMon = dow === 0 ? -6 : 1 - dow;
   const mon   = new Date(today);
-  mon.setDate(today.getDate() + toMon);
+  mon.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow));
   const sun   = new Date(mon);
   sun.setDate(mon.getDate() + 6);
-  const localISO = (d) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return [localISO(mon), localISO(sun)];
+  return [isoLocal(mon), isoLocal(sun)];
 }
 
-function getMonthKeys() {
-  const today  = new Date();
-  const ym     = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  const prev   = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const ymPrev = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
-  return [ym, ymPrev];
-}
+const moisCourant = () => isoLocal(new Date()).slice(0, 7);
 
 function daysSince(iso) {
   const today = new Date();
@@ -37,14 +39,8 @@ function daysSince(iso) {
   return Math.floor((today - new Date(iso + "T00:00:00")) / 86400000);
 }
 
-const sumFleches = (s)   => s.totalFleches ?? (s.paille ?? s.volumePaille ?? 0) + (s.blason ?? s.volumeBlason ?? 0) + (s.compte ?? s.volumeCompte ?? 0);
-const getMoy     = (s)   => {
-  const c  = s.compte ?? s.volumeCompte ?? 0;
-  const sc = s.score ?? 0;
-  if (c > 0 && sc > 0) return sc / c;
-  if (s.moyenne != null) return Number(s.moyenne);
-  return null;
-};
+const sumFleches = (s) => s.totalFleches ?? getPaille(s) + getBlason(s) + getCompte(s);
+const premiereLigne = (txt) => (txt ?? "").split("\n")[0].replace(/^Séance – /, "");
 
 // ── objectifs hook ────────────────────────────────────────────────────────────
 
@@ -61,23 +57,20 @@ function useObjectifs() {
 
 // ── composant principal ───────────────────────────────────────────────────────
 
-export default function Dashboard() {
+/** onOuvrirJournal({ archer?, filtre?, ouvrir? }) : ouvre le Journal coach filtré
+ *  sur un archer, sur les séances à commenter, ou directement sur une séance. */
+export default function Dashboard({ onOuvrirJournal }) {
   const { seances, loading, error } = useAllSeances();
-  const objectifs  = useObjectifs();
+  const { user } = useAuth();
+  const objectifs = useObjectifs();
 
   const [monStr, sunStr] = useMemo(() => getWeekBounds(), []);
-  const [ym, ymPrev]     = useMemo(() => getMonthKeys(),  []);
+  const ym = useMemo(() => moisCourant(), []);
 
   const weekSeances  = useMemo(() => seances.filter(s => s.date >= monStr && s.date <= sunStr), [seances, monStr, sunStr]);
-  const monthSeances = useMemo(() => seances.filter(s => s.date?.startsWith(ym)),     [seances, ym]);
-  const prevSeances  = useMemo(() => seances.filter(s => s.date?.startsWith(ymPrev)), [seances, ymPrev]);
+  const monthSeances = useMemo(() => seances.filter(s => s.date?.startsWith(ym)), [seances, ym]);
 
-  // ── stat cards ────────────────────────────────────────────────────────────
-
-  const fleches = useMemo(
-    () => monthSeances.reduce((n, s) => n + sumFleches(s), 0),
-    [monthSeances]
-  );
+  const fleches = useMemo(() => monthSeances.reduce((n, s) => n + sumFleches(s), 0), [monthSeances]);
 
   const archerDuMois = useMemo(() => {
     const c = {};
@@ -89,9 +82,21 @@ export default function Dashboard() {
     return Object.values(c).map((a) => ({ name: a.name, n: a.seances.size })).sort((a, b) => b.n - a.n)[0] ?? null;
   }, [monthSeances]);
 
+  // ── Séances à commenter (les plus récentes d'abord) ──────────────────────
+  const recentes = useMemo(() => {
+    const limite = new Date();
+    limite.setDate(limite.getDate() - JOURS_A_COMMENTER);
+    return seances.filter((s) => s.date >= isoLocal(limite));
+  }, [seances]);
+  const aCommenterListe = useMemo(
+    () => regrouperParJour(recentes)
+      .filter((l) => aCommenter(l, user?.id))
+      .sort((a, b) => b.date.localeCompare(a.date) || (a.archer ?? "").localeCompare(b.archer ?? "")),
+    [recentes, user?.id]
+  );
+
   // ── tous les archers, triés par dernière séance décroissante ──────────────
   // Clé = s.archer (nom complet) — toujours défini, robuste même si archerId varie
-
   const archerActivity = useMemo(() => {
     const map = {};
     for (const s of seances) {
@@ -103,162 +108,130 @@ export default function Dashboard() {
         if (!map[s.archer].id && s.archerId) map[s.archer].id = s.archerId;
       }
     }
-    return Object.values(map).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+    return Object.values(map)
+      .map((a) => ({ ...a, days: daysSince(a.lastDate) }))
+      .sort((a, b) => b.lastDate.localeCompare(a.lastDate));
   }, [seances]);
-
-  // ── progression moyenne/flèche ────────────────────────────────────────────
-
-  const progression = useMemo(() => {
-    const avgMoy = (list) => {
-      const hits = list.filter(s => getMoy(s) != null);
-      if (!hits.length) return null;
-      return hits.reduce((sum, s) => sum + getMoy(s), 0) / hits.length;
-    };
-    return archerActivity.map(({ name }) => {
-      const curr  = avgMoy(monthSeances.filter(s => s.archer === name));
-      const prev  = avgMoy(prevSeances.filter(s => s.archer === name));
-      const delta = curr != null && prev != null ? curr - prev : null;
-      return { name, curr, prev, delta };
-    }).filter(a => a.curr != null || a.prev != null);
-  }, [archerActivity, monthSeances, prevSeances]);
+  const actifs   = archerActivity.filter((a) => a.days <= JOURS_INACTIF);
+  const inactifs = archerActivity.filter((a) => a.days > JOURS_INACTIF);
 
   // ── volume entraînement vs objectif ──────────────────────────────────────
-
   const volumeData = useMemo(() => {
     return archerActivity.map(archer => {
       const obj = objectifs.find(o => o.archer === archer.name || o.id === archer.id);
-
-      const entrSeances = monthSeances.filter(
-        s => s.archer === archer.name && s.type?.startsWith("Entraîn")
-      );
-      const vol = entrSeances.reduce(
-        (n, s) =>
-          n +
-          (s.paille ?? s.volumePaille ?? 0) +
-          (s.blason ?? s.volumeBlason ?? 0) +
-          (s.compte ?? s.volumeCompte ?? 0),
-        0
-      );
+      const vol = monthSeances
+        .filter(s => s.archer === archer.name && s.type?.startsWith("Entraîn"))
+        .reduce((n, s) => n + getPaille(s) + getBlason(s) + getCompte(s), 0);
       const target = obj?.saisons?.[CURRENT_SAISON]?.volEntr ?? obj?.volEntr ?? 0;
       const hasObj = !!obj && target > 0;
       const rawPct = hasObj ? Math.round((vol / target) * 100) : null;
-      const barPct = hasObj ? Math.min(rawPct, 100) : null;
-      return { ...archer, vol, target, hasObj, rawPct, barPct };
-    }).sort((a, b) => {
-      if (a.hasObj && !b.hasObj) return -1;
-      if (!a.hasObj && b.hasObj) return 1;
-      if (!a.hasObj) return 0;
-      return (b.rawPct ?? 0) - (a.rawPct ?? 0);
-    });
+      return { ...archer, vol, target, hasObj, rawPct, barPct: hasObj ? Math.min(rawPct, 100) : null };
+    })
+      // Un archer inactif sans objectif n'a rien à montrer ici.
+      .filter((a) => a.hasObj || a.days <= JOURS_INACTIF)
+      .sort((a, b) => {
+        if (a.hasObj !== b.hasObj) return a.hasObj ? -1 : 1;
+        return (b.rawPct ?? 0) - (a.rawPct ?? 0);
+      });
   }, [archerActivity, monthSeances, objectifs]);
 
   // ── render ────────────────────────────────────────────────────────────────
 
-  if (loading) return <div style={s.info}>Chargement…</div>;
-  if (error)   return <div style={s.errMsg}>{error}</div>;
+  if (loading) return <div style={ui.info}>Chargement…</div>;
+  if (error)   return <div style={ui.erreur}>{error}</div>;
+
+  const ouvrirArcher = (name) => onOuvrirJournal?.({ archer: name });
 
   return (
-    <div style={s.page}>
+    <div style={{ ...ui.page, gap: "24px" }}>
 
-
-      {/* ── Stat cards ── */}
       <div className="coach-cards-grid">
-        <StatCard label="Séances cette semaine" value={nbSeances(weekSeances)} />
-        <StatCard label="Séances ce mois"       value={nbSeances(monthSeances)} />
-        <StatCard label="Flèches ce mois"       value={fleches.toLocaleString("fr-FR")} />
-        <StatCard
-          label="🏆 Archer du mois"
+        <Kpi label="Séances cette semaine" value={nbSeances(weekSeances)} />
+        <Kpi label="Séances ce mois"       value={nbSeances(monthSeances)} />
+        <Kpi label="Flèches ce mois"       value={fleches.toLocaleString("fr-FR")} />
+        <Kpi
+          label="Archer du mois"
           value={archerDuMois ? archerDuMois.name.split(" ")[0] : "—"}
           sub={archerDuMois ? `${archerDuMois.n} séance${archerDuMois.n > 1 ? "s" : ""}` : undefined}
-          numeric={false}
         />
       </div>
 
-      {/* ── Dernière séance par archer ── */}
-      <Section title="⏰ Dernière séance par archer">
-        {archerActivity.length === 0 ? (
-          <div style={s.empty}>Aucune séance enregistrée.</div>
+      {/* ── À commenter ── */}
+      <Section
+        title="À commenter"
+        sous={aCommenterListe.length > 0
+          ? `${aCommenterListe.length} séance${aCommenterListe.length > 1 ? "s" : ""} des ${JOURS_A_COMMENTER} derniers jours sans retour`
+          : null}
+        action={aCommenterListe.length > NB_A_COMMENTER && (
+          <button type="button" style={ui.boutonSecondaire} onClick={() => onOuvrirJournal?.({ filtre: "aCommenter" })}>
+            Tout voir ({aCommenterListe.length})
+          </button>
+        )}
+      >
+        {aCommenterListe.length === 0 ? (
+          <div style={s.calme}>Rien en attente : toutes les séances des {JOURS_A_COMMENTER} derniers jours ont un retour.</div>
         ) : (
-          <div>
-            {archerActivity.map((a, i) => {
-              const days  = daysSince(a.lastDate);
-              const col   = days < 7 ? GREEN : days <= 14 ? ORANGE : RED;
-              const label = days === 0 ? "Auj." : `${days} j.`;
+          <div style={s.liste}>
+            {aCommenterListe.slice(0, NB_A_COMMENTER).map((l) => {
+              const couleur = l.type === "Compétition" ? BLUE : PRIMARY;
+              const extrait = premiereLigne(l.commentaire);
               return (
-                <div
-                  key={a.name}
-                  style={{ ...s.lastRow, ...(i === archerActivity.length - 1 ? { borderBottom: "none" } : {}) }}
-                >
-                  <span style={s.lastName}>{a.name}</span>
-                  <span style={{ ...s.lastRight, color: col }}>
-                    {label} · {fmtDateCourte(a.lastDate)}
+                <button key={l.id} type="button" style={s.ligneBtn} onClick={() => onOuvrirJournal?.({ ouvrir: l.id, filtre: "aCommenter" })}>
+                  <span style={s.ligneTexte}>
+                    <span style={s.ligneNom}>{l.archer}</span>
+                    <span style={s.ligneMeta}>
+                      <span style={ui.point(couleur)} />
+                      {fmtDateLongue(l.date)} · {l.distance}
+                    </span>
+                    {extrait && <span style={s.ligneExtrait}>« {extrait} »</span>}
                   </span>
-                </div>
+                  <span style={s.ligneAction}>Commenter →</span>
+                </button>
               );
             })}
           </div>
         )}
       </Section>
 
-      {/* ── Progression ── */}
-      <Section title="📈 Progression — ce mois vs mois précédent">
-        {progression.length === 0 ? (
-          <div style={s.empty}>Aucune séance avec tir compté ce mois-ci ou le mois précédent.</div>
+      {/* ── Dernière séance par archer ── */}
+      <Section title="Dernière séance par archer" sous="Touchez un nom pour ouvrir son journal">
+        {archerActivity.length === 0 ? (
+          <div style={s.calme}>Aucune séance enregistrée.</div>
         ) : (
-          <div style={s.progGrid}>
-            {progression.map(p => {
-              const dCol   = p.delta == null ? "var(--text-dim)" : p.delta > 0 ? GREEN : RED;
-              const dStr   = p.delta != null
-                ? `${p.delta > 0 ? "+ " : "− "}${Math.abs(p.delta).toFixed(2)}`
-                : null;
-              return (
-                <div key={p.name} style={s.progCard}>
-                  <div style={s.progName}>{p.name}</div>
-                  <div style={s.progPrev}>
-                    Mois prec. : {p.prev != null ? p.prev.toFixed(2) : "—"}
-                  </div>
-                  <div style={s.progRow}>
-                    <span style={s.progCurr}>
-                      {p.curr != null ? p.curr.toFixed(2) : "—"}
-                    </span>
-                    {dStr && (
-                      <span style={{ ...s.progDelta, color: dCol }}>{dStr}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div style={s.liste}>
+            {actifs.map((a) => <LigneActivite key={a.name} a={a} onClick={() => ouvrirArcher(a.name)} />)}
+            {inactifs.length > 0 && (
+              <details style={s.inactifs}>
+                <summary style={s.inactifsTitre}>Inactifs depuis plus de 2 mois ({inactifs.length})</summary>
+                {inactifs.map((a) => <LigneActivite key={a.name} a={a} onClick={() => ouvrirArcher(a.name)} />)}
+              </details>
+            )}
           </div>
         )}
       </Section>
 
       {/* ── Volume vs objectif ── */}
-      <Section title="🎯 Volume mensuel entraînement vs objectif">
+      <Section title="Volume d'entraînement du mois" sous="Par rapport à l'objectif mensuel de chacun">
         {volumeData.length === 0 ? (
-          <div style={s.empty}>Aucune séance enregistrée.</div>
+          <div style={s.calme}>Aucune séance enregistrée.</div>
         ) : (
-          <div style={s.volCard}>
-            {volumeData.map((a, i) => (
-              <div
-                key={a.name}
-                style={{ ...s.volRow, ...(i === volumeData.length - 1 ? { borderBottom: "none" } : {}) }}
-              >
-                <div style={s.volMeta}>
+          <div style={s.liste}>
+            {volumeData.map((a) => (
+              <button key={a.name} type="button" style={s.volRow} onClick={() => ouvrirArcher(a.name)}>
+                <span style={s.volMeta}>
                   <span style={s.volName}>{a.name}</span>
                   {a.hasObj ? (
-                    <span style={s.volText}>
-                      {a.vol} / {a.target} fl. ({a.rawPct}%)
-                    </span>
+                    <span style={s.volText}>{a.vol} / {a.target} fl. ({a.rawPct} %)</span>
                   ) : (
-                    <span style={s.volNoObj}>{a.vol} fl. — pas objectif</span>
+                    <span style={s.volNoObj}>{a.vol} fl. · pas d'objectif</span>
                   )}
-                </div>
+                </span>
                 {a.hasObj && (
-                  <div style={s.barTrack}>
-                    <div style={{ ...s.barFill, width: `${a.barPct}%`, backgroundColor: couleurJaugeVolume(a.rawPct, avancementMois()) }} />
-                  </div>
+                  <span style={s.barTrack}>
+                    <span style={{ ...s.barFill, width: `${a.barPct}%`, backgroundColor: couleurJaugeVolume(a.rawPct, avancementMois()) }} />
+                  </span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -269,105 +242,78 @@ export default function Dashboard() {
 
 // ── sous-composants ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, numeric = true }) {
+function Kpi({ label, value, sub }) {
   return (
-    <div style={s.statCard}>
-      <div style={s.statLabel}>{label}</div>
-      <div className={numeric ? "num" : undefined} style={s.statValue}>{value}</div>
-      {sub && <div style={s.statSub}>{sub}</div>}
+    <div style={ui.kpi}>
+      <div style={ui.kpiLabel}>{label}</div>
+      <div style={ui.kpiValeur}>{value}</div>
+      {sub && <div style={s.kpiSub}>{sub}</div>}
     </div>
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, sous, action, children }) {
   return (
-    <div style={s.section}>
-      <h3 style={s.sectionTitle}>{title}</h3>
+    <section style={s.section}>
+      <div style={ui.barre}>
+        <div>
+          <h3 style={ui.titreSection}>{title}</h3>
+          {sous && <p style={{ ...ui.sousTitre, marginTop: "2px" }}>{sous}</p>}
+        </div>
+        {action}
+      </div>
       {children}
-    </div>
+    </section>
+  );
+}
+
+function LigneActivite({ a, onClick }) {
+  const col   = a.days < 7 ? GREEN : a.days <= 14 ? ORANGE : RED;
+  const label = a.days === 0 ? "Auj." : `${a.days} j.`;
+  return (
+    <button type="button" style={s.ligneBtn} onClick={onClick}>
+      <span style={s.ligneNom}>{a.name}</span>
+      <span style={{ ...s.lastRight, color: col }}>{label} · {fmtDateCourte(a.lastDate)}</span>
+    </button>
   );
 }
 
 // ── styles ────────────────────────────────────────────────────────────────────
 
 const s = {
-  page:   { display: "flex", flexDirection: "column", gap: "28px" },
-  info:   { color: "var(--text-muted)", fontSize: "14px" },
-  errMsg: {
-    color: PRIMARY, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
-  },
+  kpiSub: { fontSize: "12px", color: "var(--text-dim)" },
 
-  // stat cards
-  statCard: {
-    backgroundColor: "var(--surface)", borderRadius: "12px",
-    boxShadow: "var(--shadow-card)",
-    padding: "18px 20px",
-    display: "flex", flexDirection: "column", gap: "4px",
-  },
-  statLabel: {
-    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
-    textTransform: "uppercase", letterSpacing: "0.07em",
-  },
-  statValue: {
-    fontSize: "28px", fontWeight: "800", color: "var(--text)",
-    letterSpacing: "-0.02em", lineHeight: "1.1",
-  },
-  statSub: { fontSize: "12px", color: "var(--text-dim)" },
+  section: { display: "flex", flexDirection: "column", gap: "10px" },
+  calme:   { ...ui.carte, padding: "18px 20px", color: "var(--text-muted)", fontSize: "14px" },
 
-  // sections
-  section:      { display: "flex", flexDirection: "column", gap: "10px" },
-  sectionTitle: { fontFamily: "var(--display)", fontSize: "15px", fontWeight: "600", color: "var(--text-2)", margin: 0 },
-  empty:        { color: "var(--text-dim)", fontSize: "14px", padding: "24px", textAlign: "center" },
+  // Liste en carte : une ligne cliquable par élément.
+  liste: { ...ui.carte, overflow: "hidden", display: "flex", flexDirection: "column" },
+  ligneBtn: {
+    display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px",
+    width: "100%", padding: "12px 18px", textAlign: "left",
+    backgroundColor: "transparent", border: "none", borderBottom: "1px solid var(--border)",
+    cursor: "pointer", fontFamily: "inherit", color: "inherit",
+  },
+  ligneTexte:   { display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 },
+  ligneNom:     { fontSize: "14px", fontWeight: "600", color: "var(--text)" },
+  ligneMeta:    { display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--text-muted)" },
+  ligneExtrait: { fontSize: "13px", color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "560px" },
+  ligneAction:  { fontSize: "13px", fontWeight: "600", color: PRIMARY, whiteSpace: "nowrap" },
+  lastRight:    { fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap" },
 
-  // dernière séance (sans fond)
-  lastRow: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "11px 4px",
-    borderBottom: "1px solid var(--border)",
-  },
-  lastName:  { fontSize: "14px", fontWeight: "700", color: "var(--text-2)" },
-  lastRight: { fontSize: "13px", fontWeight: "600" },
-
-  // progression
-  progGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-    gap: "12px",
-  },
-  progCard: {
-    backgroundColor: "var(--surface)", borderRadius: "10px",
-    boxShadow: "var(--shadow-card)",
-    padding: "14px 16px",
-    display: "flex", flexDirection: "column", gap: "6px",
-  },
-  progName:  { fontSize: "13px", fontWeight: "700", color: "var(--text)" },
-  progPrev:  { fontSize: "11px", color: "var(--text-dim)" },
-  progRow:   { display: "flex", alignItems: "baseline", gap: "8px" },
-  progCurr:  { fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums", fontSize: "26px", fontWeight: "700", color: "var(--text)", letterSpacing: "-0.01em" },
-  progDelta: { fontSize: "14px", fontWeight: "700" },
+  inactifs:      { borderTop: "none" },
+  inactifsTitre: { padding: "11px 18px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", borderBottom: "1px solid var(--border)" },
 
   // volume vs objectif
-  volCard: {
-    backgroundColor: "var(--surface)", borderRadius: "12px",
-    boxShadow: "var(--shadow-card)",
-    overflow: "hidden",
-  },
   volRow: {
-    padding: "13px 20px",
-    borderBottom: "1px solid var(--border)",
-    display: "flex", flexDirection: "column", gap: "8px",
+    display: "flex", flexDirection: "column", gap: "8px", width: "100%", padding: "12px 18px",
+    backgroundColor: "transparent", border: "none", borderBottom: "1px solid var(--border)",
+    cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: "inherit",
   },
-  volMeta:  { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  volName:  { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
-  volText:  { fontSize: "12px", color: "var(--text-muted)" },
-  volNoObj: { fontSize: "12px", color: "var(--text-dim)", fontStyle: "italic" },
-  barTrack: {
-    height: "7px", backgroundColor: "var(--border)",
-    borderRadius: "10px", overflow: "hidden",
-  },
-  barFill: {
-    height: "100%", borderRadius: "10px",
-    backgroundColor: ORANGE, transition: "width 0.5s ease",
-  },
+  volMeta:  { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" },
+  volName:  { fontSize: "14px", fontWeight: "600", color: "var(--text)" },
+  volText:  { fontSize: "13px", color: "var(--text-muted)", whiteSpace: "nowrap" },
+  volNoObj: { fontSize: "13px", color: "var(--text-dim)", whiteSpace: "nowrap" },
+  barTrack: { display: "block", height: "7px", backgroundColor: "var(--border)", borderRadius: "10px", overflow: "hidden" },
+  barFill:  { display: "block", height: "100%", borderRadius: "10px", transition: "width 0.5s ease" },
 };

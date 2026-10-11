@@ -1,28 +1,53 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc, writeBatch } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
+
+// Toutes les séances du club (pages coach). Une seule écoute Firestore, partagée
+// par les onglets : passer du Tableau de bord au Journal n'attend pas un nouveau
+// chargement. Les dernières séances lues restent en mémoire (pour le compte
+// connecté seulement) et s'affichent tout de suite au retour sur un onglet.
+let etat = { seances: [], loading: true, error: null, uid: null };
+const abonnes = new Set();
+let stop = null;
+let arretDiffere = null;
+
+const publier = (maj) => { etat = { ...etat, ...maj }; abonnes.forEach((f) => f()); };
+
+function demarrer() {
+  const uid = auth.currentUser?.uid ?? null;
+  // Changement de compte : on repart d'une lecture neuve.
+  if (etat.uid !== uid) { stop?.(); stop = null; etat = { seances: [], loading: true, error: null, uid }; }
+  if (stop) return;
+  const q = query(collection(db, "seances"), orderBy("date", "desc"));
+  stop = onSnapshot(
+    q,
+    (snap) => publier({
+      seances: snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) })),
+      loading: false, error: null,
+    }),
+    (err) => {
+      console.error("[useAllSeances]", err);
+      stop = null;
+      publier({ loading: false, error: "Impossible de charger les séances." });
+    }
+  );
+}
+
+function abonner(f) {
+  abonnes.add(f);
+  clearTimeout(arretDiffere);
+  demarrer();
+  return () => {
+    abonnes.delete(f);
+    // Écoute gardée une minute après le dernier onglet coach fermé (aller-retours rapides).
+    if (abonnes.size === 0) {
+      arretDiffere = setTimeout(() => { if (abonnes.size === 0 && stop) { stop(); stop = null; } }, 60000);
+    }
+  };
+}
 
 export function useAllSeances() {
-  const [seances, setSeances] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-
-  useEffect(() => {
-    const q = query(collection(db, "seances"), orderBy("date", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setSeances(snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) })));
-        setLoading(false);
-      },
-      (err) => {
-        console.error("[useAllSeances]", err);
-        setError("Impossible de charger les séances.");
-        setLoading(false);
-      }
-    );
-    return () => unsub();
-  }, []);
+  const { seances, loading, error } = useSyncExternalStore(abonner, () => etat);
 
   const deleteSeance = async (id) => {
     try {

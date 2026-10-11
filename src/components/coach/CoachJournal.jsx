@@ -1,79 +1,44 @@
 import { useState, useMemo, Fragment } from "react";
 import { useAllSeances } from "../../hooks/useAllSeances";
+import { useAuth } from "../../hooks/useAuth";
 import { chargerExport } from "../../utils/exportLibs";
-import { PRIMARY, BLUE, getPaille, getBlason, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir, libelleSaison } from "../../utils/seances";
-import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
+import { PRIMARY, BLUE, getCompte, getSaison, CURRENT_SAISON, fmtDateCourte, fmtYM, buildMonthTotals, parOrdreDeTir, libelleSaison } from "../../utils/seances";
+import { regrouperParJour, statsTir, somme, aCommenter, debutACommenter, JOURS_A_COMMENTER } from "../../utils/journalCoach";
 import FilterSelect from "../shared/FilterSelect";
 import DetailJour from "./DetailJour";
+import * as ui from "../archer/styleArcher";
 
-const nomExercice = (s) => PROTOCOLE_PAR_ID[protocoleDe(s)]?.nom ?? s.protocole ?? "—";
-// Recherche insensible à la casse et aux accents.
-const sansAccents = (txt) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const uniques     = (vals) => [...new Set(vals.filter(Boolean))].join(" / ");
-const somme       = (docs, f) => docs.reduce((n, s) => n + f(s), 0);
-
-// Score cumulé, moyenne par flèche et score ramené sur 600 (salle) ou 720
-// (extérieur), calculés sur les seules flèches comptées avec un score. Pas de
-// score ramené si les tirs comptés mélangent plusieurs distances.
-const statsTir = (docs) => {
-  const { ts, tmoy, tscoreMoy } = buildMonthTotals(docs);
-  return { score: ts, moyenne: tmoy, ramene: tscoreMoy };
-};
-const fmtScore   = (st) => (st.score > 0 ? st.score : "");
 const fmtMoyenne = (st) => (st.moyenne != null ? st.moyenne.toFixed(2) : "");
 const fmtRamene  = (st) => (st.ramene != null ? st.ramene : "");
-
-// « Séance – … » puis « Exercice – … » pour chaque exercice commenté, un commentaire par ligne.
-const commentaireDuJour = (docs) => {
-  const seance = [...new Set(docs.map(commentaireSeanceDe).filter(Boolean))].map((c) => `Séance – ${c}`);
-  const exos   = docs.filter(commentaireExerciceDe).map((d) => `${nomExercice(d)} – ${commentaireExerciceDe(d)}`);
-  return [...seance, ...exos].join("\n");
-};
-
-// Entraînement : une ligne par archer, par jour et par distance, les exercices regroupés.
-// Compétition : une ligne par enregistrement, jamais regroupée.
-function regrouperParJour(docs) {
-  const map = new Map();
-  for (const s of docs) {
-    const cle = s.type === "Compétition" ? `comp|${s.id}` : `${s.date}|${s.archer}|${s.distance}|entr`;
-    if (!map.has(cle)) map.set(cle, []);
-    map.get(cle).push(s);
-  }
-  return [...map.entries()].map(([cle, ds]) => {
-    const tries = [...ds].sort(parOrdreDeTir);
-    return {
-      id: cle, docs: tries,
-      date: tries[0].date, archer: tries[0].archer,
-      type:     uniques(tries.map((d) => d.type)),
-      lieu:     uniques(tries.map((d) => d.lieu)),
-      distance: uniques(tries.map((d) => d.distance)),
-      paille:   somme(tries, getPaille),
-      blason:   somme(tries, getBlason),
-      compte:   somme(tries, getCompte),
-      tir:      statsTir(tries),
-      commentaire: commentaireDuJour(tries),
-      retourCoach: tries.find((d) => d.retourCoach)?.retourCoach ?? "",
-    };
-  });
-}
+const sansAccents = (txt) => txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
+// Vues du journal : toutes les séances, celles que l'archer a commentées, celles
+// qui attendent un retour du coach.
+const VUES = [
+  { id: "toutes",     label: "Toutes" },
+  { id: "commentees", label: "Commentées par l'archer" },
+  { id: "aCommenter", label: "À commenter" },
+];
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function CoachJournal() {
+/** initial : { archer?, filtre?, ouvrir? } quand le Journal est ouvert depuis le tableau de bord. */
+export default function CoachJournal({ initial }) {
   const { seances, loading, error, updateRetourCoach } = useAllSeances();
+  const { user } = useAuth();
   const [filterSaison, setFilterSaison] = useState(CURRENT_SAISON);
-  const [filterArcher, setFilterArcher] = useState("Tous");
+  const [filterArcher, setFilterArcher] = useState(initial?.archer ?? "Tous");
   const [filterType,   setFilterType]   = useState("Tous");
   const [filterDist,   setFilterDist]   = useState("Toutes");
-  const [avecComment,  setAvecComment]  = useState(false);
+  const [vue,          setVue]          = useState(initial?.filtre ?? "toutes");
   const [recherche,    setRecherche]    = useState("");
-  const [ouverte,      setOuverte]      = useState(null); // id de la ligne (jour + archer) ouverte en détail
+  const [ouverte,      setOuverte]      = useState(initial?.ouvrir ?? null); // id de la ligne (jour + archer) ouverte en détail
 
   const saisons = useMemo(() => {
     const set = new Set(seances.filter(s => s.date).map(s => getSaison(s.date)));
+    set.add(CURRENT_SAISON);
     return [...set].sort((a, b) => b.localeCompare(a));
   }, [seances]);
 
@@ -83,9 +48,10 @@ export default function CoachJournal() {
   );
 
   const archerOptions = useMemo(() => {
-    const names = [...new Set(saisonSeances.map(s => s.archer).filter(Boolean))].sort();
-    return ["Tous", ...names];
-  }, [saisonSeances]);
+    const names = new Set(saisonSeances.map(s => s.archer).filter(Boolean));
+    if (filterArcher !== "Tous") names.add(filterArcher);
+    return ["Tous", ...[...names].sort()];
+  }, [saisonSeances, filterArcher]);
 
   const filtered = useMemo(() =>
     saisonSeances.filter(s => {
@@ -100,11 +66,12 @@ export default function CoachJournal() {
   const lignes = useMemo(() => {
     const cherche = sansAccents(recherche.trim());
     return regrouperParJour(filtered).filter((l) => {
-      if (avecComment && !l.commentaire) return false;
+      if (vue === "commentees" && !l.commentaire) return false;
+      if (vue === "aCommenter" && !aCommenter(l, user?.id)) return false;
       if (cherche && !sansAccents(`${l.commentaire}\n${l.retourCoach}`).includes(cherche)) return false;
       return true;
     });
-  }, [filtered, avecComment, recherche]);
+  }, [filtered, vue, recherche, user?.id]);
   const nbJoursSaison = useMemo(() => regrouperParJour(saisonSeances).length, [saisonSeances]);
 
   const groupedByMonth = useMemo(() => {
@@ -128,10 +95,10 @@ export default function CoachJournal() {
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
-  const COL_HEADS  = ["Date", "Archer", "Type", "Dist.", "Paille", "Blason", "Compté", "Total", "Score", "Moy.", "Score moy.", "Commentaire"];
-  const NC         = 12;
-  const RIGHT_COLS = [4, 5, 6, 7, 8, 9, 10];
-  const WRAP_COLS  = [0, 11];
+  const COL_HEADS  = ["Date", "Archer", "Type", "Dist.", "Paille", "Blason", "Compté", "Total", "Moy.", "Score moy.", "Commentaire"];
+  const NC         = 11;
+  const RIGHT_COLS = [4, 5, 6, 7, 8, 9];
+  const WRAP_COLS  = [0, 10];
 
   const exportTitle = filterArcher !== "Tous"
     ? `Journal — ${filterArcher} — Saison ${libelleSaison(filterSaison)}`
@@ -140,7 +107,7 @@ export default function CoachJournal() {
   const rowCells = (l) => [
     [l.date, l.lieu].filter(Boolean).join("\n"), l.archer || "", l.type || "", l.distance || "",
     l.paille, l.blason, l.compte, l.paille + l.blason + l.compte,
-    fmtScore(l.tir), fmtMoyenne(l.tir), fmtRamene(l.tir),
+    fmtMoyenne(l.tir), fmtRamene(l.tir),
     [l.commentaire, l.retourCoach && `Coach – ${l.retourCoach}`].filter(Boolean).join("\n"),
   ];
 
@@ -152,7 +119,7 @@ export default function CoachJournal() {
     const st = statsTir(docs);
     return [
       `Total — ${fmtYM(month)}`, "", "", "",
-      tp, tb, somme(docs, getCompte), tt, fmtScore(st), fmtMoyenne(st), fmtRamene(st), "",
+      tp, tb, somme(docs, getCompte), tt, fmtMoyenne(st), fmtRamene(st), "",
     ];
   };
 
@@ -192,7 +159,7 @@ export default function CoachJournal() {
     ws["!merges"] = merges;
     ws["!cols"]   = [
       { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 7 },
-      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 7 }, { wch: 11 }, { wch: 44 },
+      { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 8  }, { wch: 7 }, { wch: 11 }, { wch: 44 },
     ];
 
     const ST = {
@@ -262,7 +229,7 @@ export default function CoachJournal() {
     const pdf   = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pw    = pdf.internal.pageSize.width;
     const ph    = pdf.internal.pageSize.height;
-    const COL_W = [26, 26, 20, 10, 12, 12, 12, 12, 12, 11, 17, 0];
+    const COL_W = [26, 26, 20, 10, 12, 12, 12, 12, 11, 17, 0];
 
     const colStyles = COL_W.reduce((acc, w, i) => {
       acc[i] = w > 0 ? { cellWidth: w } : {};
@@ -336,62 +303,51 @@ export default function CoachJournal() {
     pdf.save(`journal-coach-saison-${libelleSaison(filterSaison)}.pdf`);
   };
 
-  if (loading) return <div style={s.info}>Chargement…</div>;
-  if (error)   return <div style={s.errMsg}>{error}</div>;
+  if (loading) return <div style={ui.info}>Chargement…</div>;
+  if (error)   return <div style={ui.erreur}>{error}</div>;
 
-  // Cherchée dans toutes les séances de la saison (pas seulement les filtrées),
-  // pour que le détail reste ouvert même si un filtre change entre-temps.
-  const ligneOuverte = ouverte && regrouperParJour(saisonSeances).find((l) => l.id === ouverte);
+  // Cherchée dans toutes les séances (pas seulement celles de la saison ou des
+  // filtres), pour que le détail reste ouvert même si un filtre change entre-temps.
+  const ligneOuverte = ouverte && regrouperParJour(seances.filter((s) => ouverte.startsWith(`${s.date}|`) || ouverte === `comp|${s.id}`))
+    .find((l) => l.id === ouverte);
   if (ligneOuverte) {
+    // Enchaîner les retours : la séance suivante qui attend un retour, s'il y en a une.
+    const debut = debutACommenter();
+    const suivante = regrouperParJour(seances.filter((s) => s.date >= debut))
+      .filter((l) => l.id !== ligneOuverte.id && aCommenter(l, user?.id))
+      .sort((a, b) => b.date.localeCompare(a.date) || (a.archer ?? "").localeCompare(b.archer ?? ""))[0];
     return (
       <DetailJour
+        key={ligneOuverte.id}
         ligne={ligneOuverte}
         onRetour={() => setOuverte(null)}
         onEnregistrerRetour={(texte) => updateRetourCoach(ligneOuverte.docs.map((d) => d.id), texte)}
+        onSuivante={suivante ? () => { setOuverte(suivante.id); window.scrollTo(0, 0); } : null}
       />
     );
   }
 
   return (
-    <div style={s.page}>
-
-      {/* ── Sélecteur de saison ── */}
-      <div style={s.saisonBar}>
-        <CalendarIcon />
-        <span style={s.saisonLabel}>Saison</span>
-        <select
-          value={filterSaison}
-          onChange={e => { setFilterSaison(e.target.value); setFilterArcher("Tous"); }}
-          style={s.saisonSelect}
-        >
-          {saisons.map(sn => <option key={sn} value={sn}>{libelleSaison(sn)}</option>)}
-        </select>
-      </div>
+    <div style={ui.pageLarge}>
 
       {/* ── Filtres + Export ── */}
-      <div style={s.filterBar}>
-        <div style={s.filterGroup}>
+      <div style={ui.barre}>
+        <div style={ui.filtres}>
+          <FilterSelect label="Saison"   value={filterSaison} options={saisons} libelle={libelleSaison}
+            onChange={(v) => { setFilterSaison(v); setFilterArcher("Tous"); }} />
           <FilterSelect label="Archer"   value={filterArcher} options={archerOptions} onChange={setFilterArcher} />
           <FilterSelect label="Type"     value={filterType}   options={TYPES}         onChange={setFilterType} />
           <FilterSelect label="Distance" value={filterDist}   options={DISTANCES}     onChange={setFilterDist} />
-          <label style={s.checkLabel}>
-            <input type="checkbox" checked={avecComment} onChange={(e) => setAvecComment(e.target.checked)} style={{ accentColor: PRIMARY }} />
-            Avec commentaire
-          </label>
-          <input
-            type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher dans les commentaires…" style={s.searchInput}
-          />
         </div>
         <div style={{ display: "flex", gap: "6px" }}>
           <button
-            style={{ ...s.exportBtn, ...(filtered.length === 0 ? s.off : {}) }}
+            style={{ ...ui.boutonSecondaire, ...(filtered.length === 0 ? s.off : {}) }}
             onClick={handleExportExcel}
             disabled={filtered.length === 0}
             title="Exporter en Excel (.xlsx)"
           >↓ Excel</button>
           <button
-            style={{ ...s.exportBtn, ...(filtered.length === 0 ? s.off : {}) }}
+            style={{ ...ui.boutonSecondaire, ...(filtered.length === 0 ? s.off : {}) }}
             onClick={handleExportPDF}
             disabled={filtered.length === 0}
             title="Exporter en PDF"
@@ -399,28 +355,49 @@ export default function CoachJournal() {
         </div>
       </div>
 
+      <div style={ui.filtres}>
+        <div style={ui.bascule} role="group" aria-label="Séances affichées">
+          {VUES.map((v) => (
+            <button key={v.id} type="button" aria-pressed={vue === v.id}
+              style={{ ...ui.basculeBtn, ...(vue === v.id ? ui.basculeBtnActif : {}) }}
+              onClick={() => setVue(v.id)}
+            >{v.label}</button>
+          ))}
+        </div>
+        <input
+          type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher dans les commentaires…" style={s.searchInput}
+        />
+      </div>
+      {vue === "aCommenter" && (
+        <p style={ui.sousTitre}>
+          Séances des {JOURS_A_COMMENTER} derniers jours sans retour du coach (les vôtres n'y sont pas).
+        </p>
+      )}
+
       {/* ── Tableau ── */}
-      <div style={s.tableWrap}>
-        <table style={s.table}>
+      <div style={ui.tableauCadre}>
+        <table style={ui.tableau}>
           <thead>
             <tr>
-              <th style={s.th}>Date</th>
-              <th style={s.th}>Archer</th>
-              <th style={s.th}>Type</th>
-              <th style={s.th}>Dist.</th>
-              <th style={s.thR}>Paille</th>
-              <th style={s.thR}>Blason</th>
-              <th style={s.thR}>Compté</th>
-              <th style={s.thR}>Total</th>
-              <th style={s.thR}>Score</th>
-              <th style={s.thR}>Moy.</th>
-              <th style={s.thR}>Score moy.</th>
-              <th style={s.th}>Commentaire</th>
+              <th style={ui.th}>Date</th>
+              <th style={ui.th}>Archer</th>
+              <th style={ui.th}>Type</th>
+              <th style={ui.th}>Dist.</th>
+              <th style={ui.thNum}>Paille</th>
+              <th style={ui.thNum}>Blason</th>
+              <th style={ui.thNum}>Compté</th>
+              <th style={ui.thNum}>Total</th>
+              <th style={ui.thNum}>Moy.</th>
+              <th style={ui.thNum}>Score moy.</th>
+              <th style={ui.th}>Commentaire</th>
             </tr>
           </thead>
           <tbody>
             {groupedByMonth.length === 0 ? (
-              <tr><td colSpan={NC} style={s.empty}>Aucune séance trouvée.</td></tr>
+              <tr><td colSpan={NC} style={s.empty}>
+                {vue === "aCommenter" ? "Rien à commenter : toutes les séances récentes ont un retour." : "Aucune séance trouvée."}
+              </td></tr>
             ) : groupedByMonth.map(({ month, rows }) => {
               const subP   = somme(rows, (l) => l.paille);
               const subB   = somme(rows, (l) => l.blason);
@@ -434,29 +411,27 @@ export default function CoachJournal() {
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--surface-raised)"}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = ""}
                     >
-                      <td style={s.td}>
+                      <td style={ui.td}>
                         {fmtDateCourte(ligne.date)}
                         {ligne.lieu && <div style={s.lieu}>{ligne.lieu}</div>}
                       </td>
-                      <td style={{ ...s.td, fontWeight: "700" }}>{ligne.archer || "—"}</td>
-                      <td style={s.td}>
-                        <span style={ligne.type === "Compétition" ? s.typeComp : s.typeEntr}>
+                      <td style={{ ...ui.td, fontWeight: "600", color: "var(--text)" }}>{ligne.archer || "—"}</td>
+                      <td style={ui.td}>
+                        <span style={s.type}>
+                          <span style={ui.point(ligne.type === "Compétition" ? BLUE : PRIMARY)} />
                           {ligne.type || "—"}
                         </span>
                       </td>
-                      <td style={s.td}>
-                        {ligne.distance ? <span style={s.distBadge}>{ligne.distance}</span> : "—"}
-                      </td>
-                      <td style={s.tdR}>{ligne.paille > 0 ? ligne.paille : "—"}</td>
-                      <td style={s.tdR}>{ligne.blason > 0 ? ligne.blason : "—"}</td>
-                      <td style={s.tdR}>{ligne.compte > 0 ? ligne.compte : "—"}</td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: "var(--text)" }}>{ligne.paille + ligne.blason + ligne.compte || "—"}</td>
-                      <td style={s.tdR}>{fmtScore(ligne.tir) || "—"}</td>
-                      <td style={s.tdR}>{fmtMoyenne(ligne.tir) || "—"}</td>
-                      <td style={{ ...s.tdR, fontWeight: "700", color: ligne.tir.ramene != null ? PRIMARY : "var(--text-dim)" }}>
+                      <td style={ui.td}>{ligne.distance || "—"}</td>
+                      <td style={ui.tdNum}>{ligne.paille > 0 ? ligne.paille : "—"}</td>
+                      <td style={ui.tdNum}>{ligne.blason > 0 ? ligne.blason : "—"}</td>
+                      <td style={ui.tdNum}>{ligne.compte > 0 ? ligne.compte : "—"}</td>
+                      <td style={{ ...ui.tdNum, fontWeight: "700", color: "var(--text)" }}>{ligne.paille + ligne.blason + ligne.compte || "—"}</td>
+                      <td style={ui.tdNum}>{fmtMoyenne(ligne.tir) || "—"}</td>
+                      <td style={{ ...ui.tdNum, fontWeight: "700", color: ligne.tir.ramene != null ? (ligne.type === "Compétition" ? BLUE : PRIMARY) : "var(--text-dim)" }}>
                         {fmtRamene(ligne.tir) || "—"}
                       </td>
-                      <td style={{ ...s.td, color: "var(--text-dim)", minWidth: "160px", maxWidth: "420px", whiteSpace: "pre-line", wordBreak: "break-word", lineHeight: "1.4" }}>
+                      <td style={s.tdComment}>
                         {ligne.commentaire || (ligne.retourCoach ? "" : "—")}
                         {ligne.retourCoach && (
                           <div style={s.retourCoach}>Coach – {ligne.retourCoach}</div>
@@ -466,17 +441,14 @@ export default function CoachJournal() {
                   ))}
                   <tr key={`sub-${month}`} style={s.trSub}>
                     <td style={s.tdSub}>{fmtYM(month)}</td>
-                    <td style={s.tdSub}>
-                      {rows.length} séance{rows.length > 1 ? "s" : ""}
-                    </td>
+                    <td style={s.tdSub}>{rows.length} séance{rows.length > 1 ? "s" : ""}</td>
                     <td style={s.tdSub} /><td style={s.tdSub} />
-                    <td style={s.tdSub}>{subP > 0 ? subP : "—"}</td>
-                    <td style={s.tdSub}>{subB > 0 ? subB : "—"}</td>
-                    <td style={s.tdSub}>{subC > 0 ? subC : "—"}</td>
-                    <td style={s.tdSub}>{subTot > 0 ? subTot : "—"}</td>
-                    <td style={s.tdSub}>{fmtScore(subTir) || "—"}</td>
-                    <td style={s.tdSub}>{fmtMoyenne(subTir) || "—"}</td>
-                    <td style={s.tdSub}>{fmtRamene(subTir) || "—"}</td>
+                    <td style={s.tdSubNum}>{subP > 0 ? subP : "—"}</td>
+                    <td style={s.tdSubNum}>{subB > 0 ? subB : "—"}</td>
+                    <td style={s.tdSubNum}>{subC > 0 ? subC : "—"}</td>
+                    <td style={s.tdSubNum}>{subTot > 0 ? subTot : "—"}</td>
+                    <td style={s.tdSubNum}>{fmtMoyenne(subTir) || "—"}</td>
+                    <td style={s.tdSubNum}>{fmtRamene(subTir) || "—"}</td>
                     <td style={s.tdSub} />
                   </tr>
                 </Fragment>
@@ -497,107 +469,29 @@ export default function CoachJournal() {
   );
 }
 
-// ── Sous-composants ───────────────────────────────────────────────────────────
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none"
-      stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8"  y1="2" x2="8"  y2="6" />
-      <line x1="3"  y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = {
-  page:   { display: "flex", flexDirection: "column", gap: "20px" },
-  info:   { color: "var(--text-muted)", fontSize: "14px" },
-  errMsg: {
-    color: PRIMARY, fontSize: "13px", padding: "10px 14px",
-    backgroundColor: "var(--pink-soft)", borderRadius: "8px", border: `1px solid ${PRIMARY}`,
-  },
-
-  saisonBar: {
-    backgroundColor: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px",
-    padding: "13px 18px",
-    display: "flex", alignItems: "center", gap: "10px",
-    boxShadow: "var(--shadow-card)",
-    alignSelf: "flex-start",
-  },
-  saisonLabel: {
-    fontSize: "13px", fontWeight: "700", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.08em",
-  },
-  saisonSelect: {
-    backgroundColor: "var(--input-bg)", color: "var(--text-2)",
-    border: "1.5px solid var(--border-2)", borderRadius: "7px",
-    padding: "7px 12px", fontSize: "14px", fontWeight: "600",
-    outline: "none", fontFamily: "inherit", cursor: "pointer",
-  },
-
-  filterBar:   { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" },
-  filterGroup: { display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" },
-  exportBtn: {
-    backgroundColor: "var(--border)", color: "var(--text)", border: "none",
-    borderRadius: "7px", padding: "8px 14px", fontSize: "13px",
-    fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
-  },
   off: { opacity: 0.4, cursor: "not-allowed" },
 
-  tableWrap: {
-    backgroundColor: "var(--surface)", borderRadius: "12px",
-    boxShadow: "var(--shadow-card)", overflowX: "auto",
-  },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
-  th: {
-    padding: "11px 12px", textAlign: "center",
-    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
-    textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
-    backgroundColor: "var(--surface-raised)",
-  },
-  thR: {
-    padding: "11px 12px", textAlign: "center",
-    fontSize: "11px", fontWeight: "700", color: "var(--text-dim)",
-    textTransform: "uppercase", letterSpacing: "0.07em",
-    borderBottom: "1px solid var(--border)", whiteSpace: "nowrap",
-    backgroundColor: "var(--surface-raised)",
-  },
-  tr:  { borderBottom: "1px solid var(--border)", transition: "background-color 0.1s", cursor: "pointer" },
-  retourCoach: { marginTop: "4px", color: PRIMARY, fontWeight: "600" },
-  checkLabel: {
-    display: "flex", alignItems: "center", gap: "6px", cursor: "pointer",
-    fontSize: "12px", fontWeight: "600", color: "var(--text-muted)",
-    textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
-  },
   searchInput: {
     padding: "8px 12px", border: "1.5px solid var(--border-2)", borderRadius: "8px",
-    fontSize: "13px", color: "var(--text-2)", outline: "none", minWidth: "220px",
+    fontSize: "13px", color: "var(--text-2)", outline: "none", minWidth: "240px",
     fontFamily: "inherit", backgroundColor: "var(--input-bg)",
   },
-  td:  { padding: "10px 12px", textAlign: "center", color: "var(--text-2)", whiteSpace: "nowrap" },
-  tdR: { padding: "10px 12px", textAlign: "center", color: "var(--text-3)", whiteSpace: "nowrap", fontFamily: "var(--mono)", fontVariantNumeric: "tabular-nums" },
 
-  typeEntr: {
-    backgroundColor: "var(--pink-soft)", color: PRIMARY,
-    borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "600",
+  tr:   { transition: "background-color 0.1s", cursor: "pointer" },
+  type: { display: "inline-flex", alignItems: "center", gap: "6px" },
+  lieu: { fontSize: "12px", color: "var(--text-dim)", marginTop: "2px" },
+  tdComment: {
+    ...ui.td, color: "var(--text-muted)", minWidth: "180px", maxWidth: "420px",
+    whiteSpace: "pre-line", wordBreak: "break-word", lineHeight: "1.4",
   },
-  typeComp: {
-    backgroundColor: "var(--blue-soft)", color: BLUE,
-    borderRadius: "5px", padding: "2px 8px", fontSize: "11px", fontWeight: "600",
-  },
-  lieu: { fontSize: "11px", fontStyle: "italic", color: "var(--text-dim)", marginTop: "2px" },
-  distBadge: {
-    backgroundColor: "var(--border)", borderRadius: "5px",
-    padding: "2px 7px", fontSize: "11px", fontWeight: "600", color: "var(--text-3)",
-  },
+  retourCoach: { marginTop: "4px", color: PRIMARY, fontWeight: "600" },
 
-  trSub: { backgroundColor: "var(--surface-raised)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" },
-  tdSub: { padding: "9px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", fontStyle: "italic" },
+  trSub:    { backgroundColor: "var(--surface-raised)" },
+  tdSub:    { ...ui.td, color: "var(--text-muted)", fontSize: "12px", fontWeight: "600" },
+  tdSubNum: { ...ui.tdNum, color: "var(--text-muted)", fontSize: "12px", fontWeight: "600" },
 
   empty: { padding: "40px", textAlign: "center", color: "var(--text-dim)", fontSize: "14px" },
   count: { fontSize: "12px", color: "var(--text-dim)", textAlign: "right" },

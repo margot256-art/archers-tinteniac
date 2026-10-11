@@ -36,11 +36,10 @@ const COACH_TABS = [
 ];
 
 // Section réservée aux coachs : les comptes de l'appli et le droit coach.
-const ARCHERS_TABS = [
-  { id: "liste-archers", label: "Liste des archers" },
-];
+// Une seule page, donc pas de barre d'onglets.
+const ARCHERS_TABS = [];
 
-function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil, onOuvrirSeance, seanceAOuvrir } = {}) {
+function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil, onOuvrirSeance, seanceAOuvrir, onOuvrirJournal, journalCoachInit } = {}) {
   switch (id) {
     case "accueil":          return <Accueil onReprendre={onAllerNewSession} onNouvelleSeance={onAllerNewSession} onSaisieManuelle={onAllerSaisieManuelle} onOuvrirSeance={onOuvrirSeance} />;
     case "new-session":      return <SeanceTab onQuitter={onAllerAccueil} />;
@@ -48,8 +47,8 @@ function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccuei
     case "journal":          return <Journal seanceInitiale={seanceAOuvrir} />;
     case "progression":      return <Progression />;
     case "records":          return <MesRecords />;
-    case "dashboard":        return <Dashboard />;
-    case "coach-journal":    return <CoachJournal />;
+    case "dashboard":        return <Dashboard onOuvrirJournal={onOuvrirJournal} />;
+    case "coach-journal":    return <CoachJournal key={JSON.stringify(journalCoachInit)} initial={journalCoachInit} />;
     case "progression-club": return <ProgressionClub />;
     case "objectives":       return <Objectifs />;
     case "liste-archers":    return <ListeArchers />;
@@ -74,6 +73,9 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
   const online = useOnlineStatus();
   // Séance à ouvrir directement dans le Journal (depuis un retour du coach à l'accueil).
   const [seanceAOuvrir, setSeanceAOuvrir] = useState(null);
+  // Journal coach ouvert depuis le tableau de bord : filtré sur un archer, sur les
+  // séances à commenter, ou directement sur une séance.
+  const [journalCoachInit, setJournalCoachInit] = useState(null);
 
   // Retours du coach non lus : pastille sur l'onglet Journal.
   const { seances } = useSeances();
@@ -184,8 +186,8 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
               </a>
             </div>
 
-            {/* Ligne 3 — onglets */}
-            <div role="tablist" aria-label="Onglets" style={{
+            {/* Ligne 3 — onglets (aucun pour Utilisateurs : une seule page) */}
+            {subTabs.length > 0 && <div role="tablist" aria-label="Onglets" style={{
               display: "flex", alignItems: "stretch", backgroundColor: "var(--surface-sub)",
               overflowX: "auto", scrollbarWidth: "none", padding: "0 12px",
             }}>
@@ -193,11 +195,11 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
                 <TabBtn
                   key={tab.id} label={tab.label}
                   active={activeTab === tab.id}
-                  onClick={() => { setSeanceAOuvrir(null); setActiveTab(tab.id); }}
+                  onClick={() => { setSeanceAOuvrir(null); setJournalCoachInit(null); setActiveTab(tab.id); }}
                   badge={tab.id === "liste-archers" ? pendingResets : tab.id === "journal" ? nbRetoursNonLus : 0}
                 />
               ))}
-            </div>
+            </div>}
           </>
         )}
       </header>
@@ -214,6 +216,8 @@ export default function Layout({ user, isCoach, onLogout, changePassword, theme,
             onAllerAccueil:        () => setActiveTab("accueil"),
             onOuvrirSeance:        (cle) => { setSeanceAOuvrir(cle); setActiveTab("journal"); },
             seanceAOuvrir,
+            onOuvrirJournal:       (init) => { setJournalCoachInit(init); setActiveTab("coach-journal"); window.scrollTo(0, 0); },
+            journalCoachInit,
           })}
         </Suspense>
       </main>

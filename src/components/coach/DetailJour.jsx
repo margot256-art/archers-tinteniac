@@ -12,7 +12,7 @@ const nomExercice = (s) => PROTOCOLE_PAR_ID[protocoleDe(s)]?.nom ?? s.protocole 
 // Détail d'une journée d'un archer dans le Journal coach : chaque exercice
 // (feuille de score et blason pour le Tir compté), les commentaires de
 // l'archer, et le retour du coach.
-export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
+export default function DetailJour({ ligne, onRetour, onEnregistrerRetour, onSuivante }) {
   const commentairesSeance = [...new Set(ligne.docs.map(commentaireSeanceDe).filter(Boolean))];
   const retourInitial = ligne.docs.find((d) => d.retourCoach)?.retourCoach ?? "";
 
@@ -37,6 +37,11 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour }) {
       {ligne.docs.map((d) => <CarteExercice key={d.id} doc={d} />)}
 
       <RetourCoach key={ligne.id} initial={retourInitial} onEnregistrer={onEnregistrerRetour} />
+
+      {/* Enchaîner les retours sans repasser par la liste. */}
+      {onSuivante && (
+        <button type="button" style={s.suivanteBtn} onClick={onSuivante}>Séance suivante à commenter →</button>
+      )}
     </div>
   );
 }
@@ -231,7 +236,11 @@ function RetourCoach({ initial, onEnregistrer }) {
 }
 
 const s = {
-  page: { display: "flex", flexDirection: "column", gap: "14px", maxWidth: "860px" },
+  page: { display: "flex", flexDirection: "column", gap: "14px", width: "100%", maxWidth: "820px", margin: "0 auto" },
+  suivanteBtn: {
+    alignSelf: "flex-end", backgroundColor: "transparent", border: "1px solid var(--border-3)", borderRadius: "8px",
+    color: PRIMARY, padding: "8px 14px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit",
+  },
   retourBtn: {
     alignSelf: "flex-start", background: "none", border: "none",
     color: "var(--text-dim)", fontSize: "13px", cursor: "pointer", fontFamily: "inherit", padding: "4px 0",
@@ -245,10 +254,7 @@ const s = {
     boxShadow: "var(--shadow-card)", padding: "16px 18px",
     display: "flex", flexDirection: "column", gap: "8px",
   },
-  carteLabel: {
-    fontSize: "11px", fontWeight: "700", color: "var(--text-muted)", margin: 0,
-    textTransform: "uppercase", letterSpacing: "0.07em",
-  },
+  carteLabel: { fontSize: "13px", fontWeight: "600", color: "var(--text-muted)", margin: 0 },
   carteHead: { display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "4px 12px" },
   carteNom: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
   carteResultat: { fontFamily: "var(--display)", fontSize: "18px", fontWeight: "600", color: PRIMARY },

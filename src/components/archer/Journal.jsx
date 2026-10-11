@@ -391,7 +391,7 @@ export default function Journal({ seanceInitiale = null }) {
                         <span style={s.cleUnite}>{score.unite}</span>
                       </>
                     )}
-                    <span style={score ? s.cleFleches : { ...s.cleValeur, color: "var(--text)" }}>{c.total}</span>
+                    <span style={score ? s.cleFleches : { ...s.cleFleches, marginTop: 0 }}>{c.total}</span>
                     <span style={s.cleUnite}>flèches</span>
                   </span>
                 </button>

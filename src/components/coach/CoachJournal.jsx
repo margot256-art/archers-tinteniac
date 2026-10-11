@@ -14,12 +14,12 @@ const sansAccents = (txt) => txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowe
 
 const DISTANCES = ["Toutes", "5m", "18m", "20m", "30m", "40m", "50m", "60m", "70m"];
 const TYPES     = ["Tous", "Entraînement", "Compétition"];
-// Vues du journal : toutes les séances, celles que l'archer a commentées, celles
-// qui attendent un retour du coach.
+// Vues du journal : toutes les séances, celles que l'archer a commentées, et parmi
+// elles les récentes qui n'ont pas encore de réponse du coach.
 const VUES = [
   { id: "toutes",     label: "Toutes" },
   { id: "commentees", label: "Commentées par l'archer" },
-  { id: "aCommenter", label: "À commenter" },
+  { id: "aCommenter", label: "Sans réponse" },
 ];
 
 // ── Composant principal ───────────────────────────────────────────────────────
@@ -311,7 +311,7 @@ export default function CoachJournal({ initial }) {
   const ligneOuverte = ouverte && regrouperParJour(seances.filter((s) => ouverte.startsWith(`${s.date}|`) || ouverte === `comp|${s.id}`))
     .find((l) => l.id === ouverte);
   if (ligneOuverte) {
-    // Enchaîner les retours : la séance suivante qui attend un retour, s'il y en a une.
+    // Enchaîner les réponses : le commentaire suivant sans réponse, s'il y en a un.
     const debut = debutACommenter();
     const suivante = regrouperParJour(seances.filter((s) => s.date >= debut))
       .filter((l) => l.id !== ligneOuverte.id && aCommenter(l, user?.id))
@@ -371,7 +371,7 @@ export default function CoachJournal({ initial }) {
       </div>
       {vue === "aCommenter" && (
         <p style={ui.sousTitre}>
-          Séances des {JOURS_A_COMMENTER} derniers jours sans retour du coach (les vôtres n'y sont pas).
+          Commentaires des archers des {JOURS_A_COMMENTER} derniers jours auxquels vous n'avez pas encore répondu (les vôtres n'y sont pas).
         </p>
       )}
 
@@ -396,7 +396,7 @@ export default function CoachJournal({ initial }) {
           <tbody>
             {groupedByMonth.length === 0 ? (
               <tr><td colSpan={NC} style={s.empty}>
-                {vue === "aCommenter" ? "Rien à commenter : toutes les séances récentes ont un retour." : "Aucune séance trouvée."}
+                {vue === "aCommenter" ? "Aucun commentaire d'archer sans réponse ces derniers jours." : "Aucune séance trouvée."}
               </td></tr>
             ) : groupedByMonth.map(({ month, rows }) => {
               const subP   = somme(rows, (l) => l.paille);

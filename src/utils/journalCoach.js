@@ -1,6 +1,6 @@
 // Lignes du Journal coach : une ligne par archer, par jour et par distance pour
 // l'entraînement (les exercices regroupés), une par enregistrement pour la
-// compétition. Partagé par le Journal et le Tableau de bord (séances à commenter).
+// compétition. Partagé par le Journal et le Tableau de bord (commentaires sans réponse).
 import { getPaille, getBlason, getCompte, buildMonthTotals, parOrdreDeTir, todayISO } from "./seances";
 import { PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "./exercices";
 
@@ -48,8 +48,10 @@ export function regrouperParJour(docs) {
   });
 }
 
-// Séances à commenter : les séances récentes des archers sans retour du coach.
-// Celles du coach connecté ne comptent pas (on ne se commente pas soi-même).
+// Commentaires sans réponse : les séances récentes où l'archer a écrit un
+// commentaire et n'a pas encore de retour du coach. Rien n'oblige à répondre à
+// chaque entraînement : seuls les archers qui ont pris la parole sont signalés.
+// Celles du coach connecté ne comptent pas (on ne se répond pas à soi-même).
 export const JOURS_A_COMMENTER = 14;
 
 /** Première date (AAAA-MM-JJ) de la fenêtre des séances à commenter. */
@@ -60,7 +62,7 @@ export function debutACommenter() {
 }
 
 export function aCommenter(ligne, moiId, aujourdhui = todayISO()) {
-  if (ligne.retourCoach || !ligne.date) return false;
+  if (ligne.retourCoach || !ligne.date || !ligne.commentaire) return false;
   if (moiId && ligne.archerId === moiId) return false;
   const jours = (new Date(`${aujourdhui}T12:00:00`) - new Date(`${ligne.date}T12:00:00`)) / 86400000;
   return jours >= 0 && jours <= JOURS_A_COMMENTER;

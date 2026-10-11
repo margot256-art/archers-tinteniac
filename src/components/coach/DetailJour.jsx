@@ -40,7 +40,7 @@ export default function DetailJour({ ligne, onRetour, onEnregistrerRetour, onSui
 
       {/* Enchaîner les retours sans repasser par la liste. */}
       {onSuivante && (
-        <button type="button" style={s.suivanteBtn} onClick={onSuivante}>Séance suivante à commenter →</button>
+        <button type="button" style={s.suivanteBtn} onClick={onSuivante}>Commentaire suivant sans réponse →</button>
       )}
     </div>
   );

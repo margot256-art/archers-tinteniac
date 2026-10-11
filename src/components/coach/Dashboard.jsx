@@ -13,7 +13,7 @@ const ORANGE = "var(--warn)";
 
 // Un archer sans séance depuis plus de 2 mois est rangé dans « Inactifs ».
 const JOURS_INACTIF = 60;
-// Séances à commenter affichées sur le tableau de bord (la suite dans le Journal).
+// Commentaires sans réponse affichés sur le tableau de bord (la suite dans le Journal).
 const NB_A_COMMENTER = 6;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ function useObjectifs() {
 // ── composant principal ───────────────────────────────────────────────────────
 
 /** onOuvrirJournal({ archer?, filtre?, ouvrir? }) : ouvre le Journal coach filtré
- *  sur un archer, sur les séances à commenter, ou directement sur une séance. */
+ *  sur un archer, sur les commentaires sans réponse, ou directement sur une séance. */
 export default function Dashboard({ onOuvrirJournal }) {
   const { seances, loading, error } = useAllSeances();
   const { user } = useAuth();
@@ -82,7 +82,7 @@ export default function Dashboard({ onOuvrirJournal }) {
     return Object.values(c).map((a) => ({ name: a.name, n: a.seances.size })).sort((a, b) => b.n - a.n)[0] ?? null;
   }, [monthSeances]);
 
-  // ── Séances à commenter (les plus récentes d'abord) ──────────────────────
+  // ── Commentaires des archers sans réponse (les plus récents d'abord) ─────
   const recentes = useMemo(() => {
     const limite = new Date();
     limite.setDate(limite.getDate() - JOURS_A_COMMENTER);
@@ -156,11 +156,11 @@ export default function Dashboard({ onOuvrirJournal }) {
         />
       </div>
 
-      {/* ── À commenter ── */}
+      {/* ── Commentaires des archers sans réponse ── */}
       <Section
-        title="À commenter"
+        title="Commentaires des archers"
         sous={aCommenterListe.length > 0
-          ? `${aCommenterListe.length} séance${aCommenterListe.length > 1 ? "s" : ""} des ${JOURS_A_COMMENTER} derniers jours sans retour`
+          ? `${aCommenterListe.length} commentaire${aCommenterListe.length > 1 ? "s" : ""} des ${JOURS_A_COMMENTER} derniers jours sans réponse`
           : null}
         action={aCommenterListe.length > NB_A_COMMENTER && (
           <button type="button" style={ui.boutonSecondaire} onClick={() => onOuvrirJournal?.({ filtre: "aCommenter" })}>
@@ -169,7 +169,7 @@ export default function Dashboard({ onOuvrirJournal }) {
         )}
       >
         {aCommenterListe.length === 0 ? (
-          <div style={s.calme}>Rien en attente : toutes les séances des {JOURS_A_COMMENTER} derniers jours ont un retour.</div>
+          <div style={s.calme}>Aucun commentaire d'archer sans réponse ces {JOURS_A_COMMENTER} derniers jours.</div>
         ) : (
           <div style={s.liste}>
             {aCommenterListe.slice(0, NB_A_COMMENTER).map((l) => {
@@ -185,7 +185,7 @@ export default function Dashboard({ onOuvrirJournal }) {
                     </span>
                     {extrait && <span style={s.ligneExtrait}>« {extrait} »</span>}
                   </span>
-                  <span style={s.ligneAction}>Commenter →</span>
+                  <span style={s.ligneAction}>Répondre →</span>
                 </button>
               );
             })}

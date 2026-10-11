@@ -37,7 +37,7 @@ const COACH_TABS = [
 
 // Section réservée aux coachs : les comptes de l'appli et le droit coach.
 const ARCHERS_TABS = [
-  { id: "liste-archers", label: "Liste des archers" },
+  { id: "liste-archers", label: "Utilisateurs" },
 ];
 
 function renderTab(id, { onAllerNewSession, onAllerSaisieManuelle, onAllerAccueil, onOuvrirSeance, seanceAOuvrir } = {}) {

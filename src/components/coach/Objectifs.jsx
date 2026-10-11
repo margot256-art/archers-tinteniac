@@ -36,7 +36,9 @@ function useObjectifsManager() {
     return () => unsub();
   }, []);
 
-  const saveObjectif = async (archerId, archerName, saison, distances, volEntr) => {
+  // `distancesMasquees` : distances retirées de la carte par le coach (pour toutes les
+  // saisons), même si l'archer y a déjà tiré.
+  const saveObjectif = async (archerId, archerName, saison, distances, volEntr, distancesMasquees) => {
     const cleanDist = {};
     for (const [dist, val] of Object.entries(distances)) {
       const n = parseInt(val, 10);
@@ -50,6 +52,7 @@ function useObjectifsManager() {
       archer:   archerName,
       archerId,
       saisons,
+      distancesMasquees,
     }, { merge: true });
   };
 
@@ -60,26 +63,40 @@ function useObjectifsManager() {
 
 // Une ligne par distance : celles que l'archer tire (d'après ses séances) et celles
 // qui ont déjà un objectif ; les autres s'ajoutent avec « + Distance ».
-function ArcherCard({ archer, objectif, seances, saison, onSave }) {
+function ArcherCard({ archer, objectif, masqueesInit, seances, saison, onSave }) {
   const initiales = Object.fromEntries(DIST_LIST.map((d) => [d, String(objectif?.distances?.[d] ?? "")]));
   const [distances, setDistances] = useState(initiales);
   const [volEntr,  setVolEntr]  = useState(String(objectif?.volEntr ?? ""));
   const [ajoutees, setAjoutees] = useState([]);
+  const [masquees, setMasquees] = useState(masqueesInit);
   const [saving,   setSaving]   = useState(false);
   const [feedback, setFeedback] = useState(null);
 
   const tirees = useMemo(() => new Set(seances.map((s) => s.distance)), [seances]);
-  const affichees = DIST_LIST.filter((d) => tirees.has(d) || initiales[d] || ajoutees.includes(d));
+  const affichees = DIST_LIST.filter((d) => ajoutees.includes(d) || (!masquees.includes(d) && (tirees.has(d) || initiales[d])));
   const autres = DIST_LIST.filter((d) => !affichees.includes(d));
 
-  const modifie = DIST_LIST.some((d) => distances[d] !== initiales[d]) || volEntr !== String(objectif?.volEntr ?? "");
+  const modifie = DIST_LIST.some((d) => distances[d] !== initiales[d]) || volEntr !== String(objectif?.volEntr ?? "")
+    || [...masquees].sort().join() !== [...masqueesInit].sort().join();
+
+  // Retirer une distance de la carte : sa cible est effacée, et elle ne revient
+  // plus d'elle-même (on peut toujours la rajouter avec « + Distance »).
+  const retirer = (d) => {
+    setDistances((prev) => ({ ...prev, [d]: "" }));
+    setAjoutees((a) => a.filter((x) => x !== d));
+    setMasquees((m) => (m.includes(d) ? m : [...m, d]));
+  };
+  const ajouter = (d) => {
+    setAjoutees((a) => [...a, d]);
+    setMasquees((m) => m.filter((x) => x !== d));
+  };
   const hasDef = DIST_LIST.some((d) => distances[d]) || volEntr;
 
   const handleSave = async () => {
     setSaving(true);
     setFeedback(null);
     try {
-      await onSave(distances, volEntr);
+      await onSave(distances, volEntr, masquees);
       setFeedback("ok");
     } catch {
       setFeedback("err");
@@ -122,11 +139,13 @@ function ArcherCard({ archer, objectif, seances, saison, onSave }) {
                 <Niveau label="Entr." n={niveau(d, "Entraînement")} />
               </span>
             )}
+            <button type="button" style={s.retirer} onClick={() => retirer(d)}
+              title={`Retirer le ${d} de la carte`} aria-label={`Retirer le ${d} de la carte`}>✕</button>
           </div>
         ))}
         {autres.length > 0 && (
           <select
-            value="" onChange={(e) => e.target.value && setAjoutees((a) => [...a, e.target.value])}
+            value="" onChange={(e) => e.target.value && ajouter(e.target.value)}
             style={s.ajout} aria-label="Ajouter une distance"
           >
             <option value="">+ Distance</option>
@@ -223,11 +242,12 @@ export default function Objectifs() {
       key={a.name + saison}
       archer={a}
       objectif={getObjForSaison(rawDe(a), saison)}
+      masqueesInit={rawDe(a)?.distancesMasquees ?? []}
       seances={seances.filter((x) => x.archer === a.name || (a.id && x.archerId === a.id))}
       saison={saison}
-      onSave={(distances, volEntr) => {
+      onSave={(distances, volEntr, masquees) => {
         const safeId = a.id ?? a.name.trim().toLowerCase().replace(/\s+/g, "_");
-        return saveObjectif(safeId, a.name, saison, distances, volEntr);
+        return saveObjectif(safeId, a.name, saison, distances, volEntr, masquees);
       }}
     />
   );
@@ -290,6 +310,10 @@ const s = {
     fontFamily: "inherit", cursor: "pointer",
   },
 
+  retirer: {
+    marginLeft: "auto", backgroundColor: "transparent", border: "none", color: "var(--text-dim)",
+    fontSize: "13px", cursor: "pointer", fontFamily: "inherit", padding: "4px 6px",
+  },
   niveaux:      { display: "inline-flex", alignItems: "baseline", gap: "12px" },
   niveau:       { display: "inline-flex", alignItems: "baseline", gap: "4px" },
   niveauLabel:  { fontSize: "12px", color: "var(--text-dim)" },

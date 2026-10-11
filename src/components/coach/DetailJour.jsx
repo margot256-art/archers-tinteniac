@@ -226,7 +226,7 @@ const s = {
   },
   carteHead: { display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "4px 12px" },
   carteNom: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
-  carteResultat: { fontFamily: "var(--mono)", fontSize: "15px", fontWeight: "700", color: PRIMARY },
+  carteResultat: { fontFamily: "var(--display)", fontSize: "18px", fontWeight: "600", color: PRIMARY },
   carteDroite: { display: "inline-flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" },
   modifierBtn: {
     background: "none", border: "1px solid var(--border-3)", borderRadius: "7px", color: "var(--text-muted)",

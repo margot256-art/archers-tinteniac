@@ -4,7 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { lireSeanceEnCours, effacerSeanceEnCours } from "../../utils/seanceEnCours";
 import { effacerBrouillonsDeSeance } from "../../utils/brouillonExercice";
 import { PRIMARY as PINK, BLUE, getCompte, buildMonthTotals, fmtYM, getSaison, CURRENT_SAISON, todayISO, retourNonLu, fmtDateLongue, jourDate } from "../../utils/seances";
-import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, resultatAvecMoyenne, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
+import { PROTOCOLES_ACTIFS, PROTOCOLE_PAR_ID, protocoleDe, commentaireSeanceDe, commentaireExerciceDe } from "../../utils/exercices";
 import { CarteExercice } from "../coach/DetailJour";
 
 const estCompet = (type) => type === "Compétition";
@@ -345,45 +345,29 @@ export default function Journal({ seanceInitiale = null }) {
               const couleur = couleurType(sess.type);
               const c = sess.chiffres;
               const j = jourDate(sess.date);
+              // Chiffre clé à droite : le score s'il y a du tir compté, sinon les flèches.
+              const cle = c.score > 0 ? { valeur: c.score, unite: "pts" } : { valeur: c.total, unite: "flèches" };
+              const details = [
+                ...(c.score > 0 && c.moyenne != null ? [`moy. ${c.moyenne.toFixed(2)}`, `${c.total} flèches`] : []),
+                ...[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
+                  .filter(([, n]) => n > 0 && n < c.total).map(([l, n]) => `${l} ${n}`),
+              ];
               return (
                 <button key={sess.cle} style={s.carte} onClick={() => setOuverte(sess.cle)}>
-                  <span style={{ ...s.tuile, color: couleur, backgroundColor: fondType(sess.type) }}>
+                  <span style={s.tuile}>
                     <span style={s.tuileJour}>{j.semaine}</span>
                     <span style={s.tuileNum}>{j.num}</span>
                   </span>
 
                   <span style={s.carteCorps}>
                     <span style={s.carteTete}>
-                      <span style={s.carteTitre}>{sess.distance}{sess.lieu ? ` · ${sess.lieu}` : ""}</span>
+                      <span style={s.carteTitre}>{sess.lieu ? `${sess.lieu} · ${sess.distance}` : sess.distance}</span>
                       {estCompet(sess.type) && (
                         <span style={{ ...s.typeBadge, color: couleur, backgroundColor: fondType(sess.type) }}>Compétition</span>
                       )}
                     </span>
-
-                    <span style={s.exos}>
-                      {sess.docs.map((d) => {
-                        const res = resultatAvecMoyenne(d);
-                        return (
-                          <span key={d.id} style={s.exo}>
-                            {nomExercice(d)}
-                            {res && <strong style={{ ...s.exoRes, color: couleur }}>{res}</strong>}
-                          </span>
-                        );
-                      })}
-                    </span>
-
-                    <span style={s.stats}>
-                      {/* Déjà affiché par l'exercice (« 207 fl. ») quand il est seul : pas de doublon. */}
-                      {!(sess.docs.length === 1 && resultatAvecMoyenne(sess.docs[0])?.endsWith("fl.")) && (
-                        <span><strong style={s.statFort}>{c.total}</strong> flèches</span>
-                      )}
-                      {[["paille", c.paille], ["blason", c.blason], ["compté", c.compte]]
-                        .filter(([, n]) => n > 0 && n < c.total)
-                        .map(([l, n]) => <span key={l}>{l} {n}</span>)}
-                      {c.scoreMoy != null && sess.docs.length > 1 && (
-                        <span>score moy. <strong style={{ ...s.statFort, color: couleur }}>{c.scoreMoy}</strong></span>
-                      )}
-                    </span>
+                    <span style={s.exos}>{sess.docs.map(nomExercice).join(" · ")}</span>
+                    {details.length > 0 && <span style={s.stats}>{details.join(" · ")}</span>}
 
                     {sess.commentaireSeance && <span style={s.citation}>{sess.commentaireSeance}</span>}
                     {sess.retourCoach && (
@@ -396,7 +380,10 @@ export default function Journal({ seanceInitiale = null }) {
                     )}
                   </span>
 
-                  <span style={s.chevron} aria-hidden="true">›</span>
+                  <span style={s.cle}>
+                    <span style={{ ...s.cleValeur, color: couleur }}>{cle.valeur}</span>
+                    <span style={s.cleUnite}>{cle.unite}</span>
+                  </span>
                 </button>
               );
             })}
@@ -545,7 +532,7 @@ function CommentaireSeance({ initial, onEnregistrer }) {
 }
 
 const s = {
-  page: { display: "flex", flexDirection: "column", gap: "14px" },
+  page: { display: "flex", flexDirection: "column", gap: "14px", width: "100%", maxWidth: "780px", margin: "0 auto" },
 
   liste: { display: "flex", flexDirection: "column", gap: "10px" },
 
@@ -586,23 +573,20 @@ const s = {
     textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "inherit",
   },
   tuile: {
-    flex: "0 0 auto", width: "52px", borderRadius: "12px", padding: "7px 0 6px",
+    flex: "0 0 auto", width: "50px", borderRadius: "12px", padding: "7px 0 6px",
     display: "flex", flexDirection: "column", alignItems: "center", gap: "1px",
+    backgroundColor: "var(--surface-raised)", border: "1px solid var(--border)",
   },
-  tuileJour: { fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em" },
-  tuileNum: { fontFamily: "var(--display)", fontSize: "22px", fontWeight: "600", lineHeight: 1.05 },
-  carteCorps: { flex: "1 1 auto", minWidth: 0, display: "flex", flexDirection: "column", gap: "7px" },
-  carteTete: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" },
-  carteTitre: { fontSize: "14px", fontWeight: "700", color: "var(--text)" },
-  exos: { display: "flex", flexWrap: "wrap", gap: "6px" },
-  exo: {
-    display: "inline-flex", alignItems: "baseline", gap: "6px", fontSize: "12px", fontWeight: "600",
-    color: "var(--text-2)", backgroundColor: "var(--surface-raised)", border: "1px solid var(--border)",
-    borderRadius: "8px", padding: "4px 9px",
-  },
-  exoRes: { fontFamily: "var(--mono)", fontSize: "12px", fontWeight: "700" },
-  stats: { display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: "12px", color: "var(--text-muted)" },
-  statFort: { fontFamily: "var(--mono)", fontWeight: "700", color: "var(--text)" },
+  tuileJour: { fontSize: "10px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" },
+  tuileNum: { fontFamily: "var(--display)", fontSize: "21px", fontWeight: "600", lineHeight: 1.05, color: "var(--text)" },
+  carteCorps: { flex: "1 1 auto", minWidth: 0, display: "flex", flexDirection: "column", gap: "5px" },
+  carteTete: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
+  carteTitre: { fontSize: "15px", fontWeight: "700", color: "var(--text)" },
+  exos: { fontSize: "13px", fontWeight: "600", color: "var(--text-2)" },
+  stats: { fontSize: "12px", color: "var(--text-muted)" },
+  cle: { flex: "0 0 auto", alignSelf: "center", display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: "64px" },
+  cleValeur: { fontFamily: "var(--display)", fontSize: "26px", fontWeight: "600", lineHeight: 1 },
+  cleUnite: { fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", marginTop: "3px" },
   citation: {
     fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", lineHeight: 1.45,
     borderLeft: "2px solid var(--border-3)", paddingLeft: "9px",

@@ -515,7 +515,7 @@ export default function ProgressionClub() {
       });
       return { label: archer, data, borderColor: color, backgroundColor: color + "22", pointBackgroundColor: color, pointRadius: 5, pointHoverRadius: 7, tension: 0.3, spanGaps: true };
     });
-    return { g2Labels: saisons, g2Datasets: datasets };
+    return { g2Labels: saisons.map(fmtSaison), g2Datasets: datasets };
   }, [seances, g2Archer, g2Dist, g2Type]);
   const hasG2 = g2Datasets.some(d => d.data.some(v => v !== null));
 

@@ -193,7 +193,7 @@ function DetailTirCompte({ doc: d, compact = false }) {
   );
 }
 
-function RetourCoach({ initial, onEnregistrer }) {
+export function RetourCoach({ initial, onEnregistrer }) {
   const [texte, setTexte] = useState(initial);
   const [etat,  setEtat]  = useState(null); // null | "envoi" | "ok" | "erreur"
 

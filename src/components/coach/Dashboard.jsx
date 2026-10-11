@@ -3,8 +3,10 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAllSeances } from "../../hooks/useAllSeances";
 import { useAuth } from "../../hooks/useAuth";
-import { PRIMARY, BLUE, fmtDateCourte, fmtDateLongue, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume, avancementMois, getPaille, getBlason, getCompte } from "../../utils/seances";
-import { regrouperParJour, aCommenter, JOURS_A_COMMENTER } from "../../utils/journalCoach";
+import { PRIMARY, BLUE, fmtDateLongue, CURRENT_SAISON, cleSeance, nbSeances, couleurJaugeVolume, avancementMois, getPaille, getBlason, getCompte } from "../../utils/seances";
+import { regrouperParJour } from "../../utils/journalCoach";
+import { commentaireSeanceDe } from "../../utils/exercices";
+import { CarteExercice, RetourCoach } from "./DetailJour";
 import * as ui from "../archer/styleArcher";
 
 const GREEN  = "var(--ok)";   // vert : activité récente
@@ -13,8 +15,6 @@ const ORANGE = "var(--warn)";
 
 // Un archer sans séance depuis plus de 2 mois est rangé dans « Inactifs ».
 const JOURS_INACTIF = 60;
-// Commentaires sans réponse affichés sur le tableau de bord (la suite dans le Journal).
-const NB_A_COMMENTER = 6;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -57,12 +57,14 @@ function useObjectifs() {
 
 // ── composant principal ───────────────────────────────────────────────────────
 
-/** onOuvrirJournal({ archer?, filtre?, ouvrir? }) : ouvre le Journal coach filtré
- *  sur un archer, sur les commentaires sans réponse, ou directement sur une séance. */
+/** onOuvrirJournal({ archer?, ouvrir? }) : ouvre le Journal coach filtré sur un
+ *  archer, ou directement sur une séance. */
 export default function Dashboard({ onOuvrirJournal }) {
-  const { seances, loading, error } = useAllSeances();
+  const { seances, loading, error, updateRetourCoach } = useAllSeances();
   const { user } = useAuth();
   const objectifs = useObjectifs();
+  const [ouverte,      setOuverte]      = useState(null);  // archer dont la dernière séance est dépliée
+  const [voirInactifs, setVoirInactifs] = useState(false);
 
   const [monStr, sunStr] = useMemo(() => getWeekBounds(), []);
   const ym = useMemo(() => moisCourant(), []);
@@ -82,18 +84,24 @@ export default function Dashboard({ onOuvrirJournal }) {
     return Object.values(c).map((a) => ({ name: a.name, n: a.seances.size })).sort((a, b) => b.n - a.n)[0] ?? null;
   }, [monthSeances]);
 
-  // ── Commentaires des archers sans réponse (les plus récents d'abord) ─────
-  const recentes = useMemo(() => {
-    const limite = new Date();
-    limite.setDate(limite.getDate() - JOURS_A_COMMENTER);
-    return seances.filter((s) => s.date >= isoLocal(limite));
+  // ── Dernière séance de chaque archer (le dernier jour, le dernier exercice tiré) ──
+  // Quand l'archer enregistre une nouvelle séance, elle prend la place de l'ancienne.
+  const dernieres = useMemo(() => {
+    const parArcher = {};
+    for (const s of seances) {
+      if (!s.date || !s.archer) continue;
+      const der = parArcher[s.archer];
+      if (!der || s.date > der[0].date) parArcher[s.archer] = [s];
+      else if (s.date === der[0].date) der.push(s);
+    }
+    const res = {};
+    for (const [archer, docs] of Object.entries(parArcher)) {
+      const lignes = regrouperParJour(docs);
+      const instant = (l) => Math.max(...l.docs.map((d) => d.createdAt?.toMillis?.() ?? 0));
+      res[archer] = lignes.sort((a, b) => instant(b) - instant(a))[0];
+    }
+    return res;
   }, [seances]);
-  const aCommenterListe = useMemo(
-    () => regrouperParJour(recentes)
-      .filter((l) => aCommenter(l, user?.id))
-      .sort((a, b) => b.date.localeCompare(a.date) || (a.archer ?? "").localeCompare(b.archer ?? "")),
-    [recentes, user?.id]
-  );
 
   // ── tous les archers, triés par dernière séance décroissante ──────────────
   // Clé = s.archer (nom complet) — toujours défini, robuste même si archerId varie
@@ -156,55 +164,27 @@ export default function Dashboard({ onOuvrirJournal }) {
         />
       </div>
 
-      {/* ── Commentaires des archers sans réponse ── */}
-      <Section
-        title="Commentaires des archers"
-        sous={aCommenterListe.length > 0
-          ? `${aCommenterListe.length} commentaire${aCommenterListe.length > 1 ? "s" : ""} des ${JOURS_A_COMMENTER} derniers jours sans réponse`
-          : null}
-        action={aCommenterListe.length > NB_A_COMMENTER && (
-          <button type="button" style={ui.boutonSecondaire} onClick={() => onOuvrirJournal?.({ filtre: "aCommenter" })}>
-            Tout voir ({aCommenterListe.length})
-          </button>
-        )}
-      >
-        {aCommenterListe.length === 0 ? (
-          <div style={s.calme}>Aucun commentaire d'archer sans réponse ces {JOURS_A_COMMENTER} derniers jours.</div>
-        ) : (
-          <div style={s.liste}>
-            {aCommenterListe.slice(0, NB_A_COMMENTER).map((l) => {
-              const couleur = l.type === "Compétition" ? BLUE : PRIMARY;
-              const extrait = premiereLigne(l.commentaire);
-              return (
-                <button key={l.id} type="button" style={s.ligneBtn} onClick={() => onOuvrirJournal?.({ ouvrir: l.id, filtre: "aCommenter" })}>
-                  <span style={s.ligneTexte}>
-                    <span style={s.ligneNom}>{l.archer}</span>
-                    <span style={s.ligneMeta}>
-                      <span style={ui.point(couleur)} />
-                      {fmtDateLongue(l.date)} · {l.distance}
-                    </span>
-                    {extrait && <span style={s.ligneExtrait}>« {extrait} »</span>}
-                  </span>
-                  <span style={s.ligneAction}>Répondre →</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </Section>
-
-      {/* ── Dernière séance par archer ── */}
-      <Section title="Dernière séance par archer" sous="Touchez un nom pour ouvrir son journal">
+      {/* ── Dernière séance de chaque archer, à commenter si on le souhaite ── */}
+      <Section title="Dernière séance par archer" sous="Touchez une séance pour la voir et y répondre. La suivante prendra sa place.">
         {archerActivity.length === 0 ? (
           <div style={s.calme}>Aucune séance enregistrée.</div>
         ) : (
           <div style={s.liste}>
-            {actifs.map((a) => <LigneActivite key={a.name} a={a} onClick={() => ouvrirArcher(a.name)} />)}
+            {[...actifs, ...(voirInactifs ? inactifs : [])].map((a) => (
+              <DerniereSeance
+                key={a.name} a={a} ligne={dernieres[a.name]}
+                ouverte={ouverte === a.name}
+                onBasculer={() => setOuverte(ouverte === a.name ? null : a.name)}
+                estMoi={!!user?.id && a.id === user.id}
+                onEnregistrerRetour={(ligne, texte) => updateRetourCoach(ligne.docs.map((d) => d.id), texte)}
+                onDetail={(ligne) => onOuvrirJournal?.({ ouvrir: ligne.id })}
+                onJournal={() => ouvrirArcher(a.name)}
+              />
+            ))}
             {inactifs.length > 0 && (
-              <details style={s.inactifs}>
-                <summary style={s.inactifsTitre}>Inactifs depuis plus de 2 mois ({inactifs.length})</summary>
-                {inactifs.map((a) => <LigneActivite key={a.name} a={a} onClick={() => ouvrirArcher(a.name)} />)}
-              </details>
+              <button type="button" style={s.inactifsTitre} onClick={() => setVoirInactifs((v) => !v)}>
+                {voirInactifs ? "▾" : "▸"} Inactifs depuis plus de 2 mois ({inactifs.length})
+              </button>
             )}
           </div>
         )}
@@ -267,14 +247,53 @@ function Section({ title, sous, action, children }) {
   );
 }
 
-function LigneActivite({ a, onClick }) {
+// Une ligne par archer : sa dernière séance, repliée. Dépliée, on voit les
+// exercices et les commentaires de l'archer, et on peut écrire le retour du coach.
+function DerniereSeance({ a, ligne, ouverte, onBasculer, estMoi, onEnregistrerRetour, onDetail, onJournal }) {
   const col   = a.days < 7 ? GREEN : a.days <= 14 ? ORANGE : RED;
-  const label = a.days === 0 ? "Auj." : `${a.days} j.`;
+  const label = a.days === 0 ? "Auj." : a.days === 1 ? "Hier" : `${a.days} j.`;
+  if (!ligne) return null;
+  const couleur = ligne.type === "Compétition" ? BLUE : PRIMARY;
+  const fleches = ligne.paille + ligne.blason + ligne.compte;
+  const extrait = premiereLigne(ligne.commentaire);
+  const commentairesSeance = [...new Set(ligne.docs.map(commentaireSeanceDe).filter(Boolean))];
+
   return (
-    <button type="button" style={s.ligneBtn} onClick={onClick}>
-      <span style={s.ligneNom}>{a.name}</span>
-      <span style={{ ...s.lastRight, color: col }}>{label} · {fmtDateCourte(a.lastDate)}</span>
-    </button>
+    <div style={{ ...s.derniere, ...(ouverte ? s.derniereOuverte : {}) }}>
+      <button type="button" style={s.ligneBtn} onClick={onBasculer} aria-expanded={ouverte}>
+        <span style={s.ligneTexte}>
+          <span style={s.ligneNom}>
+            {a.name}
+            {!estMoi && ligne.retourCoach && <span style={s.repondu}>✓ Retour envoyé</span>}
+            {!estMoi && !ligne.retourCoach && ligne.commentaire && <span style={s.attente}>Commentaire de l'archer</span>}
+          </span>
+          <span style={s.ligneMeta}>
+            <span style={ui.point(couleur)} />
+            {fmtDateLongue(ligne.date)} · {ligne.distance}{fleches > 0 ? ` · ${fleches} fl.` : ""}
+          </span>
+          {!ouverte && extrait && <span style={s.ligneExtrait}>« {extrait} »</span>}
+        </span>
+        <span style={{ ...s.lastRight, color: col }}>{label}</span>
+      </button>
+
+      {ouverte && (
+        <div style={s.depli}>
+          {commentairesSeance.map((c, i) => <p key={i} style={s.commentaire}>« {c} »</p>)}
+          {ligne.docs.map((d) => <CarteExercice key={d.id} doc={d} compact />)}
+          {!estMoi && (
+            <RetourCoach
+              key={ligne.id}
+              initial={ligne.retourCoach}
+              onEnregistrer={(texte) => onEnregistrerRetour(ligne, texte)}
+            />
+          )}
+          <div style={s.liens}>
+            <button type="button" style={ui.boutonSecondaire} onClick={() => onDetail(ligne)}>Séance en détail →</button>
+            <button type="button" style={ui.boutonSecondaire} onClick={onJournal}>Journal de {a.name.split(" ")[0]} →</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -291,18 +310,28 @@ const s = {
   ligneBtn: {
     display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px",
     width: "100%", padding: "12px 18px", textAlign: "left",
-    backgroundColor: "transparent", border: "none", borderBottom: "1px solid var(--border)",
+    backgroundColor: "transparent", border: "none",
     cursor: "pointer", fontFamily: "inherit", color: "inherit",
   },
   ligneTexte:   { display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 },
   ligneNom:     { fontSize: "14px", fontWeight: "600", color: "var(--text)" },
   ligneMeta:    { display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--text-muted)" },
   ligneExtrait: { fontSize: "13px", color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "560px" },
-  ligneAction:  { fontSize: "13px", fontWeight: "600", color: PRIMARY, whiteSpace: "nowrap" },
   lastRight:    { fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap" },
 
-  inactifs:      { borderTop: "none" },
-  inactifsTitre: { padding: "11px 18px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", borderBottom: "1px solid var(--border)" },
+  inactifsTitre: {
+    padding: "11px 18px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", textAlign: "left",
+    backgroundColor: "transparent", border: "none", fontFamily: "inherit",
+  },
+
+  // dernière séance par archer (dépliable)
+  derniere:        { borderBottom: "1px solid var(--border)" },
+  derniereOuverte: { backgroundColor: "var(--surface-sub)" },
+  repondu:  { marginLeft: "10px", fontSize: "12px", fontWeight: "600", color: "var(--ok)" },
+  attente:  { marginLeft: "10px", fontSize: "12px", fontWeight: "600", color: PRIMARY },
+  depli:    { display: "flex", flexDirection: "column", gap: "10px", padding: "0 18px 16px" },
+  commentaire: { fontSize: "14px", color: "var(--text-2)", margin: 0, lineHeight: 1.5, whiteSpace: "pre-line" },
+  liens:    { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" },
 
   // volume vs objectif
   volRow: {
